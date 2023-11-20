@@ -44,14 +44,15 @@ class Algorithm extends Component
         $yi_general_cc_id = $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'];
         $gender_question_id = $json['medal_r_json']['config']['basic_questions']['gender_question_id'];
 
-        // add redis
 
         $this->cache_key = "json_data_{$this->id}_$json_version";
         $this->cache_expiration_time = 86400; // 24 hours
 
-        // Cache::flush();
+        // todo set that up in redis
+        Cache::forget($this->cache_key);
+        $cache_found = Cache::has($this->cache_key);
 
-        if (!Cache::has($this->cache_key)) {
+        if (!$cache_found) {
             Cache::put($this->cache_key, [
                 'full_nodes' => collect($json['medal_r_json']['nodes'])->keyBy('id')->all(),
                 'instances' => $json['medal_r_json']['diagram']['instances'],
@@ -134,9 +135,13 @@ class Algorithm extends Component
             foreach ($diagnosesForStep as $diag) {
                 foreach ($diag['instances'] as $instance_id => $instance) {
 
+                    if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
+                        continue;
+                    }
                     if ($instance_id === $gender_question_id) {
                         continue;
                     }
+
 
                     if (empty($instance['conditions'])) {
                         $this->nodes[$step][$instance_id] = [
@@ -176,13 +181,16 @@ class Algorithm extends Component
             }
         }
 
-        Cache::put($this->cache_key, [
-            ...$cached_data,
-            'answers_hash_map' => $answers_hash_map,
-            'formula_hash_map' => $formula_hash_map,
-            'df_hash_map' => $df_hash_map,
-            'dependency_map' => $dependency_map,
-        ], $this->cache_expiration_time);
+        if (!$cache_found) {
+            Cache::put($this->cache_key, [
+                ...$cached_data,
+                'answers_hash_map' => $answers_hash_map,
+                'formula_hash_map' => $formula_hash_map,
+                'df_hash_map' => $df_hash_map,
+                'dependency_map' => $dependency_map,
+            ], $this->cache_expiration_time);
+            $cached_data = Cache::get($this->cache_key);
+        }
 
         // Order nodes
         if (isset($this->nodes[$step])) {
@@ -201,7 +209,7 @@ class Algorithm extends Component
 
 
         // dd($this->registration_steps);
-        // dd($this->nodes);
+        // dd($cached_data);
 
         dump($cached_data['answers_hash_map']);
         dump($cached_data['dependency_map']);
@@ -286,7 +294,7 @@ class Algorithm extends Component
 
         // Modification behavior
         if ($old_value) {
-            // Remove every nodes dependency
+            // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
                     unset($this->nodes[$step][$key]);
@@ -311,6 +319,7 @@ class Algorithm extends Component
             $this->nodes_to_save[$next_node_id] = intval($value);
             $next_node_id = $this->getNextQuestionId($value);
         }
+
         //if next node is DF, add it to df_to_display <3
         if (isset($df_hash_map[$value])) {
             $other_conditons_met = true;
@@ -339,6 +348,7 @@ class Algorithm extends Component
                         'level_of_urgency' => $final_diagnoses[$df_hash_map[$value]]['level_of_urgency'],
                     ];
                 }
+
                 //todo when multiple managements sets what to do ?
                 $management_key = key($final_diagnoses[$df_hash_map[$value]]['managements']);
 
@@ -404,6 +414,7 @@ class Algorithm extends Component
                     }
                 }
             }
+
             // Merge nodes that were not in full_order_medical_history but are present in $this->nodes[$step]
             foreach ($this->nodes[$step] as $node_id => $node) {
                 if (!isset($reordered_nodes[$node_id])) {
@@ -412,8 +423,6 @@ class Algorithm extends Component
             }
             $this->nodes[$step] = $reordered_nodes;
         }
-
-        //todo if next nodes is DF
     }
 
     public function updatingChosenComplaintCategories($value)
@@ -492,6 +501,7 @@ class Algorithm extends Component
     public function getNextQuestionId($node_id)
     {
         $answers_hash_map = Cache::get($this->cache_key)['answers_hash_map'];
+
         //todo quick and dirty fix for now as an answer can have multiple nodes displayed next
         if (is_array($answers_hash_map[$node_id] ?? null)) {
             return reset($answers_hash_map[$node_id]) ?? null;
