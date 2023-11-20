@@ -266,7 +266,6 @@ class Algorithm extends Component
             $this->nodes_to_save[$node_id] = intval($value);
         }
 
-        //todo between with value like "25, 30" need to explode the ,
         return $this->displayNextNode($answer_id, $old_answer_id);
     }
 
@@ -312,18 +311,21 @@ class Algorithm extends Component
             $this->nodes_to_save[$next_node_id] = intval($value);
             $next_node_id = $this->getNextQuestionId($value);
         }
-
         //if next node is DF, add it to df_to_display <3
         if (isset($df_hash_map[$value])) {
             $other_conditons_met = true;
             foreach ($final_diagnoses[$df_hash_map[$value]]['conditions'] as $condition) {
                 // We already know that this condition is met because it has been calulated
                 if ($condition['answer_id'] !== $value) {
-                    if (
-                        array_key_exists($condition['node_id'], $this->nodes_to_save)
-                        && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
-                    ) {
-                        $other_conditons_met = false;
+                    // We only check if the other conditions node has no condition
+                    if (in_array($condition['node_id'], $this->nodes[$step]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
+                        // Need also to calculate if node is not in nodes_to_save like radio button
+                        if (
+                            array_key_exists($condition['node_id'], $this->nodes_to_save)
+                            && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
+                        ) {
+                            $other_conditons_met = false;
+                        }
                     }
                 }
             }

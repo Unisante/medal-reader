@@ -9,6 +9,7 @@ class Numeric extends Component
 {
     public $node_id;
     public $label;
+    public $description;
     public $answers = [];
     public $answer;
 
@@ -19,6 +20,7 @@ class Numeric extends Component
     {
         $this->node_id = $node['id'];
         $this->label = $node['label'];
+        $this->description = $node['description'];
         $this->answers = $node['answers'];
     }
 

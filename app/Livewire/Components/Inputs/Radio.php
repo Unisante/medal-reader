@@ -8,6 +8,7 @@ class Radio extends Component
 {
     public $node_id;
     public $label;
+    public $description;
     public $answers = [];
     public $answer;
 
@@ -15,13 +16,14 @@ class Radio extends Component
     {
         $this->node_id = $node['id'];
         $this->label = $node['label'];
+        $this->description = $node['description'];
         $this->answers = $node['answers'];
     }
 
     public function updatingAnswer($value)
     {
-        // dd($this->answer);
         $this->dispatch('nodeUpdated', $value, $this->answer);
+        $this->answer = $value;
     }
 
     public function render()

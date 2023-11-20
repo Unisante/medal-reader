@@ -1,5 +1,9 @@
 <div class="mb-2">
-  <label class="form-label" for="{{ $node_id }}">{{ $label }}</label>
+  <label class="form-label" for="{{ $node_id }}">
+    {{ $label }}
+    <br>
+    {{ $description }}
+  </label>
   <input class="form-control @error('value') is-invalid @enderror" type="text" wire:model.live="value"
     name="{{ $node_id }}" id="{{ $node_id }}">
   @error('value')

@@ -9,6 +9,7 @@ class Text extends Component
 {
     public $node_id;
     public $label;
+    public $description;
     public $formula;
     public $value;
     public $answers;
@@ -18,6 +19,7 @@ class Text extends Component
     {
         $this->node_id = $node['id'];
         $this->label = $node['label'];
+        $this->description = $node['description'];
         $this->answers = $node['answers'];
         $this->value = $value;
 
