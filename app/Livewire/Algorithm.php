@@ -26,8 +26,8 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
-    public $date_of_birth = "1960-01-01";
-    public $currentStep = 'complaint_category';
+    public string $date_of_birth = "1960-01-01";
+    public string $currentStep = 'complaint_category';
 
 
     public function mount($id = null)
@@ -43,7 +43,6 @@ class Algorithm extends Component
         $general_cc_id = $json['medal_r_json']['config']['basic_questions']['general_cc_id'];
         $yi_general_cc_id = $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'];
         $gender_question_id = $json['medal_r_json']['config']['basic_questions']['gender_question_id'];
-
 
         $this->cache_key = "json_data_{$this->id}_$json_version";
         $this->cache_expiration_time = 86400; // 24 hours
@@ -72,22 +71,23 @@ class Algorithm extends Component
 
         $cached_data = Cache::get($this->cache_key);
 
-        $this->complaint_categories_nodes = collect($cached_data['full_nodes'])->filter(function ($node) use ($general_cc_id, $yi_general_cc_id) {
-            return $node['category'] === 'complaint_category'
-                && $node['id'] !== $general_cc_id
-                && $node['id'] !== $yi_general_cc_id;
-        })->map(function ($node) {
-            return [
-                'id' => $node['id'],
-                'label' => $node['label']['en'] ?? '',
-                'description' => $node['description']['en'] ?? '',
-            ];
-        })->values();
+        $this->complaint_categories_nodes = collect($cached_data['full_nodes'])
+            ->filter(function ($node) use ($general_cc_id, $yi_general_cc_id) {
+                return $node['category'] === 'complaint_category'
+                    && $node['id'] !== $general_cc_id
+                    && $node['id'] !== $yi_general_cc_id;
+            })->map(function ($node) {
+                return [
+                    'id' => $node['id'],
+                    'label' => $node['label']['en'] ?? '',
+                    'description' => $node['description']['en'] ?? '',
+                ];
+            })->values();
 
         $df_hash_map = [];
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
-                $df_hash_map[$condition['answer_id']] = $df['id'];
+                $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
             }
         }
 
@@ -164,15 +164,7 @@ class Algorithm extends Component
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
 
-                            //todo ask why an answer could appear in multiple diag
-                            if (array_key_exists($answer_id, $answers_hash_map)) {
-                                if (!is_array($answers_hash_map[$answer_id])) {
-                                    $answers_hash_map[$answer_id] = [$answers_hash_map[$answer_id]];
-                                }
-                                $answers_hash_map[$answer_id][] = $instance_id;
-                            } else {
-                                $answers_hash_map[$answer_id] = $instance_id;
-                            }
+                            $answers_hash_map[$step][$answer_id][] = $instance_id;
 
                             $this->breadthFirstSearch($diag, $node_id, $answer_id, $dependency_map);
                         }
@@ -211,6 +203,7 @@ class Algorithm extends Component
         // dd($this->registration_steps);
         // dd($cached_data);
 
+        // dd($cached_data['full_nodes']);
         dump($cached_data['answers_hash_map']);
         dump($cached_data['dependency_map']);
         dump($cached_data['formula_hash_map']);
@@ -229,11 +222,11 @@ class Algorithm extends Component
         while (!empty($stack)) {
             $node_id = array_shift($stack);
 
-            if (isset($nodes_visited[$node_id])) {
-                continue;
-            }
+            // if (isset($nodes_visited[$node_id])) {
+            //     continue;
+            // }
 
-            $nodes_visited[$node_id] = true;
+            // $nodes_visited[$node_id] = true;
 
             foreach ($diag['instances'] as $instance_id => $instance) {
                 if (!empty($instance['conditions'])) {
@@ -242,6 +235,7 @@ class Algorithm extends Component
                         $children_node_id = $condition['node_id'];
 
                         if ($children_node_id === $node_id) {
+
                             if (!isset($dependency_map[$answer_id])) {
                                 $dependency_map[$answer_id] = [];
                             }
@@ -267,6 +261,7 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
+
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
                 $value = $this->handleFormula($node_id);
@@ -287,8 +282,6 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $managements = $cached_data['managements'];
-        $full_nodes = $cached_data['full_nodes'];
-        $full_order_medical_history = $cached_data['full_order_medical_history'];
 
         $step = reset($this->chosen_complaint_categories);
 
@@ -302,75 +295,101 @@ class Algorithm extends Component
             }
 
             // Remove every df and managements dependency
-            if (isset($df_hash_map[$old_value])) {
-                if (array_key_exists($df_hash_map[$old_value], $this->df_to_display)) {
-                    if (isset($final_diagnoses[$df_hash_map[$old_value]]['managements'])) {
-                        unset($this->managements_to_display[key($final_diagnoses[$df_hash_map[$old_value]]['managements'])]);
+            if (isset($df_hash_map[$step][$old_value])) {
+                foreach ($df_hash_map[$step][$old_value] as $df) {
+                    if (array_key_exists($df, $this->df_to_display)) {
+                        if (isset($final_diagnoses[$df]['managements'])) {
+                            unset($this->managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                        }
+                        unset($this->df_to_display[$df]);
                     }
-                    unset($this->df_to_display[$df_hash_map[$old_value]]);
+                }
+            }
+
+            // Need to recalulate bc
+        }
+
+        $next_node_id = $this->getNextNodeId($value);
+
+        //if next node is background calc -> calc and directly show next <3
+        if ($next_node_id) {
+            foreach ($next_node_id as $node) {
+                if (array_key_exists($node, $formula_hash_map)) {
+                    $this->nodes_to_save[$node] = intval($value);
+                    $next_node_id = $this->getNextNodeId($value);
                 }
             }
         }
 
-        $next_node_id = $this->getNextQuestionId($value);
-
-        //if next node is background calc -> calc and directly show next <3
-        if (array_key_exists($next_node_id, $formula_hash_map)) {
-            $this->nodes_to_save[$next_node_id] = intval($value);
-            $next_node_id = $this->getNextQuestionId($value);
-        }
-
-        //if next node is DF, add it to df_to_display <3
-        if (isset($df_hash_map[$value])) {
+        //if next node is DF, add it to df_to_display <3§
+        if (isset($df_hash_map[$step][$value])) {
             $other_conditons_met = true;
-            foreach ($final_diagnoses[$df_hash_map[$value]]['conditions'] as $condition) {
-                // We already know that this condition is met because it has been calulated
-                if ($condition['answer_id'] !== $value) {
-                    // We only check if the other conditions node has no condition
-                    if (in_array($condition['node_id'], $this->nodes[$step]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
-                        // Need also to calculate if node is not in nodes_to_save like radio button
-                        if (
-                            array_key_exists($condition['node_id'], $this->nodes_to_save)
-                            && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
-                        ) {
-                            $other_conditons_met = false;
+            foreach ($df_hash_map[$step][$value] as $df) {
+                foreach ($final_diagnoses[$df]['conditions'] as $condition) {
+                    // We already know that this condition is met because it has been calulated
+                    if ($condition['answer_id'] !== $value) {
+                        // We only check if the other conditions node has no condition
+                        if (in_array($condition['node_id'], $this->nodes[$step]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
+                            // Need also to calculate if node is not in nodes_to_save like radio button
+                            if (
+                                array_key_exists($condition['node_id'], $this->nodes_to_save)
+                                && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
+                            ) {
+                                $other_conditons_met = false;
+                            }
+                        }
+                    }
+                }
+
+                if ($other_conditons_met) {
+                    if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
+                        $this->df_to_display[$df] = [
+                            'id' => $final_diagnoses[$df]['id'],
+                            'label' => $final_diagnoses[$df]['label']['en'] ?? '',
+                            'description' => $final_diagnoses[$df]['description']['en'] ?? '',
+                            'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
+                        ];
+                    }
+
+                    //todo when multiple managements sets what to do ?
+                    $management_key = key($final_diagnoses[$df]['managements']);
+
+                    // Because sometime df have no managements
+                    if (isset($managements[$management_key]['id'])) {
+                        if (!array_key_exists($managements[$management_key]['id'], $this->managements_to_display)) {
+                            $this->managements_to_display[$management_key] = [
+                                'id' => $managements[$management_key]['id'],
+                                'label' => $managements[$management_key]['label']['en'] ?? '',
+                                'description' => $managements[$management_key]['description']['en'] ?? '',
+                                'level_of_urgency' => $managements[$management_key]['level_of_urgency'],
+                            ];
                         }
                     }
                 }
             }
-
-            if ($other_conditons_met) {
-                if (!array_key_exists($final_diagnoses[$df_hash_map[$value]]['id'], $this->df_to_display)) {
-                    $this->df_to_display[$df_hash_map[$value]] = [
-                        'id' => $final_diagnoses[$df_hash_map[$value]]['id'],
-                        'label' => $final_diagnoses[$df_hash_map[$value]]['label']['en'] ?? '',
-                        'description' => $final_diagnoses[$df_hash_map[$value]]['description']['en'] ?? '',
-                        'level_of_urgency' => $final_diagnoses[$df_hash_map[$value]]['level_of_urgency'],
-                    ];
-                }
-
-                //todo when multiple managements sets what to do ?
-                $management_key = key($final_diagnoses[$df_hash_map[$value]]['managements']);
-
-                // Because sometime df have no managements
-                if (isset($managements[$management_key]['id'])) {
-                    if (!array_key_exists($managements[$management_key]['id'], $this->managements_to_display)) {
-                        $this->managements_to_display[$management_key] = [
-                            'id' => $managements[$management_key]['id'],
-                            'label' => $managements[$management_key]['label']['en'] ?? '',
-                            'description' => $managements[$management_key]['description']['en'] ?? '',
-                            'level_of_urgency' => $managements[$management_key]['level_of_urgency'],
-                        ];
-                    }
-                }
-            }
         }
+
 
         // Reorder DF and managements upon level_of_urgency
         uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
         uasort($this->managements_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
 
-        if ($next_node_id && isset($full_nodes[$next_node_id])) {
+        if ($next_node_id) {
+            foreach ($next_node_id as $node) {
+                $this->setNextNodeAndSort($node);
+            }
+        }
+    }
+
+    public function setNextNodeAndSort($next_node_id)
+    {
+        $cached_data = Cache::get($this->cache_key);
+        $full_nodes = $cached_data['full_nodes'];
+        $full_order_medical_history = $cached_data['full_order_medical_history'];
+        $step = reset($this->chosen_complaint_categories);
+
+
+        if (isset($full_nodes[$next_node_id])) {
             $this->nodes[$step][$next_node_id] = [
                 'id' => $full_nodes[$next_node_id]['id'],
                 'category' => $full_nodes[$next_node_id]['category'],
@@ -421,11 +440,12 @@ class Algorithm extends Component
                     $reordered_nodes[$node_id] = $node;
                 }
             }
+
             $this->nodes[$step] = $reordered_nodes;
         }
     }
 
-    public function updatingChosenComplaintCategories($value)
+    public function updatedChosenComplaintCategories($value)
     {
         if (!array_key_exists($value, $this->nodes)) {
             return;
@@ -495,18 +515,16 @@ class Algorithm extends Component
                 return $answer_id;
             }
         }
+
         return null;
     }
 
-    public function getNextQuestionId($node_id)
+    public function getNextNodeId($node_id)
     {
         $answers_hash_map = Cache::get($this->cache_key)['answers_hash_map'];
+        $step = reset($this->chosen_complaint_categories);
 
-        //todo quick and dirty fix for now as an answer can have multiple nodes displayed next
-        if (is_array($answers_hash_map[$node_id] ?? null)) {
-            return reset($answers_hash_map[$node_id]) ?? null;
-        }
-        return $answers_hash_map[$node_id] ?? null;
+        return $answers_hash_map[$step][$node_id] ?? null;
     }
 
     public function submitCC($chosen_cc)
