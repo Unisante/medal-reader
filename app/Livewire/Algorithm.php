@@ -317,7 +317,8 @@ class Algorithm extends Component
         if ($next_node_id) {
             foreach ($next_node_id as $node) {
                 if (array_key_exists($node, $formula_hash_map)) {
-                    $this->nodes_to_save[$node] = intval($value);
+                    $bc_value = $this->handleFormula($node);
+                    $this->nodes_to_save[$node] = intval($bc_value);
                     $next_node_id = $this->getNextNodeId($value);
                 }
             }
