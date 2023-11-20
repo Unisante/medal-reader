@@ -24,7 +24,7 @@ class Numeric extends Component
         $this->answers = $node['answers'];
     }
 
-    public function updatedValue($value)
+    public function updatingValue($value)
     {
         foreach ($this->answers as $answer) {
             $result = intval($value);
@@ -42,6 +42,7 @@ class Numeric extends Component
             if ($answer_id) {
                 $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
                 $this->answer = $answer_id;
+                return;
             }
         }
         $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);

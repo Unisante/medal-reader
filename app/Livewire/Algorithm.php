@@ -222,31 +222,32 @@ class Algorithm extends Component
         while (!empty($stack)) {
             $node_id = array_shift($stack);
 
-            // if (isset($nodes_visited[$node_id])) {
-            //     continue;
-            // }
+            if (isset($nodes_visited[$node_id])) {
+                continue;
+            }
 
-            // $nodes_visited[$node_id] = true;
+            $nodes_visited[$node_id] = true;
 
             foreach ($diag['instances'] as $instance_id => $instance) {
-                if (!empty($instance['conditions'])) {
-                    $children = $instance['children'];
-                    foreach ($instance['conditions'] as $condition) {
-                        $children_node_id = $condition['node_id'];
 
-                        if ($children_node_id === $node_id) {
+                if (!isset($dependency_map[$answer_id])) {
+                    $dependency_map[$answer_id] = [];
+                }
+                if ($instance_id === $node_id && $node_id !== $start_node_id) {
+                    $dependency_map[$answer_id][] = $instance_id;
+                }
 
-                            if (!isset($dependency_map[$answer_id])) {
-                                $dependency_map[$answer_id] = [];
-                            }
+                $children = $instance['children'];
 
-                            if (!in_array($instance_id, $dependency_map[$answer_id])) {
-                                $dependency_map[$answer_id][] = $instance_id;
-                            }
+                foreach ($instance['conditions'] as $condition) {
+                    if ($condition['node_id'] === $node_id) {
 
-                            foreach ($children as $child_node_id) {
-                                $stack[] = $child_node_id;
-                            }
+                        if (!in_array($instance_id, $dependency_map[$answer_id])) {
+                            $dependency_map[$answer_id][] = $instance_id;
+                        }
+
+                        foreach ($children as $child_node_id) {
+                            $stack[] = $child_node_id;
                         }
                     }
                 }
@@ -287,6 +288,7 @@ class Algorithm extends Component
 
         // Modification behavior
         if ($old_value) {
+
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
