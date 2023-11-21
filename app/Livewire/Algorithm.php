@@ -24,6 +24,7 @@ class Algorithm extends Component
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
     public array $df_to_display;
+    public array $drugs_to_display;
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
@@ -42,7 +43,6 @@ class Algorithm extends Component
     ];
 
     public array $agreed_diagnoses;
-    public array $drugs_to_display;
 
     public function mount($id = null)
     {
@@ -74,7 +74,7 @@ class Algorithm extends Component
                 'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
-                'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step']) + [42318 => "", 42323 => "", 42331 => ""],
+                'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step']) + [42318 => "", 42323 => "", 42331 => "", 35385 => ""],
                 'complaint_categories_steps' => [
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
@@ -83,7 +83,7 @@ class Algorithm extends Component
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
-                'drug_hash_map' => [],
+                'drugs_hash_map' => [],
                 'dependency_map' => [],
             ], $this->cache_expiration_time);
         }
@@ -111,7 +111,7 @@ class Algorithm extends Component
 
 
         $df_hash_map = [];
-        $drug_hash_map = [];
+        $drugs_hash_map = [];
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
@@ -119,7 +119,9 @@ class Algorithm extends Component
 
             foreach ($df['drugs'] as $drug) {
                 foreach ($drug['conditions'] as $condition) {
-                    $drug_hash_map[$df['cc']][$condition['answer_id']][] = $drug['id'];
+                    // if (!in_array($drug['id'], $drugs_hash_map[$condition['answer_id']])) {
+                    $drugs_hash_map[$condition['answer_id']][] = $drug['id'];
+                    // }
                 }
             }
         }
@@ -215,7 +217,7 @@ class Algorithm extends Component
                 'answers_hash_map' => $answers_hash_map,
                 'formula_hash_map' => $formula_hash_map,
                 'df_hash_map' => $df_hash_map,
-                'drug_hash_map' => $drug_hash_map,
+                'drugs_hash_map' => $drugs_hash_map,
                 'dependency_map' => $dependency_map,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
@@ -244,7 +246,7 @@ class Algorithm extends Component
 
         // dd($cached_data['full_nodes']);
         dump($this->nodes);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['df_hash_map']);
@@ -259,12 +261,20 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
+        $drugs_hash_map = $cached_data['drugs_hash_map'];
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
                 $value = $this->handleFormula($node_id);
             }
             $this->nodes_to_save[$node_id] = intval($value);
+
+            // If answer will set a drug, we add it to the drugs to display
+            if (array_key_exists($value, $drugs_hash_map)) {
+                // todo remove that reset and put everything in the same first array
+                // maybe with [...$this->drugs_to_display]
+                $this->drugs_to_display[] = reset($drugs_hash_map[$value]);
+            }
         }
 
         return $this->displayNextNode($answer_id, $old_answer_id);
@@ -279,7 +289,6 @@ class Algorithm extends Component
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
-        $drug_hash_map = $cached_data['drug_hash_map'];
         $health_cares = $cached_data['health_cares'];
 
         // Modification behavior
@@ -342,31 +351,34 @@ class Algorithm extends Component
 
                 if ($other_conditons_met) {
                     if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
+                        foreach ($final_diagnoses[$df]['drugs'] as $drug) {
+
+                            $conditions = $final_diagnoses[$df]['conditions'];
+
+                            if (empty($conditions)) {
+                                $drugs[] = [
+                                    'id' => $health_cares[$drug['id']]['id'],
+                                    'label' => $health_cares[$drug['id']]['label']['en'],
+                                    'description' => $health_cares[$drug['id']]['description']['en'],
+                                ];
+                            } else {
+                                if (in_array($drug['id'], $this->drugs_to_display)) {
+                                    $drugs[] = [
+                                        'id' => $health_cares[$drug['id']]['id'],
+                                        'label' => $health_cares[$drug['id']]['label']['en'],
+                                        'description' => $health_cares[$drug['id']]['description']['en'],
+                                    ];
+                                }
+                            }
+                        }
+
                         $this->df_to_display[$df] = [
                             'id' => $final_diagnoses[$df]['id'],
                             'label' => $final_diagnoses[$df]['label']['en'] ?? '',
                             'description' => $final_diagnoses[$df]['description']['en'] ?? '',
                             'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
-                            'drugs' => array_map(function($drug) use ($health_cares, $drug_hash_map, $value, $final_diagnoses,$df){
-                                $conditions=$final_diagnoses[$df]['conditions'];
-                                if (!empty($conditions)){
-                                    if(isset($drug_hash_map[$value])){
-                                        dd($drug_hash_map[$value]);
-                                        return [
-                                            'id'=> $health_cares[$drug['id']]['id'],
-                                            'label'=> $health_cares[$drug['id']]['label']['en'],
-                                            'description'=> $health_cares[$drug['id']]['description']['en'],
-                                        ];
-                                    }
-                                }
-                                return [
-                                    'id'=> $health_cares[$drug['id']]['id'],
-                                    'label'=> $health_cares[$drug['id']]['label']['en'],
-                                    'description'=> $health_cares[$drug['id']]['description']['en'],
-                                ];
-                            },$final_diagnoses[$df]['drugs']),
+                            'drugs' => $drugs ?? []
                         ];
-                        // dd($this->df_to_display);
                     }
 
                     //todo when multiple managements sets what to do ?
@@ -430,10 +442,13 @@ class Algorithm extends Component
                 $nodes_to_save[$node['id']] = $node;
         }
 
-        $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
+        // todo need to calcule all bc after registration step
+        // $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
+        $nodes_to_save = $nodes_to_save + $formula_hash_map;
+
         if (!empty($nodes_to_save)) {
-            foreach ($nodes_to_save as $node) {
-                $this->saveNode($node['id'], null, null, null);
+            foreach ($nodes_to_save as $node_id => $node) {
+                $this->saveNode($node_id, null, null, null);
             }
         }
     }
@@ -634,7 +649,6 @@ class Algorithm extends Component
         $next_index = ($current_index + 1) % count($this->chosen_complaint_categories);
 
         if ($current_index === count($this->chosen_complaint_categories) - 1 && $next_index === 0) {
-            $this->is_last_cc = true;
             return;
         }
 
