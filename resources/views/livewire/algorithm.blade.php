@@ -139,12 +139,39 @@
 
       @if ($current_step === 'health_care_questions')
         @foreach ($df_to_display as $df)
+            <div class="m-0" wire:key="{{ 'df-' . $df['id'] }}">
+                <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+                <label class="custom-control teleport-switch">
+                <span class="teleport-switch-control-description">Disagree</span>
+                <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
+                    id="{{ $df['id'] }}" value="{{ $df['id'] }}" wire:model.live="agreed_diagnoses.{{ $df['id'] }}">
+                <span class="teleport-switch-control-indicator"></span>
+                <span class="teleport-switch-control-description">Agree</span>
+                </label>
+            </div>
+            @if (isset($agreed_diagnoses[$df['id']]))
+                @foreach ($df['drugs'] as $drug)
+                    <div class="m-0" wire:key="{{ 'drug-' . $drug['id'] }}">
+                        <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
+                        <label class="custom-control teleport-switch">
+                        <span class="teleport-switch-control-description">Disagree</span>
+                        <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
+                            id="{{ $drug['id'] }}" value="{{ $drug['id'] }}" wire:model.live="agreed_drugs.{{ $drug['id'] }}">
+                        <span class="teleport-switch-control-indicator"></span>
+                        <span class="teleport-switch-control-description">Agree</span>
+                        </label>
+                    </div>
+                @endforeach
+            @endif
+        @endforeach
+        {{-- @foreach ($df_to_display as $df)
           <div wire:key="{{ 'df-' . $df['id'] }}">
+
             <p> Final Diagnose :{{ $df['id'] }} </p>
             <p> {{ $df['label'] }}</p>
             <p> {{ $df['description'] }}</p>
           </div>
-        @endforeach
+        @endforeach --}}
         @foreach ($managements_to_display as $management)
           <div wire:key="{{ 'management-' . $management['id'] }}">
             <p> Management : {{ $management['id'] }} </p>

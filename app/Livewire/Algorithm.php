@@ -41,6 +41,9 @@ class Algorithm extends Component
         'referral',
     ];
 
+    public array $agreed_diagnoses;
+    public array $drugs_to_display;
+
     public function mount($id = null)
     {
         $this->id = $id;
@@ -80,6 +83,7 @@ class Algorithm extends Component
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
+                'drug_hash_map' => [],
                 'dependency_map' => [],
             ], $this->cache_expiration_time);
         }
@@ -107,11 +111,19 @@ class Algorithm extends Component
 
 
         $df_hash_map = [];
+        $drug_hash_map = [];
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
             }
+
+            foreach ($df['drugs'] as $drug) {
+                foreach ($drug['conditions'] as $condition) {
+                    $drug_hash_map[$df['cc']][$condition['answer_id']][] = $drug['id'];
+                }
+            }
         }
+
 
         $formula_hash_map = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
@@ -203,6 +215,7 @@ class Algorithm extends Component
                 'answers_hash_map' => $answers_hash_map,
                 'formula_hash_map' => $formula_hash_map,
                 'df_hash_map' => $df_hash_map,
+                'drug_hash_map' => $drug_hash_map,
                 'dependency_map' => $dependency_map,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
@@ -266,6 +279,7 @@ class Algorithm extends Component
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
+        $drug_hash_map = $cached_data['drug_hash_map'];
         $health_cares = $cached_data['health_cares'];
 
         // Modification behavior
@@ -333,7 +347,26 @@ class Algorithm extends Component
                             'label' => $final_diagnoses[$df]['label']['en'] ?? '',
                             'description' => $final_diagnoses[$df]['description']['en'] ?? '',
                             'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
+                            'drugs' => array_map(function($drug) use ($health_cares, $drug_hash_map, $value, $final_diagnoses,$df){
+                                $conditions=$final_diagnoses[$df]['conditions'];
+                                if (!empty($conditions)){
+                                    if(isset($drug_hash_map[$value])){
+                                        dd($drug_hash_map[$value]);
+                                        return [
+                                            'id'=> $health_cares[$drug['id']]['id'],
+                                            'label'=> $health_cares[$drug['id']]['label']['en'],
+                                            'description'=> $health_cares[$drug['id']]['description']['en'],
+                                        ];
+                                    }
+                                }
+                                return [
+                                    'id'=> $health_cares[$drug['id']]['id'],
+                                    'label'=> $health_cares[$drug['id']]['label']['en'],
+                                    'description'=> $health_cares[$drug['id']]['description']['en'],
+                                ];
+                            },$final_diagnoses[$df]['drugs']),
                         ];
+                        // dd($this->df_to_display);
                     }
 
                     //todo when multiple managements sets what to do ?
