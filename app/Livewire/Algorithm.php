@@ -27,8 +27,18 @@ class Algorithm extends Component
     public array $nodes_to_save;
     public array $nodes;
     public string $date_of_birth = "1960-01-01";
-    public string $currentStep = 'complaint_category';
-
+    public string $current_step = 'registration';
+    public string $current_cc;
+    public array $steps = [
+        'registration',
+        'first_look_assessment',
+        'complaint_categories',
+        'basic_measurements',
+        'medical_history',
+        'physical_exam',
+        'health_care_questions',
+        'referral',
+    ];
 
     public function mount($id = null)
     {
@@ -214,52 +224,6 @@ class Algorithm extends Component
         // dd(Cache::get($this->cache_key));
     }
 
-    public function breadthFirstSearch($diag, $start_node_id, $answer_id, &$dependency_map)
-    {
-        $stack = [$start_node_id];
-        $nodes_visited = [];
-
-        while (!empty($stack)) {
-            $node_id = array_shift($stack);
-
-            if (isset($nodes_visited[$node_id])) {
-                continue;
-            }
-
-            $nodes_visited[$node_id] = true;
-
-            foreach ($diag['instances'] as $instance_id => $instance) {
-
-                if ($instance_id === $node_id && $node_id !== $start_node_id) {
-                    if (!isset($dependency_map[$answer_id])) {
-                        $dependency_map[$answer_id] = [];
-                    }
-                    $dependency_map[$answer_id][] = $instance_id;
-                }
-
-                $children = $instance['children'];
-
-                foreach ($instance['conditions'] as $condition) {
-                    if ($condition['node_id'] === $node_id) {
-
-                        if (!isset($dependency_map[$answer_id])) {
-                            $dependency_map[$answer_id] = [];
-                        }
-                        if (!in_array($instance_id, $dependency_map[$answer_id])) {
-                            $dependency_map[$answer_id][] = $instance_id;
-                        }
-
-                        foreach ($children as $child_node_id) {
-                            $stack[] = $child_node_id;
-                        }
-                    }
-                }
-            }
-        }
-
-        return $dependency_map;
-    }
-
     #[On('nodeToSave')]
     public function saveNode($node_id, $value, $answer_id, $old_answer_id)
     {
@@ -387,6 +351,74 @@ class Algorithm extends Component
         }
     }
 
+    public function updatedChosenComplaintCategories($value)
+    {
+        if (!array_key_exists($value, $this->nodes)) {
+            return;
+        }
+        $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
+        $nodes_to_save = [];
+
+        // We only need to refresh background_calculation nodes
+        foreach ($this->registration_nodes as $node) {
+            if ($node['category'] === 'background_calculation' || $node['display_format'] === 'Formula')
+                $nodes_to_save[$node['id']] = $node;
+        }
+
+        $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$value], $formula_hash_map);
+        if (!empty($nodes_to_save)) {
+            foreach ($nodes_to_save as $node) {
+                $this->saveNode($node['id'], null, null, null);
+            }
+        }
+    }
+
+    public function breadthFirstSearch($diag, $start_node_id, $answer_id, &$dependency_map)
+    {
+        $stack = [$start_node_id];
+        $nodes_visited = [];
+
+        while (!empty($stack)) {
+            $node_id = array_shift($stack);
+
+            if (isset($nodes_visited[$node_id])) {
+                continue;
+            }
+
+            $nodes_visited[$node_id] = true;
+
+            foreach ($diag['instances'] as $instance_id => $instance) {
+
+                if ($instance_id === $node_id && $node_id !== $start_node_id) {
+                    if (!isset($dependency_map[$answer_id])) {
+                        $dependency_map[$answer_id] = [];
+                    }
+                    $dependency_map[$answer_id][] = $instance_id;
+                }
+
+                $children = $instance['children'];
+
+                foreach ($instance['conditions'] as $condition) {
+                    if ($condition['node_id'] === $node_id) {
+
+                        if (!isset($dependency_map[$answer_id])) {
+                            $dependency_map[$answer_id] = [];
+                        }
+                        if (!in_array($instance_id, $dependency_map[$answer_id])) {
+                            $dependency_map[$answer_id][] = $instance_id;
+                        }
+
+                        foreach ($children as $child_node_id) {
+                            $stack[] = $child_node_id;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $dependency_map;
+    }
+
     public function setNextNodeAndSort($next_node_id)
     {
         $cached_data = Cache::get($this->cache_key);
@@ -451,28 +483,6 @@ class Algorithm extends Component
         }
     }
 
-    public function updatedChosenComplaintCategories($value)
-    {
-        if (!array_key_exists($value, $this->nodes)) {
-            return;
-        }
-        $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
-        $nodes_to_save = [];
-
-        // We only need to refresh background_calculation nodes
-        foreach ($this->registration_nodes as $node) {
-            if ($node['category'] === 'background_calculation' || $node['display_format'] === 'Formula')
-                $nodes_to_save[$node['id']] = $node;
-        }
-
-        $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$value], $formula_hash_map);
-        if (!empty($nodes_to_save)) {
-            foreach ($nodes_to_save as $node) {
-                $this->saveNode($node['id'], null, null, null);
-            }
-        }
-    }
-
     public function handleFormula($node_id)
     {
         $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
@@ -531,6 +541,50 @@ class Algorithm extends Component
         $step = reset($this->chosen_complaint_categories);
 
         return $answers_hash_map[$step][$node_id] ?? null;
+    }
+
+    public function goToStep(string $step): void
+    {
+        if ($step === 'medical_history') {
+            $cached_data = Cache::get($this->cache_key);
+            $cc_order = $cached_data['complaint_categories_steps'];
+
+            // Respect the order in the complaint_categories_step key
+            usort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
+                return array_search($a, $cc_order) <=> array_search($b, $cc_order);
+            });
+
+            $this->current_cc = reset($this->chosen_complaint_categories);
+        }
+
+        $this->current_step = $step;
+    }
+
+    public function goToNextCc(): void
+    {
+        $current_index = array_search($this->current_cc, $this->chosen_complaint_categories);
+        $next_index = ($current_index + 1) % count($this->chosen_complaint_categories);
+
+        if ($current_index === count($this->chosen_complaint_categories) - 1 && $next_index === 0) {
+            $this->is_last_cc = true;
+            return;
+        }
+
+        $this->current_cc = $this->chosen_complaint_categories[$next_index];
+    }
+
+    public function goToPreviousCc(): void
+    {
+        $current_index = array_search($this->current_cc, $this->chosen_complaint_categories);
+        $count = count($this->chosen_complaint_categories);
+
+        $previous_index = ($current_index - 1 + $count) % $count;
+        if ($current_index === 0 && $previous_index === $count - 1) {
+            return;
+        }
+
+
+        $this->current_cc = $this->chosen_complaint_categories[$previous_index];
     }
 
     public function submitCC($chosen_cc)
