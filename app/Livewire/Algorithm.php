@@ -27,7 +27,7 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
-    public string $date_of_birth;
+    public string $date_of_birth = "1960-01-01";
     public string $current_step = 'registration';
     public string $current_cc;
     public array $steps = [
@@ -209,18 +209,20 @@ class Algorithm extends Component
         }
 
         // Order nodes
-        if (isset($this->nodes[$step])) {
-            foreach ($cached_data['full_order_medical_history'] as $node_id) {
-                if (isset($this->nodes[$step][$node_id])) {
-                    $reordered_nodes[$node_id] = $this->nodes[$step][$node_id];
+        foreach ($this->nodes as $age_key => $nodes_by_age) {
+            foreach ($nodes_by_age as $step_id => $nodes) {
+                foreach ($cached_data['full_order_medical_history'] as $node_id) {
+                    if (isset($this->nodes[$age_key][$step_id][$node_id])) {
+                        $reordered_nodes[$step_id][$node_id] = $this->nodes[$age_key][$step_id][$node_id];
+                    }
                 }
-            }
-            foreach ($this->nodes[$step] as $node_id => $node) {
-                if (!isset($reordered_nodes[$node_id])) {
-                    $reordered_nodes[$node_id] = $node;
+                foreach ($this->nodes[$age_key][$step_id] as $node_id => $node) {
+                    if (!isset($reordered_nodes[$node_id])) {
+                        $reordered_nodes[$step_id][$node_id] = $node;
+                    }
                 }
+                $this->nodes[$age_key][$step] = $reordered_nodes[$step_id];
             }
-            $this->nodes[$step] = $reordered_nodes;
         }
 
 
@@ -228,11 +230,11 @@ class Algorithm extends Component
         // dd($cached_data);
 
         // dd($cached_data['full_nodes']);
-        dump($cached_data['complaint_categories_steps']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
-        dump($cached_data['formula_hash_map']);
-        dump($cached_data['df_hash_map']);
+        dump($this->nodes);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
+        // dump($cached_data['formula_hash_map']);
+        // dump($cached_data['df_hash_map']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
         // dump($this->formula_hash_map);
@@ -266,21 +268,19 @@ class Algorithm extends Component
         $df_hash_map = $cached_data['df_hash_map'];
         $managements = $cached_data['managements'];
 
-        $step = reset($this->chosen_complaint_categories);
-
         // Modification behavior
         if ($old_value) {
 
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
-                    unset($this->nodes[$step][$key]);
+                    unset($this->nodes[$this->age_key][$this->current_cc][$key]);
                 }
             }
 
             // Remove every df and managements dependency
-            if (isset($df_hash_map[$step][$old_value])) {
-                foreach ($df_hash_map[$step][$old_value] as $df) {
+            if (isset($df_hash_map[$this->current_cc][$old_value])) {
+                foreach ($df_hash_map[$this->current_cc][$old_value] as $df) {
                     if (array_key_exists($df, $this->df_to_display)) {
                         if (isset($final_diagnoses[$df]['managements'])) {
                             unset($this->managements_to_display[key($final_diagnoses[$df]['managements'])]);
@@ -307,14 +307,14 @@ class Algorithm extends Component
         }
 
         //if next node is DF, add it to df_to_display <3
-        if (isset($df_hash_map[$step][$value])) {
+        if (isset($df_hash_map[$this->current_cc][$value])) {
             $other_conditons_met = true;
-            foreach ($df_hash_map[$step][$value] as $df) {
+            foreach ($df_hash_map[$this->current_cc][$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
                     // We already know that this condition is met because it has been calulated
                     if ($condition['answer_id'] !== $value) {
                         // We only check if the other conditions node has no condition
-                        if (in_array($condition['node_id'], $this->nodes[$step]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
+                        if (in_array($condition['node_id'], $this->nodes[$this->age_key][$this->current_cc]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
@@ -382,11 +382,14 @@ class Algorithm extends Component
 
     public function updatedChosenComplaintCategories($value)
     {
-        if (!array_key_exists($value, $this->nodes)) {
+        if (!array_key_exists($value, $this->nodes[$this->age_key])) {
             return;
         }
+
         $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
         $nodes_to_save = [];
+
+        $this->current_cc = reset($this->chosen_complaint_categories);
 
         // We only need to refresh background_calculation nodes
         foreach ($this->registration_nodes as $node) {
@@ -394,7 +397,7 @@ class Algorithm extends Component
                 $nodes_to_save[$node['id']] = $node;
         }
 
-        $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$value], $formula_hash_map);
+        $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
         if (!empty($nodes_to_save)) {
             foreach ($nodes_to_save as $node) {
                 $this->saveNode($node['id'], null, null, null);
@@ -453,11 +456,9 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $full_nodes = $cached_data['full_nodes'];
         $full_order_medical_history = $cached_data['full_order_medical_history'];
-        $step = reset($this->chosen_complaint_categories);
-
 
         if (isset($full_nodes[$next_node_id])) {
-            $this->nodes[$step][$next_node_id] = [
+            $this->nodes[$this->age_key][$this->current_cc][$next_node_id] = [
                 'id' => $full_nodes[$next_node_id]['id'],
                 'category' => $full_nodes[$next_node_id]['category'],
                 'display_format' => $full_nodes[$next_node_id]['display_format'],
@@ -477,7 +478,7 @@ class Algorithm extends Component
             $node_exists = false;
 
             foreach ($full_order_medical_history as $node_id) {
-                if (isset($this->nodes[$step][$node_id])) {
+                if (isset($this->nodes[$this->age_key][$this->current_cc][$node_id])) {
                     if (!$node_exists && $node_id === $next_node_id) {
                         $reordered_nodes[$next_node_id] = [
                             'id' => $full_nodes[$next_node_id]['id'],
@@ -496,19 +497,19 @@ class Algorithm extends Component
                         ];
                         $node_exists = true;
                     } else {
-                        $reordered_nodes[$node_id] = $this->nodes[$step][$node_id];
+                        $reordered_nodes[$node_id] = $this->nodes[$this->age_key][$this->current_cc][$node_id];
                     }
                 }
             }
 
-            // Merge nodes that were not in full_order_medical_history but are present in $this->nodes[$step]
-            foreach ($this->nodes[$step] as $node_id => $node) {
+            // Merge nodes that were not in full_order_medical_history but are present in $this->nodes[$this->current_cc]
+            foreach ($this->nodes[$this->age_key][$this->current_cc] as $node_id => $node) {
                 if (!isset($reordered_nodes[$node_id])) {
                     $reordered_nodes[$node_id] = $node;
                 }
             }
 
-            $this->nodes[$step] = $reordered_nodes;
+            $this->nodes[$this->age_key][$this->current_cc] = $reordered_nodes;
         }
     }
 
@@ -573,9 +574,8 @@ class Algorithm extends Component
     public function getNextNodeId($node_id)
     {
         $answers_hash_map = Cache::get($this->cache_key)['answers_hash_map'];
-        $step = reset($this->chosen_complaint_categories);
 
-        return $answers_hash_map[$step][$node_id] ?? null;
+        return $answers_hash_map[$this->current_cc][$node_id] ?? null;
     }
 
     public function goToStep(string $step): void

@@ -77,50 +77,52 @@
           {{-- @endif --}}
           @if ($current_cc === $cc)
             <div wire:key="{{ 'chosen-cc-' . $cc }}">
-              @dump($nodes_to_save)
-              @dump($nodes[$age_key][$cc])
-              @foreach ($nodes[$age_key][$cc] as $node)
-                <div wire:key="{{ 'nodes-' . $node['id'] }}">
-                  @if (in_array($node, $nodes[$cc]))
-                    @switch($node['display_format'])
-                      @case('RadioButton')
-                        <div>
-                          <livewire:components.inputs.radio wire:key="{{ $cc . $node['id'] }}" :node="$node" />
-                        </div>
-                      @break
+              @if (isset($nodes[$age_key][$cc]))
+                @dump($nodes_to_save)
+                @dump($nodes[$age_key][$cc])
+                @foreach ($nodes[$age_key][$cc] as $node)
+                  <div wire:key="{{ 'nodes-' . $node['id'] }}">
+                    @if (in_array($node, $nodes[$age_key][$cc]))
+                      @switch($node['display_format'])
+                        @case('RadioButton')
+                          <div>
+                            <livewire:components.inputs.radio wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          </div>
+                        @break
 
-                      @case('String')
-                        <div>
-                          <livewire:components.inputs.text wire:key="{{ $cc . $node['id'] }}" :node="$node" />
-                        </div>
-                      @break
+                        @case('String')
+                          <div>
+                            <livewire:components.inputs.text wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          </div>
+                        @break
 
-                      @case('DropDownList')
-                        <div>
-                          <livewire:components.inputs.select wire:key="{{ $cc . $node['id'] }}" :node="$node" />
-                        </div>
-                      @break
+                        @case('DropDownList')
+                          <div>
+                            <livewire:components.inputs.select wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          </div>
+                        @break
 
-                      @case('Input')
-                        <div>
-                          <livewire:components.inputs.numeric wire:key="{{ $cc . $node['id'] }}" :node="$node" />
-                        </div>
-                      @break
+                        @case('Input')
+                          <div>
+                            <livewire:components.inputs.numeric wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          </div>
+                        @break
 
-                      @case('Formula')
-                        <div>
-                          <livewire:components.inputs.text :value="$nodes_to_save[$node['id']]" wire:key="{{ $cc . $node['id'] }}"
-                            :node="$node" />
-                        </div>
-                        {{-- <p> {{ $node['label'] }}</p> --}}
-                        {{-- <p>{{ $node['formula'] }} => {{ $nodes_to_save[$node['id']] }} </p> --}}
-                      @break
+                        @case('Formula')
+                          <div>
+                            <livewire:components.inputs.text :value="$nodes_to_save[$node['id']]" wire:key="{{ $cc . $node['id'] }}"
+                              :node="$node" />
+                          </div>
+                          {{-- <p> {{ $node['label'] }}</p> --}}
+                          {{-- <p>{{ $node['formula'] }} => {{ $nodes_to_save[$node['id']] }} </p> --}}
+                        @break
 
-                      @default
-                    @endswitch
-                  @endif
-                </div>
-              @endforeach
+                        @default
+                      @endswitch
+                    @endif
+                  </div>
+                @endforeach
+              @endif
             </div>
             @if (!$loop->first)
               <button wire:click="goToPreviousCc()">Previous CC</button>
