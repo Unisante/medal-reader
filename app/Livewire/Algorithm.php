@@ -19,6 +19,7 @@ class Algorithm extends Component
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
+    public string $age_key;
     public array $registration_nodes;
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
@@ -26,7 +27,7 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
-    public string $date_of_birth = "1960-01-01";
+    public string $date_of_birth;
     public string $current_step = 'registration';
     public string $current_cc;
     public array $steps = [
@@ -71,7 +72,11 @@ class Algorithm extends Component
                 'full_order' => $json['medal_r_json']['config']['full_order'],
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
                 'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step']) + [42318 => "", 42323 => "", 42331 => ""],
-                'complaint_categories_steps' => $json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
+                'complaint_categories_steps' => [
+                    ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
+                    ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
+                ],
+                'birth_date_formulas' => $json['medal_r_json']['config']['birth_date_formulas'],
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -86,13 +91,20 @@ class Algorithm extends Component
                 return $node['category'] === 'complaint_category'
                     && $node['id'] !== $general_cc_id
                     && $node['id'] !== $yi_general_cc_id;
-            })->map(function ($node) {
+            })
+            ->map(function ($node) {
                 return [
                     'id' => $node['id'],
+                    'is_neonat' => $node['is_neonat'],
                     'label' => $node['label']['en'] ?? '',
                     'description' => $node['description']['en'] ?? '',
                 ];
-            })->values();
+            })
+            ->values()
+            ->groupBy(function ($node) {
+                return $node['is_neonat'] ? 'neonat' : 'older';
+            });
+
 
         $df_hash_map = [];
         foreach ($cached_data['final_diagnoses'] as $df) {
@@ -148,13 +160,15 @@ class Algorithm extends Component
                     if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
                         continue;
                     }
+
                     if ($instance_id === $gender_question_id) {
                         continue;
                     }
 
+                    $age_key = $cached_data['full_nodes'][$instance_id]['is_neonat'] ? 'neonat' : 'older';
 
                     if (empty($instance['conditions'])) {
-                        $this->nodes[$step][$instance_id] = [
+                        $this->nodes[$age_key][$step][$instance_id] = [
                             'id' => $cached_data['full_nodes'][$instance_id]['id'],
                             'category' => $cached_data['full_nodes'][$instance_id]['category'],
                             'display_format' => $cached_data['full_nodes'][$instance_id]['display_format'],
@@ -214,6 +228,7 @@ class Algorithm extends Component
         // dd($cached_data);
 
         // dd($cached_data['full_nodes']);
+        dump($cached_data['complaint_categories_steps']);
         dump($cached_data['answers_hash_map']);
         dump($cached_data['dependency_map']);
         dump($cached_data['formula_hash_map']);
@@ -291,7 +306,7 @@ class Algorithm extends Component
             }
         }
 
-        //if next node is DF, add it to df_to_display <3§
+        //if next node is DF, add it to df_to_display <3
         if (isset($df_hash_map[$step][$value])) {
             $other_conditons_met = true;
             foreach ($df_hash_map[$step][$value] as $df) {
@@ -348,6 +363,20 @@ class Algorithm extends Component
             foreach ($next_node_id as $node) {
                 $this->setNextNodeAndSort($node);
             }
+        }
+    }
+
+    public function updatedDateOfBirth($value)
+    {
+        if ($value === "") {
+            return;
+        }
+
+        $cached_data = Cache::get($this->cache_key);
+        $birth_date_formulas = $cached_data['birth_date_formulas'];
+
+        foreach ($birth_date_formulas as $node_id) {
+            $this->nodes_to_save[$node_id] = $this->handleFormula($node_id);
         }
     }
 
@@ -496,7 +525,13 @@ class Algorithm extends Component
             $interval = $today->diff($dob);
 
             if ($formula === "ToDay") {
-                return $interval->format('%a');
+                $days = $interval->format('%a');
+                //My eyes are burning....
+                //But no other way as the Age in days node id is not saved anywhere
+                if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
+                    $this->age_key = $days <= 59 ? 'neonat' : 'older';
+                }
+                return $days;
             } elseif ($formula === "ToMonth") {
                 return $interval->m + ($interval->y * 12);
             } elseif ($formula === "ToYear") {

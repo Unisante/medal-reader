@@ -40,7 +40,7 @@
           {{-- <livewire:components.step-renderer :nodes="$complaint_categories_nodes" /> --}}
           {{-- <livewire:components.step-renderer :steps="$registration_steps" :nodes="$nodes" />
         <livewire:components.step-renderer :steps="$medical_history_steps" :nodes="$nodes" /> --}}
-          @foreach ($complaint_categories_nodes as $node)
+          @foreach ($complaint_categories_nodes[$age_key] as $node)
             {{-- @if ($node->display_format === 'RadioButton') --}}
             {{-- @dump($node->category) --}}
             {{-- @if ($node->category === 'complaint_category') --}}
@@ -78,8 +78,8 @@
           @if ($current_cc === $cc)
             <div wire:key="{{ 'chosen-cc-' . $cc }}">
               @dump($nodes_to_save)
-              @dump($nodes[$cc])
-              @foreach ($nodes[$cc] as $node)
+              @dump($nodes[$age_key][$cc])
+              @foreach ($nodes[$age_key][$cc] as $node)
                 <div wire:key="{{ 'nodes-' . $node['id'] }}">
                   @if (in_array($node, $nodes[$cc]))
                     @switch($node['display_format'])
