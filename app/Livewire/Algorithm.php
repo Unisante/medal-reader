@@ -230,10 +230,10 @@ class Algorithm extends Component
 
             foreach ($diag['instances'] as $instance_id => $instance) {
 
-                if (!isset($dependency_map[$answer_id])) {
-                    $dependency_map[$answer_id] = [];
-                }
                 if ($instance_id === $node_id && $node_id !== $start_node_id) {
+                    if (!isset($dependency_map[$answer_id])) {
+                        $dependency_map[$answer_id] = [];
+                    }
                     $dependency_map[$answer_id][] = $instance_id;
                 }
 
@@ -242,6 +242,9 @@ class Algorithm extends Component
                 foreach ($instance['conditions'] as $condition) {
                     if ($condition['node_id'] === $node_id) {
 
+                        if (!isset($dependency_map[$answer_id])) {
+                            $dependency_map[$answer_id] = [];
+                        }
                         if (!in_array($instance_id, $dependency_map[$answer_id])) {
                             $dependency_map[$answer_id][] = $instance_id;
                         }
@@ -357,7 +360,7 @@ class Algorithm extends Component
                     //todo when multiple managements sets what to do ?
                     $management_key = key($final_diagnoses[$df]['managements']);
 
-                    // Because sometime df have no managements
+                    // Because sometime df has no managements
                     if (isset($managements[$management_key]['id'])) {
                         if (!array_key_exists($managements[$management_key]['id'], $this->managements_to_display)) {
                             $this->managements_to_display[$management_key] = [

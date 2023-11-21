@@ -9,8 +9,8 @@
       <input class="form-control" wire:model.live="date_of_birth" type="date" pattern="\d{4}-\d{2}-\d{2}" id="birth_date"
         name="birth_date">
       @foreach ($registration_nodes as $node)
-        @if ($node['id'] === 42321)
-          <div :key="{{ 'registration-' . $node['id'] }}" class="mb-2">
+        <div wire:key="{{ 'registration-' . $node['id'] }}" class="mb-2">
+          @if ($node['id'] === 42321)
             <label class="form-label" for="{{ $node['id'] }}">
               {{ $node['label'] }}
             </label>
@@ -20,9 +20,7 @@
                 <option value="{{ $answer['id'] }}">{{ $answer['label'] }}</option>
               @endforeach
             </select>
-          </div>
-        @else
-          <div :key="{{ 'registration-' . $node['id'] }}" class="mb-2">
+          @else
             <label class="form-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
             <input class="form-control @error('value') is-invalid @enderror" type="text"
               wire:model.live="nodes_to_save.{{ $node['id'] }}" name="{{ $node['id'] }}" id="{{ $node['id'] }}"
@@ -30,8 +28,8 @@
             @error('value')
               <div class="invalid-feedback" role="alert">{{ $message }}</div>
             @enderror
-          </div>
-        @endif
+          @endif
+        </div>
       @endforeach
       @if ($currentStep === 'complaint_category')
         <div class="mb-3">
@@ -43,7 +41,7 @@
             {{-- @dump($node->category) --}}
             {{-- @if ($node->category === 'complaint_category') --}}
             {{-- <livewire:components.inputs.toggle :key="$step" :node="$node" /> --}}
-            <div class="m-0" :key="{{ 'cc-' . $node['id'] }}">
+            <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
               <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
               <label class="custom-control teleport-switch">
                 <span class="teleport-switch-control-description">No</span>
@@ -73,7 +71,7 @@
         {{-- <livewire:components.step-renderer :key="$cc" :step="$cc" :nodes="$nodes[$cc]" /> --}}
         {{-- <livewire:components.step-renderer :step="$cc" /> --}}
         {{-- @endif --}}
-        <div :key="$cc">
+        <div wire:key="{{ 'chosen-cc-' . $cc }}">
           @dump($nodes_to_save)
           @dump($nodes[$cc])
           @foreach ($nodes[$cc] as $node)
@@ -140,7 +138,7 @@
       <div class="container">
         CCs chosen :
         @foreach ($chosen_complaint_categories as $cc)
-          <div :key="{{ 'edit-cc-' . $cc }}">
+          <div wire:key="{{ 'edit-cc-' . $cc }}">
             <p class="mb-0">{{ $cc }}</p>
           </div>
         @endforeach
