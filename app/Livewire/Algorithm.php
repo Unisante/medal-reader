@@ -68,7 +68,7 @@ class Algorithm extends Component
                 'instances' => $json['medal_r_json']['diagram']['instances'],
                 'diagnoses' => $json['medal_r_json']['diagnoses'],
                 'final_diagnoses' => $json['medal_r_json']['final_diagnoses'],
-                'managements' => $json['medal_r_json']['health_cares'],
+                'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
                 'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step']) + [42318 => "", 42323 => "", 42331 => ""],
@@ -266,7 +266,7 @@ class Algorithm extends Component
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
-        $managements = $cached_data['managements'];
+        $health_cares = $cached_data['health_cares'];
 
         // Modification behavior
         if ($old_value) {
@@ -340,13 +340,13 @@ class Algorithm extends Component
                     $management_key = key($final_diagnoses[$df]['managements']);
 
                     // Because sometime df has no managements
-                    if (isset($managements[$management_key]['id'])) {
-                        if (!array_key_exists($managements[$management_key]['id'], $this->managements_to_display)) {
+                    if (isset($health_cares[$management_key]['id'])) {
+                        if (!array_key_exists($health_cares[$management_key]['id'], $this->managements_to_display)) {
                             $this->managements_to_display[$management_key] = [
-                                'id' => $managements[$management_key]['id'],
-                                'label' => $managements[$management_key]['label']['en'] ?? '',
-                                'description' => $managements[$management_key]['description']['en'] ?? '',
-                                'level_of_urgency' => $managements[$management_key]['level_of_urgency'],
+                                'id' => $health_cares[$management_key]['id'],
+                                'label' => $health_cares[$management_key]['label']['en'] ?? '',
+                                'description' => $health_cares[$management_key]['description']['en'] ?? '',
+                                'level_of_urgency' => $health_cares[$management_key]['level_of_urgency'],
                             ];
                         }
                     }
