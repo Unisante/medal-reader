@@ -19,7 +19,7 @@ class Algorithm extends Component
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
-    public string $age_key;
+    public string $age_key = 'older';
     public array $registration_nodes;
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
@@ -27,7 +27,7 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
-    public string $date_of_birth = "1960-01-01";
+    public string $date_of_birth = '1960-01-01';
     public string $current_step = 'registration';
     public string $current_cc;
     public array $steps = [
