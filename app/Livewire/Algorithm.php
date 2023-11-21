@@ -28,8 +28,8 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $nodes_to_save;
     public array $nodes;
-    public string $date_of_birth = '1960-01-01';
     public string $current_step = 'registration';
+    public string $date_of_birth;
     public string $current_cc;
     public array $steps = [
         'registration',
@@ -74,7 +74,8 @@ class Algorithm extends Component
                 'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
-                'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step']) + [42318 => "", 42323 => "", 42331 => "", 35385 => ""],
+                'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step'])
+                    + array_flip($json['medal_r_json']['config']['full_order']['basic_measurements_step']),
                 'complaint_categories_steps' => [
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
@@ -85,6 +86,7 @@ class Algorithm extends Component
                 'df_hash_map' => [],
                 'drugs_hash_map' => [],
                 'dependency_map' => [],
+                'nodes_to_update' => [],
             ], $this->cache_expiration_time);
         }
 
@@ -128,10 +130,12 @@ class Algorithm extends Component
 
 
         $formula_hash_map = [];
+        $nodes_to_update = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map, &$nodes_to_update) {
                 foreach ($value as $node) {
+                    //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
                         continue;
                     }
@@ -147,6 +151,8 @@ class Algorithm extends Component
                                 return [
                                     'id' => $answer['id'],
                                     'label' => $answer['label']['en'] ?? '',
+                                    'value' => $answer['value'] ?? '',
+                                    'operator' => $answer['operator'] ?? '',
                                 ];
                             }, $node['answers'] ?? []),
                         ];
@@ -156,13 +162,13 @@ class Algorithm extends Component
                     }
                     if ($node['category'] === "background_calculation" || $node['display_format'] === "Formula") {
                         $formula_hash_map[$node['id']] = $node['formula'];
+                        $this->handleNodesToUpdate($node, $nodes_to_update);
                     }
                 }
             });
 
         $answers_hash_map = [];
         $dependency_map = [];
-
         foreach ($cached_data['complaint_categories_steps'] as $step) {
             $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step) {
                 return $diag['complaint_category'] === $step;
@@ -216,6 +222,7 @@ class Algorithm extends Component
                 ...$cached_data,
                 'answers_hash_map' => $answers_hash_map,
                 'formula_hash_map' => $formula_hash_map,
+                'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
                 'dependency_map' => $dependency_map,
@@ -245,11 +252,12 @@ class Algorithm extends Component
         // dd($cached_data);
 
         // dd($cached_data['full_nodes']);
-        dump($this->nodes);
-        dump($cached_data['drugs_hash_map']);
+        // dump($this->nodes_to_save);
+        // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['df_hash_map']);
+        dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
         // dump($this->formula_hash_map);
@@ -262,6 +270,8 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
+
+        $this->current_cc = $this->chosen_complaint_categories ? reset($this->chosen_complaint_categories) : "";
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
@@ -277,7 +287,7 @@ class Algorithm extends Component
             }
         }
 
-        return $this->displayNextNode($answer_id, $old_answer_id);
+        return $this->current_cc !== "" ? $this->displayNextNode($answer_id, $old_answer_id) : null;
     }
 
     #[On('nodeUpdated')]
@@ -411,45 +421,21 @@ class Algorithm extends Component
         }
     }
 
-    public function updatedDateOfBirth($value)
+    #[On('dobUpdated')]
+    public function updateLinkedNodesOfDob($value)
     {
         if ($value === "") {
             return;
         }
 
+        $this->date_of_birth = $value;
+
         $cached_data = Cache::get($this->cache_key);
         $birth_date_formulas = $cached_data['birth_date_formulas'];
 
         foreach ($birth_date_formulas as $node_id) {
-            $this->nodes_to_save[$node_id] = $this->handleFormula($node_id);
-        }
-    }
-
-    public function updatedChosenComplaintCategories($value)
-    {
-        if (!array_key_exists($value, $this->nodes[$this->age_key])) {
-            return;
-        }
-
-        $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
-        $nodes_to_save = [];
-
-        $this->current_cc = reset($this->chosen_complaint_categories);
-
-        // We only need to refresh background_calculation nodes
-        foreach ($this->registration_nodes as $node) {
-            if ($node['category'] === 'background_calculation' || $node['display_format'] === 'Formula')
-                $nodes_to_save[$node['id']] = $node;
-        }
-
-        // todo need to calcule all bc after registration step
-        // $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
-        $nodes_to_save = $nodes_to_save + $formula_hash_map;
-
-        if (!empty($nodes_to_save)) {
-            foreach ($nodes_to_save as $node_id => $node) {
-                $this->saveNode($node_id, null, null, null);
-            }
+            $this->nodes_to_save[$node_id] = null;
+            $this->saveNode($node_id, null, null, null);
         }
     }
 
@@ -561,6 +547,17 @@ class Algorithm extends Component
         }
     }
 
+    public function handleNodesToUpdate($node, &$nodes_to_update)
+    {
+        $formula = $node['formula'];
+
+        $nodes_to_update[$node['id']] = preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($node, &$nodes_to_update) {
+            return $nodes_to_update[$matches[1]][] = $node['id'];
+        }, $formula);
+
+        return $nodes_to_update;
+    }
+
     public function handleFormula($node_id)
     {
         $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
@@ -628,6 +625,28 @@ class Algorithm extends Component
 
     public function goToStep(string $step): void
     {
+        if ($step === 'complaint_categories') {
+            // $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
+            // $nodes_to_save = [];
+
+            // $this->current_cc = reset($this->chosen_complaint_categories);
+
+            // // We only need to refresh background_calculation nodes
+            // foreach ($this->registration_nodes as $node) {
+            //     if ($node['category'] === 'background_calculation' || $node['display_format'] === 'Formula')
+            //         $nodes_to_save[$node['id']] = $node;
+            // }
+
+            // // todo need to calcule all linked bc after registration step
+            // $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
+
+            // if (!empty($nodes_to_save)) {
+            //     foreach ($nodes_to_save as $node_id => $node) {
+            //         $this->saveNode($node_id, null, null, null);
+            //     }
+            // }
+        }
+
         if ($step === 'medical_history') {
             $cached_data = Cache::get($this->cache_key);
             $cc_order = $cached_data['complaint_categories_steps'];

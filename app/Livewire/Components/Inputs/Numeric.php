@@ -45,7 +45,7 @@ class Numeric extends Component
                 return;
             }
         }
-        $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
+        // $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
     }
     public function render()
     {

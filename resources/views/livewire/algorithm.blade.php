@@ -6,33 +6,7 @@
   <div class="row g-3">
     <div class="col-8">
       @if ($current_step === 'registration')
-        {{-- add first and last name inputs --}}
-        <label class="form-label" for="birth_date">Date of birth</label>
-        <input class="form-control" wire:model.live="date_of_birth" type="date" pattern="\d{4}-\d{2}-\d{2}"
-          id="birth_date" name="birth_date">
-        @foreach ($registration_nodes as $node)
-          <div wire:key="{{ 'registration-' . $node['id'] }}" class="mb-2">
-            @if ($node['id'] === 42321)
-              <label class="form-label" for="{{ $node['id'] }}">
-                {{ $node['label'] }}
-              </label>
-              <select wire:model.live="nodes_to_save.{{ $node['id'] }}" id="{{ $node['id'] }}" class="form-select">
-                <option selected>Select an answer</option>
-                @foreach ($node['answers'] as $answer)
-                  <option value="{{ $answer['id'] }}">{{ $answer['label'] }}</option>
-                @endforeach
-              </select>
-            @else
-              <label class="form-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
-              <input class="form-control @error('value') is-invalid @enderror" type="text"
-                wire:model.live="nodes_to_save.{{ $node['id'] }}" name="{{ $node['id'] }}"
-                id="{{ $node['id'] }}" @if ($node['display_format'] === 'Formula') disabled @endif>
-              @error('value')
-                <div class="invalid-feedback" role="alert">{{ $message }}</div>
-              @enderror
-            @endif
-          </div>
-        @endforeach
+        <livewire:components.step.registration wire:key="registration" :nodes="$registration_nodes" />
         <button wire:click="goToStep('complaint_categories')">complaint_categories</button>
       @endif
       @if ($current_step === 'complaint_categories')
@@ -139,30 +113,32 @@
 
       @if ($current_step === 'health_care_questions')
         @foreach ($df_to_display as $df)
-            <div class="m-0" wire:key="{{ 'df-' . $df['id'] }}">
-                <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+          <div class="m-0" wire:key="{{ 'df-' . $df['id'] }}">
+            <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+            <label class="custom-control teleport-switch">
+              <span class="teleport-switch-control-description">Disagree</span>
+              <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
+                id="{{ $df['id'] }}" value="{{ $df['id'] }}"
+                wire:model.live="agreed_diagnoses.{{ $df['id'] }}">
+              <span class="teleport-switch-control-indicator"></span>
+              <span class="teleport-switch-control-description">Agree</span>
+            </label>
+          </div>
+          @if (isset($agreed_diagnoses[$df['id']]))
+            @foreach ($df['drugs'] as $drug)
+              <div class="m-0" wire:key="{{ 'drug-' . $drug['id'] }}">
+                <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
                 <label class="custom-control teleport-switch">
-                <span class="teleport-switch-control-description">Disagree</span>
-                <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                    id="{{ $df['id'] }}" value="{{ $df['id'] }}" wire:model.live="agreed_diagnoses.{{ $df['id'] }}">
-                <span class="teleport-switch-control-indicator"></span>
-                <span class="teleport-switch-control-description">Agree</span>
+                  <span class="teleport-switch-control-description">Disagree</span>
+                  <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
+                    id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
+                    wire:model.live="agreed_drugs.{{ $drug['id'] }}">
+                  <span class="teleport-switch-control-indicator"></span>
+                  <span class="teleport-switch-control-description">Agree</span>
                 </label>
-            </div>
-            @if (isset($agreed_diagnoses[$df['id']]))
-                @foreach ($df['drugs'] as $drug)
-                    <div class="m-0" wire:key="{{ 'drug-' . $drug['id'] }}">
-                        <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
-                        <label class="custom-control teleport-switch">
-                        <span class="teleport-switch-control-description">Disagree</span>
-                        <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
-                            id="{{ $drug['id'] }}" value="{{ $drug['id'] }}" wire:model.live="agreed_drugs.{{ $drug['id'] }}">
-                        <span class="teleport-switch-control-indicator"></span>
-                        <span class="teleport-switch-control-description">Agree</span>
-                        </label>
-                    </div>
-                @endforeach
-            @endif
+              </div>
+            @endforeach
+          @endif
         @endforeach
         {{-- @foreach ($df_to_display as $df)
           <div wire:key="{{ 'df-' . $df['id'] }}">
