@@ -259,7 +259,7 @@ class Algorithm extends Component
         dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
-        // dump($cached_data['nodes_to_update']);
+        dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
         // dump($this->formula_hash_map);
@@ -272,6 +272,7 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
+        $nodes_to_update = $cached_data['nodes_to_update'];
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
@@ -279,11 +280,19 @@ class Algorithm extends Component
             }
             $this->nodes_to_save[$node_id] = intval($value);
 
+
             // If answer will set a drug, we add it to the drugs to display
             if (array_key_exists($value, $drugs_hash_map)) {
                 // todo remove that reset and put everything in the same first array
                 // maybe with [...$this->drugs_to_display]
                 $this->drugs_to_display[] = reset($drugs_hash_map[$value]);
+            }
+
+            // If node is linked to bc then we calculate them directly
+            if (array_key_exists($node_id, $nodes_to_update)) {
+                foreach ($nodes_to_update[$node_id] as $node_id) {
+                    $this->saveNode($node_id, null, null, null);
+                }
             }
         }
 
@@ -322,8 +331,6 @@ class Algorithm extends Component
                     }
                 }
             }
-
-            // Need to recalulate bc
         }
 
         $next_node_id = $this->getNextNodeId($value);
@@ -557,8 +564,12 @@ class Algorithm extends Component
     {
         $formula = $node['formula'];
 
-        $nodes_to_update[$node['id']] = preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($node, &$nodes_to_update) {
-            return $nodes_to_update[$matches[1]][] = $node['id'];
+        preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($node, &$nodes_to_update) {
+            if (isset($nodes_to_update[$matches[1]])) {
+                $nodes_to_update[$matches[1]][] = $node['id'];
+            } else {
+                $nodes_to_update[$matches[1]] = [$node['id']];
+            }
         }, $formula);
 
         return $nodes_to_update;

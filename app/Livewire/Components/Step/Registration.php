@@ -21,12 +21,6 @@ class Registration extends Component
         $this->dispatch('dobUpdated', $value, $this->date_of_birth);
     }
 
-    public function updatingAnsweredNodes($value, $node_id)
-    {
-        $this->dispatch('nodeToSave', $node_id, $value, $this->answered_nodes[$node_id] ?? null, $this->old_answered_nodes[$node_id] ?? null);
-        $this->old_answered_nodes[$node_id] = $value;
-    }
-
     public function render()
     {
         return view('livewire.components.step.registration');

@@ -5,7 +5,6 @@
     name="birth_date">
   @foreach ($nodes as $node)
     <div wire:key="{{ 'registration-' . $node['id'] }}" class="mb-2">
-      {{-- todo make that dynamic upon type of nodes --}}
       @switch($node['display_format'])
         @case('RadioButton')
           <div>
