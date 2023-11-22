@@ -14,6 +14,18 @@
         {{-- <livewire:components.step.vitals wire:key="registration" :nodes="$current_nodes" /> --}}
         {{-- <livewire:components.step.complaint-category wire:key="complaint_categories" :age_key="$age_key"
           :nodes="$complaint_categories_nodes" /> --}}
+        @foreach ($current_nodes['first_look_nodes_id'] ?? [] as $node)
+          <div class="m-0" wire:key="{{ 'first-look-' . $node['id'] }}">
+            <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
+            <label class="custom-control teleport-switch">
+              <span class="teleport-switch-control-description">No</span>
+              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node['id'] }}"
+                id="{{ $node['id'] }}" value="{{ $node['id'] }}" wire:model.live="chosen_complaint_categories">
+              <span class="teleport-switch-control-indicator"></span>
+              <span class="teleport-switch-control-description">Yes</span>
+            </label>
+          </div>
+        @endforeach
         @foreach ($current_nodes['complaint_categories_nodes_id'][$age_key] as $node)
           <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
             <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
@@ -26,12 +38,52 @@
             </label>
           </div>
         @endforeach
+        @foreach ($current_nodes['basic_measurements_nodes_id'] ?? [] as $node)
+          <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
+            @switch($node['display_format'])
+              @case('RadioButton')
+                <div>
+                  <livewire:components.inputs.radio wire:key="{{ 'basic-measurement-' . $node['id'] }}"
+                    :node="$node" />
+                </div>
+              @break
+
+              @case('String')
+                <div>
+                  <livewire:components.inputs.text wire:key="{{ 'basic-measurement-' . $node['id'] }}" :node="$node" />
+                </div>
+              @break
+
+              @case('DropDownList')
+                <div>
+                  <livewire:components.inputs.select wire:key="{{ 'basic-measurement-' . $node['id'] }}"
+                    :node="$node" />
+                </div>
+              @break
+
+              @case('Input')
+                <div>
+                  <livewire:components.inputs.numeric wire:key="{{ 'basic-measurement-' . $node['id'] }}"
+                    :node="$node" />
+                </div>
+              @break
+
+              @case('Formula')
+                <div>
+                  <livewire:components.inputs.text :value="$nodes_to_save[$node['id']]" wire:key="{{ $cc . $node['id'] }}"
+                    :node="$node" />
+                </div>
+              @break
+
+              @default
+            @endswitch
+          </div>
+        @endforeach
         <button wire:click="goToStep('consultation')">consultation</button>
         {{-- <button wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
       @endif
       @if ($current_step === 'consultation')
         @foreach ($chosen_complaint_categories as $cc)
-          {{-- @dump($nodes[$cc]) --}}
           {{-- @if ($this->currentStep === $cc) --}}
           {{-- <livewire:components.step-renderer :key="$cc" :step="$cc" :nodes="$nodes[$cc]" /> --}}
           {{-- <livewire:components.step-renderer :step="$cc" /> --}}
@@ -39,6 +91,7 @@
           @if ($current_cc === $cc)
             <div wire:key="{{ 'chosen-cc-' . $cc }}">
               @if (isset($current_nodes[$cc]))
+                @dump($current_nodes[$cc])
                 @foreach ($current_nodes[$cc] as $node)
                   <div wire:key="{{ 'nodes-' . $node['id'] }}">
                     @switch($node['display_format'])
@@ -71,8 +124,6 @@
                           <livewire:components.inputs.text :value="$nodes_to_save[$node['id']]" wire:key="{{ $cc . $node['id'] }}"
                             :node="$node" />
                         </div>
-                        {{-- <p> {{ $node['label'] }}</p> --}}
-                        {{-- <p>{{ $node['formula'] }} => {{ $nodes_to_save[$node['id']] }} </p> --}}
                       @break
 
                       @default

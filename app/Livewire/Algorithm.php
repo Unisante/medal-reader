@@ -19,7 +19,10 @@ class Algorithm extends Component
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
+    //todo remove definition when in prod
     public string $age_key = 'older';
+    public string $current_step = 'registration';
+    public string $date_of_birth = '1960-01-01';
     public array $registration_nodes;
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
@@ -29,8 +32,6 @@ class Algorithm extends Component
     public array $nodes_to_save;
     public array $current_nodes;
     public array $nodes;
-    public string $current_step = 'registration';
-    public string $date_of_birth = '1960-01-01';
     public string $current_cc;
 
     public array $steps = [
@@ -233,6 +234,7 @@ class Algorithm extends Component
                     $age_key = $cached_data['full_nodes'][$instance_id]['is_neonat'] ? 'neonat' : 'older';
 
                     if (empty($instance['conditions'])) {
+                        //todo remove the description for background calculation as it's taking space for nothing
                         $consultation_nodes[$age_key][$step][$instance_id] = [
                             'id' => $cached_data['full_nodes'][$instance_id]['id'],
                             'category' => $cached_data['full_nodes'][$instance_id]['category'],
@@ -297,11 +299,15 @@ class Algorithm extends Component
             $cached_data = Cache::get($this->cache_key);
         }
 
+        $this->current_nodes = $registration_nodes;
+
+        //todo remove these when in prod
         $this->current_cc = $this->age_key === "older"
             ? $cached_data['general_cc_id']
             : $cached_data['yi_general_cc_id'];
 
-        $this->current_nodes = $registration_nodes;
+
+        $this->chosen_complaint_categories[] = "{$cached_data['general_cc_id']}";
 
 
         // dd($this->registration_nodes_id);
@@ -369,7 +375,7 @@ class Algorithm extends Component
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
-                    unset($this->nodes[$this->age_key][$this->current_cc][$key]);
+                    unset($this->current_nodes[$this->current_cc][$key]);
                 }
             }
 
@@ -407,7 +413,7 @@ class Algorithm extends Component
                     // We already know that this condition is met because it has been calulated
                     if ($condition['answer_id'] !== $value) {
                         // We only check if the other conditions node has no condition
-                        if (in_array($condition['node_id'], $this->nodes[$this->age_key][$this->current_cc])) {
+                        if (in_array($condition['node_id'], $this->current_nodes[$this->current_cc])) {
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
@@ -558,7 +564,8 @@ class Algorithm extends Component
         $full_order_medical_history = $cached_data['full_order_medical_history'];
 
         if (isset($full_nodes[$next_node_id])) {
-            $this->nodes[$this->age_key][$this->current_cc][$next_node_id] = [
+
+            $this->current_nodes[$this->current_cc][$next_node_id] = [
                 'id' => $full_nodes[$next_node_id]['id'],
                 'category' => $full_nodes[$next_node_id]['category'],
                 'display_format' => $full_nodes[$next_node_id]['display_format'],
@@ -578,7 +585,7 @@ class Algorithm extends Component
             $node_exists = false;
 
             foreach ($full_order_medical_history as $node_id) {
-                if (isset($this->nodes[$this->age_key][$this->current_cc][$node_id])) {
+                if (isset($this->current_nodes[$this->current_cc][$node_id])) {
                     if (!$node_exists && $node_id === $next_node_id) {
                         $reordered_nodes[$next_node_id] = [
                             'id' => $full_nodes[$next_node_id]['id'],
@@ -597,19 +604,19 @@ class Algorithm extends Component
                         ];
                         $node_exists = true;
                     } else {
-                        $reordered_nodes[$node_id] = $this->nodes[$this->age_key][$this->current_cc][$node_id];
+                        $reordered_nodes[$node_id] = $this->current_nodes[$this->current_cc][$node_id];
                     }
                 }
             }
 
-            // Merge nodes that were not in full_order_medical_history but are present in $this->nodes[$this->current_cc]
-            foreach ($this->nodes[$this->age_key][$this->current_cc] as $node_id => $node) {
+            // Merge nodes that were not in full_order_medical_history but are present in $this->current_nodes[$this->current_cc][$this->current_cc]
+            foreach ($this->current_nodes[$this->current_cc] as $node_id => $node) {
                 if (!isset($reordered_nodes[$node_id])) {
                     $reordered_nodes[$node_id] = $node;
                 }
             }
 
-            $this->nodes[$this->age_key][$this->current_cc] = $reordered_nodes;
+            $this->current_nodes[$this->current_cc] = $reordered_nodes;
         }
     }
 
@@ -760,50 +767,8 @@ class Algorithm extends Component
         $this->current_cc = $this->chosen_complaint_categories[$previous_index];
     }
 
-    public function submitCC($chosen_cc)
-    {
-        $this->currentStep = $chosen_cc;
-
-        // return view('livewire.components.step-renderer', [
-        //     'nodes' => $this->nodes[$chosen_cc],
-        // ]);
-    }
-
     public function render()
     {
         return view('livewire.algorithm');
     }
-
-    //       switch (currentNode.display_format) {
-    //     case Config.DISPLAY_FORMAT.radioButton:
-    //       if (currentNode.category === Config.CATEGORIES.complaintCategory) {
-    //         return <Toggle questionId={questionId} />
-    //       }
-    //       return <Boolean questionId={questionId} />
-    //     case Config.DISPLAY_FORMAT.input:
-    //       return <Numeric questionId={questionId} />
-    //     case Config.DISPLAY_FORMAT.string:
-    //       return <String questionId={questionId} />
-    //     case Config.DISPLAY_FORMAT.autocomplete:
-    //       return <Autocomplete questionId={questionId} />
-    //     case Config.DISPLAY_FORMAT.dropDownList:
-    //       return <Select questionId={questionId} />
-    //     case Config.DISPLAY_FORMAT.reference:
-    //     case Config.DISPLAY_FORMAT.formula:
-    //       return <String questionId={questionId} editable={false} />
-    //     case Config.DISPLAY_FORMAT.date:
-    //       return <DatePicker questionId={questionId} />
-    //     default:
-    //       return <Text>{translate(currentNode.label)}</Text>
-    //   }
-    //     DISPLAY_FORMAT: {
-    //      radioButton: 'RadioButton',
-    //      input: 'Input',
-    //      dropDownList: 'DropDownList',
-    //      formula: 'Formula',
-    //      reference: 'Reference', // reference table
-    //      string: 'String',
-    //      autocomplete: 'Autocomplete',
-    //      date: 'Date',
-    //     },
 }
