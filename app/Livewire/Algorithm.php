@@ -105,7 +105,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                // 'villages' => array_merge(...$json['medal_r_json']['village_json']),
+                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []),
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -167,7 +167,7 @@ class Algorithm extends Component
                     $this->nodes_to_save[$node_id] = "";
                     $node = $cached_data['full_nodes'][$node_id];
                     $age_key = $node['is_neonat'] ? 'neonat' : 'older';
-                    $first_look_assessment_nodes[$age_key][$substep_name][$node_id] = [
+                    $node_to_add = [
                         'id' => $node_id,
                         'display_format' => $node['display_format'],
                         'category' => $node['category'],
@@ -182,6 +182,11 @@ class Algorithm extends Component
                             ];
                         }, $node['answers'] ?? []),
                     ];
+                    if ($node['category'] === "basic_measurement" || $node['category'] === "unique_triage_question" || $node['category'] === "background_calculation") {
+                        $first_look_assessment_nodes[$substep_name][$node_id] = $node_to_add;
+                    } else {
+                        $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = $node_to_add;
+                    }
                 }
             }
         }
@@ -646,9 +651,13 @@ class Algorithm extends Component
                     if ($days <= 59) {
                         $this->age_key = 'neonat';
                         $this->current_cc = $yi_general_cc_id;
+                        //todo in case of change need to remove the other
+                        // Ouch btw having to set it as a string
+                        $this->chosen_complaint_categories[] = "$yi_general_cc_id";
                     } else {
                         $this->age_key = 'older';
                         $this->current_cc = $general_cc_id;
+                        $this->chosen_complaint_categories[] = "$general_cc_id";
                     }
                 }
                 return $days;
@@ -702,7 +711,7 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
 
-        if ($step === 'medical_history') {
+        if ($step === 'consultation') {
             $cached_data = Cache::get($this->cache_key);
             $cc_order = $cached_data['complaint_categories_steps'];
 
@@ -716,10 +725,10 @@ class Algorithm extends Component
         }
 
         // For registration step we do not know the $age_key yet
-        if ($step !== "registration") {
-            $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
-        } else {
+        if ($step !== "consultation") {
             $this->current_nodes = $cached_data['nodes_per_step'][$step];
+        } else {
+            $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
         }
 
         $this->current_step = $step;

@@ -16,7 +16,7 @@ class Registration extends Component
     public function mount($nodes, $cache_key)
     {
         $this->nodes = $nodes;
-        // $this->villages = Cache::get($cache_key)['villages'];
+        $this->villages = Cache::get($cache_key)['villages'];
     }
 
     public function updatingDateOfBirth($value)
