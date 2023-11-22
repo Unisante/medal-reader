@@ -6,14 +6,15 @@
   <div class="row g-3">
     <div class="col-8">
       @if ($current_step === 'registration')
-        <livewire:components.step.registration wire:key="registration" :nodes="$registration_nodes" />
-
-        <button wire:click="goToStep('complaint_categories')">complaint_categories</button>
+        <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" />
+        <button wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
       @endif
-      @if ($current_step === 'complaint_categories')
+      @if ($current_step === 'first_look_assessment')
+        {{-- todo add vitals --}}
+        {{-- <livewire:components.step.vitals wire:key="registration" :nodes="$current_nodes" /> --}}
         {{-- <livewire:components.step.complaint-category wire:key="complaint_categories" :age_key="$age_key"
           :nodes="$complaint_categories_nodes" /> --}}
-        @foreach ($complaint_categories_nodes[$age_key] as $node)
+        @foreach ($current_nodes as $node)
           <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
             <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
             <label class="custom-control teleport-switch">
@@ -25,10 +26,10 @@
             </label>
           </div>
         @endforeach
-        <button wire:click="goToStep('medical_history')">medical_history</button>
+        <button wire:click="goToStep('consultation')">consultation</button>
         {{-- <button wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
       @endif
-      @if ($current_step === 'medical_history')
+      @if ($current_step === 'consultation')
         @foreach ($chosen_complaint_categories as $cc)
           {{-- @dump($nodes[$cc]) --}}
           {{-- @if ($this->currentStep === $cc) --}}
@@ -91,13 +92,15 @@
               <button wire:click="goToNextCc()">Next CC</button>
             @endif
             @if ($loop->last)
-              <button wire:click="goToStep('health_care_questions')">health_care_questions</button>
+              <button wire:click="goToStep('tests')">tests</button>
             @endif
           @endif
         @endforeach
       @endif
 
-      @if ($current_step === 'health_care_questions')
+      @if ($current_step === 'tests')
+      @endif
+      @if ($current_step === 'diagnoses')
         @foreach ($df_to_display as $df)
           <div class="m-0" wire:key="{{ 'df-' . $df['id'] }}">
             <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>

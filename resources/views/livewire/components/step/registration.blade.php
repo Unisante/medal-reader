@@ -24,6 +24,18 @@
           </div>
         @break
 
+        @case('String')
+          <div>
+            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+          </div>
+        @break
+
+        @case('Autocomplete')
+          <div>
+            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+          </div>
+        @break
+
         @default
       @endswitch
     </div>

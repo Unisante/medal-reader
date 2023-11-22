@@ -27,6 +27,7 @@ class Algorithm extends Component
     public array $drugs_to_display;
     public array $managements_to_display;
     public array $nodes_to_save;
+    public array $current_nodes;
     public array $nodes;
     public string $current_step = 'registration';
     public string $date_of_birth = '1960-01-01';
@@ -34,12 +35,9 @@ class Algorithm extends Component
     public array $steps = [
         'registration',
         'first_look_assessment',
-        'complaint_categories',
-        'basic_measurements',
-        'medical_history',
-        'physical_exam',
-        'health_care_questions',
-        'referral',
+        'consultation',
+        'tests',
+        'diagnoses',
     ];
 
     public array $agreed_diagnoses;
@@ -72,8 +70,20 @@ class Algorithm extends Component
                 'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
-                'registration_steps' => array_flip($json['medal_r_json']['config']['full_order']['registration_step'])
-                    + array_flip($json['medal_r_json']['config']['full_order']['basic_measurements_step']),
+                'registration_nodes_id' => [
+                    ...$json['medal_r_json']['config']['full_order']['registration_step'],
+                    ...$json['medal_r_json']['config']['full_order']['basic_measurements_step'],
+                    ...$json['medal_r_json']['patient_level_questions'],
+                ],
+                'first_look_assessment_step_nodes_id' => [
+                    'first_look_nodes_id' => $json['medal_r_json']['config']['full_order']['first_look_assessment_step'],
+                    'complaint_categories_nodes_id' => [
+                        ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
+                        ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
+                    ],
+                    'basic_measurements_nodes_id' => $json['medal_r_json']['config']['full_order']['basic_measurements_step'],
+                ],
+
                 'complaint_categories_steps' => [
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
@@ -88,27 +98,11 @@ class Algorithm extends Component
                 'drugs_hash_map' => [],
                 'dependency_map' => [],
                 'nodes_to_update' => [],
+                'nodes_per_step' => [],
             ], $this->cache_expiration_time);
         }
 
         $cached_data = Cache::get($this->cache_key);
-
-        $this->complaint_categories_nodes = collect($cached_data['full_nodes'])
-            ->filter(function ($node) use ($cached_data) {
-                return $node['category'] === 'complaint_category';
-            })
-            ->map(function ($node) {
-                return [
-                    'id' => $node['id'],
-                    'is_neonat' => $node['is_neonat'],
-                    'label' => $node['label']['en'] ?? '',
-                    'description' => $node['description']['en'] ?? '',
-                ];
-            })
-            ->values()
-            ->groupBy(function ($node) {
-                return $node['is_neonat'] ? 'neonat' : 'older';
-            });
 
         $df_hash_map = [];
         $drugs_hash_map = [];
@@ -126,6 +120,49 @@ class Algorithm extends Component
             }
         }
 
+        foreach ($cached_data['registration_nodes_id'] as $node_id) {
+            //Registration nodes
+            $this->nodes_to_save[$node_id] = "";
+            if (is_int($node_id)) {
+                $registration_nodes[$node_id] = [
+                    'id' => $node_id,
+                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                    'category' => $cached_data['full_nodes'][$node_id]['category'],
+                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                    'answers' => array_map(function ($answer) {
+                        return [
+                            'id' => $answer['id'],
+                            'label' => $answer['label']['en'] ?? '',
+                            'value' => $answer['value'] ?? '',
+                            'operator' => $answer['operator'] ?? '',
+                        ];
+                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                ];
+            }
+        }
+
+        // First Look Assessment nodes
+        foreach ($cached_data['first_look_assessment_step_nodes_id'] as $substep) {
+            foreach ($substep as $node_id) {
+                $this->nodes_to_save[$node_id] = "";
+                $first_look_assessment_nodes[$node_id] = [
+                    'id' => $node_id,
+                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                    'category' => $cached_data['full_nodes'][$node_id]['category'],
+                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                    'answers' => array_map(function ($answer) {
+                        return [
+                            'id' => $answer['id'],
+                            'label' => $answer['label']['en'] ?? '',
+                            'value' => $answer['value'] ?? '',
+                            'operator' => $answer['operator'] ?? '',
+                        ];
+                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                ];
+            }
+        }
 
         $formula_hash_map = [];
         $nodes_to_update = [];
@@ -136,24 +173,6 @@ class Algorithm extends Component
                     //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
                         continue;
-                    }
-                    if (array_key_exists($node['id'], $cached_data['registration_steps'])) {
-                        $this->nodes_to_save[$node['id']] = "";
-                        $this->registration_nodes[$node['id']] = [
-                            'id' => $node['id'],
-                            'display_format' => $node['display_format'],
-                            'category' => $node['category'],
-                            'label' => $node['label']['en'] ?? '',
-                            'description' => $node['description']['en'] ?? '',
-                            'answers' => array_map(function ($answer) {
-                                return [
-                                    'id' => $answer['id'],
-                                    'label' => $answer['label']['en'] ?? '',
-                                    'value' => $answer['value'] ?? '',
-                                    'operator' => $answer['operator'] ?? '',
-                                ];
-                            }, $node['answers'] ?? []),
-                        ];
                     }
                     if ($node['display_format'] === "Input" || $node['display_format'] === "Formula") {
                         $this->nodes_to_save[$node['id']] = "";
@@ -224,6 +243,10 @@ class Algorithm extends Component
                 'df_hash_map' => $df_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
                 'dependency_map' => $dependency_map,
+                'nodes_per_step' => [
+                    'registration' => $registration_nodes,
+                    'first_look_assessment' => $first_look_assessment_nodes,
+                ],
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
@@ -249,13 +272,15 @@ class Algorithm extends Component
             ? $cached_data['general_cc_id']
             : $cached_data['yi_general_cc_id'];
 
+        $this->current_nodes = $registration_nodes;
 
-        // dd($this->registration_steps);
+
+        // dd($this->registration_nodes_id);
         // dd($cached_data);
 
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
-        dump($cached_data['drugs_hash_map']);
+        dump($cached_data['full_order']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
@@ -355,7 +380,7 @@ class Algorithm extends Component
                     // We already know that this condition is met because it has been calulated
                     if ($condition['answer_id'] !== $value) {
                         // We only check if the other conditions node has no condition
-                        if (in_array($condition['node_id'], $this->nodes[$this->age_key][$this->current_cc]) || array_key_exists($condition['node_id'], $this->registration_nodes)) {
+                        if (in_array($condition['node_id'], $this->nodes[$this->age_key][$this->current_cc])) {
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
@@ -653,18 +678,22 @@ class Algorithm extends Component
 
     public function goToStep(string $step): void
     {
+        $cached_data = Cache::get($this->cache_key);
 
         if ($step === 'medical_history') {
             $cached_data = Cache::get($this->cache_key);
             $cc_order = $cached_data['complaint_categories_steps'];
 
             // Respect the order in the complaint_categories_step key
+            // todo set that up in redis
             usort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
                 return array_search($a, $cc_order) <=> array_search($b, $cc_order);
             });
 
             $this->current_cc = reset($this->chosen_complaint_categories);
         }
+
+        $this->current_nodes = $cached_data['nodes_per_step'][$step];
 
         $this->current_step = $step;
     }
