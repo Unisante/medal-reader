@@ -41,7 +41,7 @@
               @if (isset($nodes[$age_key][$cc]))
                 @dump($nodes_to_save)
                 @dump($nodes[$age_key][$cc])
-                @foreach ($nodes[$age_key][$cc] as $node)
+                @foreach ($current_nodes[$age_key][$cc] as $node)
                   <div wire:key="{{ 'nodes-' . $node['id'] }}">
                     @if (in_array($node, $nodes[$age_key][$cc]))
                       @switch($node['display_format'])
@@ -150,7 +150,7 @@
     <div class="col-4">
       <div class="container">
         Steps
-        @foreach ($steps as $step)
+        @foreach (array_keys($steps) as $step)
           <div wire:key="{{ 'go-step-' . $step }}">
             <button wire:click="goToStep('{{ $step }}')">{{ $step }}</button>
           </div>

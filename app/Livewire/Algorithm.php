@@ -32,9 +32,9 @@ class Algorithm extends Component
     public string $current_step = 'registration';
     public string $date_of_birth = '1960-01-01';
     public string $current_cc;
-    
+
     public array $steps = [
-        'registration',
+        'registration' => [],
         'first_look_assessment' => [
             'vital_signs',
             'complaint_categories',
@@ -44,7 +44,7 @@ class Algorithm extends Component
             'medical_history',
             'physical_exams',
         ],
-        'tests',
+        'tests' => [],
         'diagnoses' => [
             'final_diagnoses',
             'managements',
@@ -105,7 +105,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                'villages'=> array_merge(...$json['medal_r_json']['village_json']),
+                // 'villages' => array_merge(...$json['medal_r_json']['village_json']),
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -164,11 +164,10 @@ class Algorithm extends Component
         foreach ($cached_data['first_look_assessment_step_nodes_id'] as $substep_name => $substep) {
             foreach ($substep as $node_id) {
                 if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
-
                     $this->nodes_to_save[$node_id] = "";
                     $node = $cached_data['full_nodes'][$node_id];
                     $age_key = $node['is_neonat'] ? 'neonat' : 'older';
-                    $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = [
+                    $first_look_assessment_nodes[$age_key][$substep_name][$node_id] = [
                         'id' => $node_id,
                         'display_format' => $node['display_format'],
                         'category' => $node['category'],
@@ -209,6 +208,7 @@ class Algorithm extends Component
 
         $answers_hash_map = [];
         $dependency_map = [];
+        $consultation_nodes = [];
         foreach ($cached_data['complaint_categories_steps'] as $step) {
             $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step) {
                 return $diag['complaint_category'] === $step;
@@ -228,7 +228,7 @@ class Algorithm extends Component
                     $age_key = $cached_data['full_nodes'][$instance_id]['is_neonat'] ? 'neonat' : 'older';
 
                     if (empty($instance['conditions'])) {
-                        $this->nodes[$age_key][$step][$instance_id] = [
+                        $consultation_nodes[$age_key][$step][$instance_id] = [
                             'id' => $cached_data['full_nodes'][$instance_id]['id'],
                             'category' => $cached_data['full_nodes'][$instance_id]['category'],
                             'display_format' => $cached_data['full_nodes'][$instance_id]['display_format'],
@@ -257,6 +257,23 @@ class Algorithm extends Component
             }
         }
 
+        // Order nodes
+        foreach ($consultation_nodes as $age_key => $nodes_by_age) {
+            foreach ($nodes_by_age as $step_id => $nodes) {
+                foreach ($cached_data['full_order_medical_history'] as $node_id) {
+                    if (isset($consultation_nodes[$age_key][$step_id][$node_id])) {
+                        $reordered_nodes[$step_id][$node_id] = $consultation_nodes[$age_key][$step_id][$node_id];
+                    }
+                }
+                foreach ($consultation_nodes[$age_key][$step_id] as $node_id => $node) {
+                    if (!isset($reordered_nodes[$node_id])) {
+                        $reordered_nodes[$step_id][$node_id] = $node;
+                    }
+                }
+                $consultation_nodes[$age_key][$step] = $reordered_nodes[$step_id];
+            }
+        }
+
         if (!$cache_found) {
             Cache::put($this->cache_key, [
                 ...$cached_data,
@@ -269,26 +286,10 @@ class Algorithm extends Component
                 'nodes_per_step' => [
                     'registration' => $registration_nodes,
                     'first_look_assessment' => $first_look_assessment_nodes,
+                    'consultation' => $consultation_nodes,
                 ],
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
-        }
-
-        // Order nodes
-        foreach ($this->nodes as $age_key => $nodes_by_age) {
-            foreach ($nodes_by_age as $step_id => $nodes) {
-                foreach ($cached_data['full_order_medical_history'] as $node_id) {
-                    if (isset($this->nodes[$age_key][$step_id][$node_id])) {
-                        $reordered_nodes[$step_id][$node_id] = $this->nodes[$age_key][$step_id][$node_id];
-                    }
-                }
-                foreach ($this->nodes[$age_key][$step_id] as $node_id => $node) {
-                    if (!isset($reordered_nodes[$node_id])) {
-                        $reordered_nodes[$step_id][$node_id] = $node;
-                    }
-                }
-                $this->nodes[$age_key][$step] = $reordered_nodes[$step_id];
-            }
         }
 
         $this->current_cc = $this->age_key === "older"
@@ -303,11 +304,11 @@ class Algorithm extends Component
 
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
-        dump($cached_data['full_order']);
+        // dump($cached_data['full_order']);
         dump($cached_data['nodes_per_step']);
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
-        // dump($cached_data['df_hash_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
@@ -342,7 +343,6 @@ class Algorithm extends Component
                 }
             }
         }
-
 
         return $this->displayNextNode($answer_id, $old_answer_id);
     }
@@ -715,7 +715,12 @@ class Algorithm extends Component
             $this->current_cc = reset($this->chosen_complaint_categories);
         }
 
-        $this->current_nodes = $cached_data['nodes_per_step'][$step];
+        // For registration step we do not know the $age_key yet
+        if ($step !== "registration") {
+            $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
+        } else {
+            $this->current_nodes = $cached_data['nodes_per_step'][$step];
+        }
 
         $this->current_step = $step;
     }
