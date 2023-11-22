@@ -113,9 +113,13 @@ class Algorithm extends Component
 
             foreach ($df['drugs'] as $drug) {
                 foreach ($drug['conditions'] as $condition) {
-                    // if (!in_array($drug['id'], $drugs_hash_map[$condition['answer_id']])) {
-                    $drugs_hash_map[$condition['answer_id']][] = $drug['id'];
-                    // }
+                    if (!array_key_exists($condition['answer_id'], $drugs_hash_map)) {
+                        $drugs_hash_map[$condition['answer_id']][] = $drug['id'];
+                    } else {
+                        if (!in_array($drug['id'], $drugs_hash_map[$condition['answer_id']])) {
+                            $drugs_hash_map[$condition['answer_id']][] = $drug['id'];
+                        }
+                    }
                 }
             }
         }
@@ -309,9 +313,7 @@ class Algorithm extends Component
 
             // If answer will set a drug, we add it to the drugs to display
             if (array_key_exists($value, $drugs_hash_map)) {
-                // todo remove that reset and put everything in the same first array
-                // maybe with [...$this->drugs_to_display]
-                $this->drugs_to_display[] = reset($drugs_hash_map[$value]);
+                $this->drugs_to_display = array_merge($this->drugs_to_display, $drugs_hash_map[$value]);
             }
 
             // If node is linked to bc then we calculate them directly
@@ -321,6 +323,7 @@ class Algorithm extends Component
                 }
             }
         }
+
 
         return $this->displayNextNode($answer_id, $old_answer_id);
     }
