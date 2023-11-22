@@ -2,7 +2,7 @@
   <label class="form-label" for="{{ $node_id }}">
     {{ $node_id }} : {{ $label }}
     <div x-data="{ open: false }">
-      <button @click="open = ! open">Description</button>
+      <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">Description</button>
       <div x-show="open">
         <p>{{ $description }}</p>
       </div>

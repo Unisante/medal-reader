@@ -23,8 +23,9 @@ class Algorithm extends Component
     public string $age_key = 'older';
     public string $current_step = 'registration';
     public string $date_of_birth = '1960-01-01';
-    public array $registration_nodes;
+    public string $current_cc;
     public object $complaint_categories_nodes;
+    public array $registration_nodes;
     public array $chosen_complaint_categories;
     public array $df_to_display;
     public array $drugs_to_display;
@@ -32,7 +33,8 @@ class Algorithm extends Component
     public array $nodes_to_save;
     public array $current_nodes;
     public array $nodes;
-    public string $current_cc;
+    public array $diagnoses_status;
+    public array $drugs_status;
 
     public array $steps = [
         'registration' => [],
@@ -55,9 +57,6 @@ class Algorithm extends Component
         ],
     ];
 
-    public array $agreed_diagnoses;
-    public array $agreed_drugs;
-
     public function mount($id = null)
     {
         $this->id = $id;
@@ -70,9 +69,11 @@ class Algorithm extends Component
         $json_version = $json['medal_r_json_version'];
 
         $this->cache_key = "json_data_{$this->id}_$json_version";
+        //todo set the update cache behovior on json update and set it indefinitely
         $this->cache_expiration_time = 86400; // 24 hours
 
-        // todo set that up in redis
+        //todo set that up in redis when in prod
+        //tdo also remove the cache forget x)
         Cache::forget($this->cache_key);
         $cache_found = Cache::has($this->cache_key);
 
@@ -723,7 +724,6 @@ class Algorithm extends Component
             $cc_order = $cached_data['complaint_categories_steps'];
 
             // Respect the order in the complaint_categories_step key
-            // todo set that up in redis
             usort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
                 return array_search($a, $cc_order) <=> array_search($b, $cc_order);
             });
