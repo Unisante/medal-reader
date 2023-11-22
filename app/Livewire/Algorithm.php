@@ -43,6 +43,7 @@ class Algorithm extends Component
     ];
 
     public array $agreed_diagnoses;
+    public array $agreed_drugs;
 
     public function mount($id = null)
     {
@@ -254,12 +255,12 @@ class Algorithm extends Component
 
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
-        // dump($cached_data['drugs_hash_map']);
+        dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        dump($cached_data['formula_hash_map']);
+        // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
-        dump($cached_data['nodes_to_update']);
+        // dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
         // dump($this->formula_hash_map);
@@ -652,27 +653,6 @@ class Algorithm extends Component
 
     public function goToStep(string $step): void
     {
-        if ($step === 'complaint_categories') {
-            // $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
-            // $nodes_to_save = [];
-
-            // $this->current_cc = reset($this->chosen_complaint_categories);
-
-            // // We only need to refresh background_calculation nodes
-            // foreach ($this->registration_nodes as $node) {
-            //     if ($node['category'] === 'background_calculation' || $node['display_format'] === 'Formula')
-            //         $nodes_to_save[$node['id']] = $node;
-            // }
-
-            // // todo need to calcule all linked bc after registration step
-            // $nodes_to_save = $nodes_to_save + array_intersect_key($this->nodes[$this->age_key][$value], $formula_hash_map);
-
-            // if (!empty($nodes_to_save)) {
-            //     foreach ($nodes_to_save as $node_id => $node) {
-            //         $this->saveNode($node_id, null, null, null);
-            //     }
-            // }
-        }
 
         if ($step === 'medical_history') {
             $cached_data = Cache::get($this->cache_key);

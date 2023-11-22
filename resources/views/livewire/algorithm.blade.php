@@ -7,6 +7,7 @@
     <div class="col-8">
       @if ($current_step === 'registration')
         <livewire:components.step.registration wire:key="registration" :nodes="$registration_nodes" />
+
         <button wire:click="goToStep('complaint_categories')">complaint_categories</button>
       @endif
       @if ($current_step === 'complaint_categories')
