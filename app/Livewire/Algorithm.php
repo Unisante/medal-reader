@@ -25,7 +25,6 @@ class Algorithm extends Component
     public string $date_of_birth = '1960-01-01';
     public string $current_cc;
     public object $complaint_categories_nodes;
-    public array $registration_nodes;
     public array $chosen_complaint_categories;
     public array $df_to_display;
     public array $drugs_to_display;
@@ -90,13 +89,19 @@ class Algorithm extends Component
                     ...$json['medal_r_json']['config']['full_order']['registration_step'],
                     ...$json['medal_r_json']['patient_level_questions'],
                 ],
-                'first_look_assessment_step_nodes_id' => [
+                'first_look_assessment_nodes_id' => [
                     'first_look_nodes_id' => $json['medal_r_json']['config']['full_order']['first_look_assessment_step'],
                     'complaint_categories_nodes_id' => [
                         ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['older'],
                         ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
                     ],
                     'basic_measurements_nodes_id' => $json['medal_r_json']['config']['full_order']['basic_measurements_step'],
+                ],
+
+                'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'],
+                'diagnoses_nodes_id' => [
+                    ...$json['medal_r_json']['config']['full_order']['health_care_questions_step'],
+                    ...$json['medal_r_json']['config']['full_order']['referral_step'],
                 ],
 
                 'complaint_categories_steps' => [
@@ -107,7 +112,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []),
+                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No villages for non dynamic json
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -141,7 +146,6 @@ class Algorithm extends Component
         }
 
         foreach ($cached_data['registration_nodes_id'] as $node_id) {
-            //Registration nodes
             $this->nodes_to_save[$node_id] = "";
             if (is_int($node_id)) {
                 $registration_nodes[$node_id] = [
@@ -162,8 +166,10 @@ class Algorithm extends Component
             }
         }
 
+
+
         // First Look Assessment nodes
-        foreach ($cached_data['first_look_assessment_step_nodes_id'] as $substep_name => $substep) {
+        foreach ($cached_data['first_look_assessment_nodes_id'] as $substep_name => $substep) {
             foreach ($substep as $node_id) {
                 if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
                     $this->nodes_to_save[$node_id] = "";
@@ -190,6 +196,46 @@ class Algorithm extends Component
                         $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = $node_to_add;
                     }
                 }
+            }
+        }
+
+        foreach ($cached_data['tests_nodes_id'] as $node_id) {
+            if (is_int($node_id)) {
+                $tests_nodes[$node_id] = [
+                    'id' => $node_id,
+                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                    'category' => $cached_data['full_nodes'][$node_id]['category'],
+                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                    'answers' => array_map(function ($answer) {
+                        return [
+                            'id' => $answer['id'],
+                            'label' => $answer['label']['en'] ?? '',
+                            'value' => $answer['value'] ?? '',
+                            'operator' => $answer['operator'] ?? '',
+                        ];
+                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                ];
+            }
+        }
+
+        foreach ($cached_data['diagnoses_nodes_id'] as $node_id) {
+            if (is_int($node_id)) {
+                $diagnoses_nodes[$node_id] = [
+                    'id' => $node_id,
+                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                    'category' => $cached_data['full_nodes'][$node_id]['category'],
+                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                    'answers' => array_map(function ($answer) {
+                        return [
+                            'id' => $answer['id'],
+                            'label' => $answer['label']['en'] ?? '',
+                            'value' => $answer['value'] ?? '',
+                            'operator' => $answer['operator'] ?? '',
+                        ];
+                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                ];
             }
         }
 
@@ -295,6 +341,8 @@ class Algorithm extends Component
                     'registration' => $registration_nodes,
                     'first_look_assessment' => $first_look_assessment_nodes,
                     'consultation' => $consultation_nodes,
+                    'tests' => $tests_nodes ?? [], // No tests for non dynamic json
+                    'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic json
                 ],
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
