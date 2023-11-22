@@ -10,8 +10,20 @@
         <button wire:click="goToStep('complaint_categories')">complaint_categories</button>
       @endif
       @if ($current_step === 'complaint_categories')
-        <livewire:components.step.complaint-category wire:key="complaint_categories" :age_key="$age_key"
-          :nodes="$complaint_categories_nodes" />
+        {{-- <livewire:components.step.complaint-category wire:key="complaint_categories" :age_key="$age_key"
+          :nodes="$complaint_categories_nodes" /> --}}
+        @foreach ($complaint_categories_nodes[$age_key] as $node)
+          <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
+            <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
+            <label class="custom-control teleport-switch">
+              <span class="teleport-switch-control-description">No</span>
+              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node['id'] }}"
+                id="{{ $node['id'] }}" value="{{ $node['id'] }}" wire:model.live="chosen_complaint_categories">
+              <span class="teleport-switch-control-indicator"></span>
+              <span class="teleport-switch-control-description">Yes</span>
+            </label>
+          </div>
+        @endforeach
         <button wire:click="goToStep('medical_history')">medical_history</button>
         {{-- <button wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
       @endif

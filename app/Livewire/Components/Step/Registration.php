@@ -8,6 +8,7 @@ class Registration extends Component
 {
     public $nodes;
     public array $answered_nodes;
+    public array $old_answered_nodes;
     public string $date_of_birth = '1960-01-01';
 
     public function mount($nodes)
@@ -22,8 +23,8 @@ class Registration extends Component
 
     public function updatingAnsweredNodes($value, $node_id)
     {
-
-        $this->dispatch('nodeToSave', $node_id, $value, $this->answered_nodes[$node_id] ?? null, $this->answered_nodes[$node_id] ?? null);
+        $this->dispatch('nodeToSave', $node_id, $value, $this->answered_nodes[$node_id] ?? null, $this->old_answered_nodes[$node_id] ?? null);
+        $this->old_answered_nodes[$node_id] = $value;
     }
 
     public function render()

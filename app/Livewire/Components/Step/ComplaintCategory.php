@@ -16,6 +16,11 @@ class ComplaintCategory extends Component
         $this->age_key = $age_key;
     }
 
+    public function updatingChosenComplaintCategories($value)
+    {
+        $this->dispatch('ccUpdated', $value);
+    }
+
     public function render()
     {
         return view('livewire.components.step.complaint-category');

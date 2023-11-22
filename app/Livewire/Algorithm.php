@@ -29,7 +29,7 @@ class Algorithm extends Component
     public array $nodes_to_save;
     public array $nodes;
     public string $current_step = 'registration';
-    public string $date_of_birth;
+    public string $date_of_birth = '1960-01-01';
     public string $current_cc;
     public array $steps = [
         'registration',
@@ -54,9 +54,6 @@ class Algorithm extends Component
         }
         $this->title = $json['name'];
         $json_version = $json['medal_r_json_version'];
-        $general_cc_id = $json['medal_r_json']['config']['basic_questions']['general_cc_id'];
-        $yi_general_cc_id = $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'];
-        $gender_question_id = $json['medal_r_json']['config']['basic_questions']['gender_question_id'];
 
         $this->cache_key = "json_data_{$this->id}_$json_version";
         $this->cache_expiration_time = 86400; // 24 hours
@@ -81,6 +78,9 @@ class Algorithm extends Component
                     ...$json['medal_r_json']['config']['full_order']['complaint_categories_step']['neonat']
                 ],
                 'birth_date_formulas' => $json['medal_r_json']['config']['birth_date_formulas'],
+                'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
+                'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
+                'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -93,10 +93,10 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
 
         $this->complaint_categories_nodes = collect($cached_data['full_nodes'])
-            ->filter(function ($node) use ($general_cc_id, $yi_general_cc_id) {
+            ->filter(function ($node) use ($cached_data) {
                 return $node['category'] === 'complaint_category'
-                    && $node['id'] !== $general_cc_id
-                    && $node['id'] !== $yi_general_cc_id;
+                    && $node['id'] !== $cached_data['general_cc_id']
+                    && $node['id'] !== $cached_data['yi_general_cc_id'];
             })
             ->map(function ($node) {
                 return [
@@ -110,7 +110,6 @@ class Algorithm extends Component
             ->groupBy(function ($node) {
                 return $node['is_neonat'] ? 'neonat' : 'older';
             });
-
 
         $df_hash_map = [];
         $drugs_hash_map = [];
@@ -181,7 +180,7 @@ class Algorithm extends Component
                         continue;
                     }
 
-                    if ($instance_id === $gender_question_id) {
+                    if ($instance_id === $cached_data['gender_question_id']) {
                         continue;
                     }
 
@@ -256,8 +255,9 @@ class Algorithm extends Component
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['formula_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
-        dump($cached_data['nodes_to_update']);
+        // dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
         // dump($this->df_hash_map);
         // dump($this->formula_hash_map);
@@ -270,8 +270,17 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
+        $general_cc_id = $cached_data['general_cc_id'];
+        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
 
-        $this->current_cc = $this->chosen_complaint_categories ? reset($this->chosen_complaint_categories) : "";
+        if ($this->chosen_complaint_categories) {
+            $step = reset($this->chosen_complaint_categories);
+        } else {
+            $step = $this->age_key === "older"
+                ? $general_cc_id
+                : $yi_general_cc_id;
+        }
+        $this->current_cc = $step;
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
@@ -287,7 +296,7 @@ class Algorithm extends Component
             }
         }
 
-        return $this->current_cc !== "" ? $this->displayNextNode($answer_id, $old_answer_id) : null;
+        return $this->displayNextNode($answer_id, $old_answer_id);
     }
 
     #[On('nodeUpdated')]
@@ -300,6 +309,17 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
+        $general_cc_id = $cached_data['general_cc_id'];
+        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
+
+        if ($this->chosen_complaint_categories) {
+            $step = reset($this->chosen_complaint_categories);
+        } else {
+            $step = $this->age_key === "older"
+                ? $general_cc_id
+                : $yi_general_cc_id;
+        }
+        $this->current_cc = $step;
 
         // Modification behavior
         if ($old_value) {
@@ -419,6 +439,12 @@ class Algorithm extends Component
                 $this->setNextNodeAndSort($node);
             }
         }
+    }
+
+    #[On('ccUpdated')]
+    public function updateCC($value)
+    {
+        $this->chosen_complaint_categories[] = $value;
     }
 
     #[On('dobUpdated')]
@@ -618,9 +644,17 @@ class Algorithm extends Component
 
     public function getNextNodeId($node_id)
     {
-        $answers_hash_map = Cache::get($this->cache_key)['answers_hash_map'];
+        $cached_data = Cache::get($this->cache_key);
+        $answers_hash_map = $cached_data['answers_hash_map'];
+        $general_cc_id = $cached_data['general_cc_id'];
+        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
 
-        return $answers_hash_map[$this->current_cc][$node_id] ?? null;
+        $step = $this->current_cc
+            ?? $this->age_key === "older"
+            ? $general_cc_id
+            : $yi_general_cc_id;
+
+        return $answers_hash_map[$step][$node_id] ?? null;
     }
 
     public function goToStep(string $step): void
