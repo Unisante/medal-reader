@@ -105,6 +105,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
+                'villages'=> array_merge(...$json['medal_r_json']['village_json']),
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
