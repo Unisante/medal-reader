@@ -112,7 +112,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No villages for non dynamic json
+                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No villages for non dynamic study
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -127,6 +127,7 @@ class Algorithm extends Component
 
         $df_hash_map = [];
         $drugs_hash_map = [];
+
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
@@ -262,6 +263,7 @@ class Algorithm extends Component
         $answers_hash_map = [];
         $dependency_map = [];
         $consultation_nodes = [];
+
         foreach ($cached_data['complaint_categories_steps'] as $step) {
             $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step) {
                 return $diag['complaint_category'] === $step;
@@ -341,8 +343,8 @@ class Algorithm extends Component
                     'registration' => $registration_nodes,
                     'first_look_assessment' => $first_look_assessment_nodes,
                     'consultation' => $consultation_nodes,
-                    'tests' => $tests_nodes ?? [], // No tests for non dynamic json
-                    'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic json
+                    'tests' => $tests_nodes ?? [], // No tests for non dynamic study
+                    'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic study
                 ],
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
@@ -370,10 +372,6 @@ class Algorithm extends Component
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['nodes_to_update']);
-        // dump($this->dependency_map);
-        // dump($this->df_hash_map);
-        // dump($this->formula_hash_map);
-        // dd(Cache::get($this->cache_key));
     }
 
     #[On('nodeToSave')]
@@ -396,7 +394,7 @@ class Algorithm extends Component
                 $this->drugs_to_display = array_merge($this->drugs_to_display, $drugs_hash_map[$value]);
             }
 
-            // If node is linked to bc then we calculate them directly
+            // If node is linked to some bc(s) then we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
                 foreach ($nodes_to_update[$node_id] as $node_id) {
                     $this->saveNode($node_id, null, null, null);
