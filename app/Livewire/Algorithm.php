@@ -32,12 +32,26 @@ class Algorithm extends Component
     public string $current_step = 'registration';
     public string $date_of_birth = '1960-01-01';
     public string $current_cc;
+    
     public array $steps = [
         'registration',
-        'first_look_assessment',
-        'consultation',
+        'first_look_assessment' => [
+            'vital_signs',
+            'complaint_categories',
+            'basic_measurement',
+        ],
+        'consultation' => [
+            'medical_history',
+            'physical_exams',
+        ],
         'tests',
-        'diagnoses',
+        'diagnoses' => [
+            'final_diagnoses',
+            'managements',
+            'drugs',
+            'summary',
+            'referral',
+        ],
     ];
 
     public array $agreed_diagnoses;
@@ -72,7 +86,6 @@ class Algorithm extends Component
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
                 'registration_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['registration_step'],
-                    ...$json['medal_r_json']['config']['full_order']['basic_measurements_step'],
                     ...$json['medal_r_json']['patient_level_questions'],
                 ],
                 'first_look_assessment_step_nodes_id' => [
@@ -147,24 +160,29 @@ class Algorithm extends Component
         }
 
         // First Look Assessment nodes
-        foreach ($cached_data['first_look_assessment_step_nodes_id'] as $substep) {
+        foreach ($cached_data['first_look_assessment_step_nodes_id'] as $substep_name => $substep) {
             foreach ($substep as $node_id) {
-                $this->nodes_to_save[$node_id] = "";
-                $first_look_assessment_nodes[$node_id] = [
-                    'id' => $node_id,
-                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-                    'category' => $cached_data['full_nodes'][$node_id]['category'],
-                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                    'answers' => array_map(function ($answer) {
-                        return [
-                            'id' => $answer['id'],
-                            'label' => $answer['label']['en'] ?? '',
-                            'value' => $answer['value'] ?? '',
-                            'operator' => $answer['operator'] ?? '',
-                        ];
-                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-                ];
+                if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
+
+                    $this->nodes_to_save[$node_id] = "";
+                    $node = $cached_data['full_nodes'][$node_id];
+                    $age_key = $node['is_neonat'] ? 'neonat' : 'older';
+                    $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = [
+                        'id' => $node_id,
+                        'display_format' => $node['display_format'],
+                        'category' => $node['category'],
+                        'label' => $node['label']['en'] ?? '',
+                        'description' => $node['description']['en'] ?? '',
+                        'answers' => array_map(function ($answer) {
+                            return [
+                                'id' => $answer['id'],
+                                'label' => $answer['label']['en'] ?? '',
+                                'value' => $answer['value'] ?? '',
+                                'operator' => $answer['operator'] ?? '',
+                            ];
+                        }, $node['answers'] ?? []),
+                    ];
+                }
             }
         }
 
@@ -285,7 +303,7 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
         dump($cached_data['full_order']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['nodes_per_step']);
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);

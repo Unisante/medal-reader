@@ -14,7 +14,7 @@
         {{-- <livewire:components.step.vitals wire:key="registration" :nodes="$current_nodes" /> --}}
         {{-- <livewire:components.step.complaint-category wire:key="complaint_categories" :age_key="$age_key"
           :nodes="$complaint_categories_nodes" /> --}}
-        @foreach ($current_nodes as $node)
+        @foreach ($current_nodes['complaint_categories_nodes_id'][$age_key] as $node)
           <div class="m-0" wire:key="{{ 'cc-' . $node['id'] }}">
             <label class="form-check-label" for="{{ $node['id'] }}">{{ $node['label'] }}</label>
             <label class="custom-control teleport-switch">
