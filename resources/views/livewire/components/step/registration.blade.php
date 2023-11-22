@@ -31,9 +31,7 @@
         @break
 
         @case('Autocomplete')
-          <div>
-            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
-          </div>
+          <x-inputs.datalist :node="$node" :villages="$villages" />
         @break
 
         @default

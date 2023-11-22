@@ -6,7 +6,7 @@
   <div class="row g-3">
     <div class="col-8">
       @if ($current_step === 'registration')
-        <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" />
+        <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" :cache_key="$cache_key" />
         <button wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
       @endif
       @if ($current_step === 'first_look_assessment')
