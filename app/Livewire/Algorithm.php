@@ -94,9 +94,7 @@ class Algorithm extends Component
 
         $this->complaint_categories_nodes = collect($cached_data['full_nodes'])
             ->filter(function ($node) use ($cached_data) {
-                return $node['category'] === 'complaint_category'
-                    && $node['id'] !== $cached_data['general_cc_id']
-                    && $node['id'] !== $cached_data['yi_general_cc_id'];
+                return $node['category'] === 'complaint_category';
             })
             ->map(function ($node) {
                 return [
@@ -246,6 +244,10 @@ class Algorithm extends Component
             }
         }
 
+        $this->current_cc = $this->age_key === "older"
+            ? $cached_data['general_cc_id']
+            : $cached_data['yi_general_cc_id'];
+
 
         // dd($this->registration_steps);
         // dd($cached_data);
@@ -254,8 +256,8 @@ class Algorithm extends Component
         // dump($this->nodes_to_save);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        // dump($cached_data['formula_hash_map']);
-        dump($cached_data['answers_hash_map']);
+        dump($cached_data['formula_hash_map']);
+        // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['nodes_to_update']);
         // dump($this->dependency_map);
@@ -270,17 +272,6 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
-        $general_cc_id = $cached_data['general_cc_id'];
-        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
-
-        if ($this->chosen_complaint_categories) {
-            $step = reset($this->chosen_complaint_categories);
-        } else {
-            $step = $this->age_key === "older"
-                ? $general_cc_id
-                : $yi_general_cc_id;
-        }
-        $this->current_cc = $step;
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
@@ -309,17 +300,6 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
-        $general_cc_id = $cached_data['general_cc_id'];
-        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
-
-        if ($this->chosen_complaint_categories) {
-            $step = reset($this->chosen_complaint_categories);
-        } else {
-            $step = $this->age_key === "older"
-                ? $general_cc_id
-                : $yi_general_cc_id;
-        }
-        $this->current_cc = $step;
 
         // Modification behavior
         if ($old_value) {
@@ -586,8 +566,11 @@ class Algorithm extends Component
 
     public function handleFormula($node_id)
     {
-        $formula_hash_map = Cache::get($this->cache_key)['formula_hash_map'];
-        $full_nodes = Cache::get($this->cache_key)['full_nodes'];
+        $cached_data = Cache::get($this->cache_key);
+        $formula_hash_map = $cached_data['formula_hash_map'];
+        $full_nodes = $cached_data['full_nodes'];
+        $general_cc_id = $cached_data['general_cc_id'];
+        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
 
         $formula = $formula_hash_map[$node_id];
 
@@ -601,7 +584,13 @@ class Algorithm extends Component
                 //My eyes are burning....
                 //But no other way as the Age in days node id is not saved anywhere
                 if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
-                    $this->age_key = $days <= 59 ? 'neonat' : 'older';
+                    if ($days <= 59) {
+                        $this->age_key = 'neonat';
+                        $this->current_cc = $yi_general_cc_id;
+                    } else {
+                        $this->age_key = 'older';
+                        $this->current_cc = $general_cc_id;
+                    }
                 }
                 return $days;
             } elseif ($formula === "ToMonth") {
@@ -646,15 +635,8 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $answers_hash_map = $cached_data['answers_hash_map'];
-        $general_cc_id = $cached_data['general_cc_id'];
-        $yi_general_cc_id = $cached_data['yi_general_cc_id'];
 
-        $step = $this->current_cc
-            ?? $this->age_key === "older"
-            ? $general_cc_id
-            : $yi_general_cc_id;
-
-        return $answers_hash_map[$step][$node_id] ?? null;
+        return $answers_hash_map[$this->current_cc][$node_id] ?? null;
     }
 
     public function goToStep(string $step): void
