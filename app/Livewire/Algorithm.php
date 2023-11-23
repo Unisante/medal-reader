@@ -156,20 +156,6 @@ class Algorithm extends Component
             $this->nodes_to_save[$node_id] = "";
             if (is_int($node_id)) {
                 $registration_nodes[$node_id] = $node_id;
-                //     'id' => $node_id,
-                //     'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-                //     'category' => $cached_data['full_nodes'][$node_id]['category'],
-                //     // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                //     // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                //     // 'answers' => array_map(function ($answer) {
-                //     //     return [
-                //     //         'id' => $answer['id'],
-                //     //         'label' => $answer['label']['en'] ?? '',
-                //     //         'value' => $answer['value'] ?? '',
-                //     //         'operator' => $answer['operator'] ?? '',
-                //     //     ];
-                //     // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-                // ];
             }
         }
 
@@ -183,20 +169,6 @@ class Algorithm extends Component
                     $node = $cached_data['full_nodes'][$node_id];
                     $age_key = $node['is_neonat'] ? 'neonat' : 'older';
                     $node_to_add = $node_id;
-                    // 'id' => $node_id,
-                    // 'display_format' => $node['display_format'],
-                    // 'category' => $node['category'],
-                    // 'label' => $node['label']['en'] ?? '',
-                    // 'description' => $node['description']['en'] ?? '',
-                    // 'answers' => array_map(function ($answer) {
-                    //     return [
-                    //         'id' => $answer['id'],
-                    //         'label' => $answer['label']['en'] ?? '',
-                    //         'value' => $answer['value'] ?? '',
-                    //         'operator' => $answer['operator'] ?? '',
-                    //     ];
-                    // }, $node['answers'] ?? []),
-                    // ];
                     if ($node['category'] === "basic_measurement" || $node['category'] === "unique_triage_question" || $node['category'] === "background_calculation") {
                         $first_look_assessment_nodes[$substep_name][$node_id] = $node_to_add;
                     } else {
@@ -206,60 +178,12 @@ class Algorithm extends Component
             }
         }
 
-        // foreach ($cached_data['consultation_nodes'] as $system) {
-        //     foreach ($system['data'] as $node_id) {
-        //         $consultation_nodes[$system['title']][$node_id] = [
-        //             'id' => $node_id,
-        //             'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-        //             'category' => $cached_data['full_nodes'][$node_id]['category'],
-        //             'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-        //             'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-        //             'answers' => array_map(function ($answer) {
-        //                 return [
-        //                     'id' => $answer['id'],
-        //                     'label' => $answer['label']['en'] ?? '',
-        //                     'value' => $answer['value'] ?? '',
-        //                     'operator' => $answer['operator'] ?? '',
-        //                 ];
-        //             }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-        //         ];
-        //     }
-        // }
-
         foreach ($cached_data['tests_nodes_id'] as $node_id) {
             $tests_nodes[$node_id] = $node_id;
-            // 'id' => $node_id,
-            // 'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-            // 'category' => $cached_data['full_nodes'][$node_id]['category'],
-            // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-            // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-            // 'answers' => array_map(function ($answer) {
-            //     return [
-            //         'id' => $answer['id'],
-            //         'label' => $answer['label']['en'] ?? '',
-            //         'value' => $answer['value'] ?? '',
-            //         'operator' => $answer['operator'] ?? '',
-            //     ];
-            // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-            // ];
         }
 
         foreach ($cached_data['diagnoses_nodes_id'] as $node_id) {
             $diagnoses_nodes[$node_id] = $node_id;
-            // 'id' => $node_id,
-            // 'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-            // 'category' => $cached_data['full_nodes'][$node_id]['category'],
-            // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-            // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-            // 'answers' => array_map(function ($answer) {
-            //     return [
-            //         'id' => $answer['id'],
-            //         'label' => $answer['label']['en'] ?? '',
-            //         'value' => $answer['value'] ?? '',
-            //         'operator' => $answer['operator'] ?? '',
-            //     ];
-            // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-            // ];
         }
 
         $formula_hash_map = [];
@@ -316,20 +240,6 @@ class Algorithm extends Component
                         }
 
                         $consultation_nodes[$age_key][$node['system']][$step][$instance_id] = $node['id'];
-                        // 'id' => $node['id'],
-                        // 'category' => $node['category'],
-                        // 'display_format' => $node['display_format'],
-                        // 'label' => $node['label']['en'] ?? '',
-                        // 'description' => $node['description']['en'] ?? '',
-                        // 'answers' => array_map(function ($answer) {
-                        //     return [
-                        //         'id' => $answer['id'],
-                        //         'label' => $answer['label']['en'] ?? '',
-                        //         'operator' => $answer['operator'] ?? '',
-                        //         'value' => $answer['value'] ?? '',
-                        //     ];
-                        // }, $node['answers'] ?? []),
-                        // ];
                     } else {
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
@@ -350,7 +260,6 @@ class Algorithm extends Component
         $title_position_map = array_flip($desired_systems_order);
 
 
-        // dd($consultation_nodes);
         foreach ($consultation_nodes as &$system) {
 
             uksort($system, function ($a, $b) use ($title_position_map) {
@@ -367,17 +276,6 @@ class Algorithm extends Component
                 }
             }
         }
-
-        // dd($consultation_nodes);
-        // dump($cached_data['consultation_nodes']);
-
-        // dump("$ cached_data['consultation_nodes'] = " . $cached_data['consultation_nodes']);
-
-
-
-
-
-
 
         if (!$cache_found) {
             Cache::put($this->cache_key, [
@@ -450,10 +348,6 @@ class Algorithm extends Component
                 }
             }
         }
-        Log::info("node_id :$node_id");
-        Log::info("value :$$value");
-        Log::info("answer_id :$answer_id");
-        Log::info("old answer_id :$old_answer_id");
 
         return $this->displayNextNode($answer_id, $old_answer_id);
     }
@@ -667,20 +561,6 @@ class Algorithm extends Component
         if (isset($full_nodes[$next_node_id])) {
 
             $this->current_nodes[$this->current_cc][$next_node_id] = $full_nodes[$next_node_id]['id'];
-            // 'id' => $full_nodes[$next_node_id]['id'],
-            // 'category' => $full_nodes[$next_node_id]['category'],
-            // 'display_format' => $full_nodes[$next_node_id]['display_format'],
-            // 'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
-            // 'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
-            // 'answers' => array_map(function ($answer) {
-            //     return [
-            //         'id' => $answer['id'],
-            //         'label' => $answer['label']['en'] ?? '',
-            //         'operator' => $answer['operator'] ?? '',
-            //         'value' => $answer['value'] ?? '',
-            //     ];
-            // }, $full_nodes[$next_node_id]['answers'] ?? []),
-            // ];
 
             $reordered_nodes = [];
             $node_exists = false;
@@ -689,20 +569,6 @@ class Algorithm extends Component
                 if (isset($this->current_nodes[$this->current_cc][$node_id])) {
                     if (!$node_exists && $node_id === $next_node_id) {
                         $reordered_nodes[$next_node_id] = $full_nodes[$next_node_id]['id'];
-                        // 'id' => $full_nodes[$next_node_id]['id'],
-                        // 'category' => $full_nodes[$next_node_id]['category'],
-                        // 'display_format' => $full_nodes[$next_node_id]['display_format'],
-                        // 'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
-                        // 'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
-                        // 'answers' => array_map(function ($answer) {
-                        //     return [
-                        //         'id' => $answer['id'],
-                        //         'label' => $answer['label']['en'] ?? '',
-                        //         'operator' => $answer['operator'] ?? '',
-                        //         'value' => $answer['value'] ?? '',
-                        //     ];
-                        // }, $full_nodes[$next_node_id]['answers'] ?? []),
-                        // ];
                         $node_exists = true;
                     } else {
                         $reordered_nodes[$node_id] = $this->current_nodes[$this->current_cc][$node_id];
