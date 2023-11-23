@@ -97,7 +97,7 @@ class Algorithm extends Component
                     ],
                     'basic_measurements_nodes_id' => $json['medal_r_json']['config']['full_order']['basic_measurements_step'],
                 ],
-
+                'consultation_nodes' => $json['medal_r_json']['config']['full_order']['medical_history_step'],
                 'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'],
                 'diagnoses_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['health_care_questions_step'],
@@ -200,44 +200,60 @@ class Algorithm extends Component
             }
         }
 
+        // foreach ($cached_data['consultation_nodes'] as $system) {
+        //     foreach ($system['data'] as $node_id) {
+        //         $consultation_nodes[$system['title']][$node_id] = [
+        //             'id' => $node_id,
+        //             'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+        //             'category' => $cached_data['full_nodes'][$node_id]['category'],
+        //             'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+        //             'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+        //             'answers' => array_map(function ($answer) {
+        //                 return [
+        //                     'id' => $answer['id'],
+        //                     'label' => $answer['label']['en'] ?? '',
+        //                     'value' => $answer['value'] ?? '',
+        //                     'operator' => $answer['operator'] ?? '',
+        //                 ];
+        //             }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+        //         ];
+        //     }
+        // }
+
         foreach ($cached_data['tests_nodes_id'] as $node_id) {
-            if (is_int($node_id)) {
-                $tests_nodes[$node_id] = [
-                    'id' => $node_id,
-                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-                    'category' => $cached_data['full_nodes'][$node_id]['category'],
-                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                    'answers' => array_map(function ($answer) {
-                        return [
-                            'id' => $answer['id'],
-                            'label' => $answer['label']['en'] ?? '',
-                            'value' => $answer['value'] ?? '',
-                            'operator' => $answer['operator'] ?? '',
-                        ];
-                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-                ];
-            }
+            $tests_nodes[$node_id] = [
+                'id' => $node_id,
+                'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                'category' => $cached_data['full_nodes'][$node_id]['category'],
+                'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                'answers' => array_map(function ($answer) {
+                    return [
+                        'id' => $answer['id'],
+                        'label' => $answer['label']['en'] ?? '',
+                        'value' => $answer['value'] ?? '',
+                        'operator' => $answer['operator'] ?? '',
+                    ];
+                }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+            ];
         }
 
         foreach ($cached_data['diagnoses_nodes_id'] as $node_id) {
-            if (is_int($node_id)) {
-                $diagnoses_nodes[$node_id] = [
-                    'id' => $node_id,
-                    'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
-                    'category' => $cached_data['full_nodes'][$node_id]['category'],
-                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                    'answers' => array_map(function ($answer) {
-                        return [
-                            'id' => $answer['id'],
-                            'label' => $answer['label']['en'] ?? '',
-                            'value' => $answer['value'] ?? '',
-                            'operator' => $answer['operator'] ?? '',
-                        ];
-                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
-                ];
-            }
+            $diagnoses_nodes[$node_id] = [
+                'id' => $node_id,
+                'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
+                'category' => $cached_data['full_nodes'][$node_id]['category'],
+                'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                'answers' => array_map(function ($answer) {
+                    return [
+                        'id' => $answer['id'],
+                        'label' => $answer['label']['en'] ?? '',
+                        'value' => $answer['value'] ?? '',
+                        'operator' => $answer['operator'] ?? '',
+                    ];
+                }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+            ];
         }
 
         $formula_hash_map = [];
@@ -275,21 +291,25 @@ class Algorithm extends Component
                     if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
                         continue;
                     }
+                    if (!array_key_exists('system', $cached_data['full_nodes'][$instance_id])) {
+                        continue;
+                    }
 
                     if ($instance_id === $cached_data['gender_question_id']) {
                         continue;
                     }
 
-                    $age_key = $cached_data['full_nodes'][$instance_id]['is_neonat'] ? 'neonat' : 'older';
-
+                    $node = $cached_data['full_nodes'][$instance_id];
+                    $age_key = $node['is_neonat'] ? 'neonat' : 'older';
                     if (empty($instance['conditions'])) {
                         //todo remove the description for background calculation as it's taking space for nothing
-                        $consultation_nodes[$age_key][$step][$instance_id] = [
-                            'id' => $cached_data['full_nodes'][$instance_id]['id'],
-                            'category' => $cached_data['full_nodes'][$instance_id]['category'],
-                            'display_format' => $cached_data['full_nodes'][$instance_id]['display_format'],
-                            'label' => $cached_data['full_nodes'][$instance_id]['label']['en'] ?? '',
-                            'description' => $cached_data['full_nodes'][$instance_id]['description']['en'] ?? '',
+
+                        $consultation_nodes[$node['system']][$age_key][$step][$instance_id] = [
+                            'id' => $node['id'],
+                            'category' => $node['category'],
+                            'display_format' => $node['display_format'],
+                            'label' => $node['label']['en'] ?? '',
+                            'description' => $node['description']['en'] ?? '',
                             'answers' => array_map(function ($answer) {
                                 return [
                                     'id' => $answer['id'],
@@ -297,7 +317,7 @@ class Algorithm extends Component
                                     'operator' => $answer['operator'] ?? '',
                                     'value' => $answer['value'] ?? '',
                                 ];
-                            }, $cached_data['full_nodes'][$instance_id]['answers'] ?? []),
+                            }, $node['answers'] ?? []),
                         ];
                     } else {
                         foreach ($instance['conditions'] as $condition) {
@@ -326,7 +346,7 @@ class Algorithm extends Component
                         $reordered_nodes[$step_id][$node_id] = $node;
                     }
                 }
-                $consultation_nodes[$age_key][$step] = $reordered_nodes[$step_id];
+                $consultation_nodes[$age_key][$step_id] = $reordered_nodes[$step_id];
             }
         }
 
@@ -401,6 +421,10 @@ class Algorithm extends Component
                 }
             }
         }
+        Log::info("node_id :$node_id");
+        Log::info("value :$$value");
+        Log::info("answer_id :$answer_id");
+        Log::info("old answer_id :$old_answer_id");
 
         return $this->displayNextNode($answer_id, $old_answer_id);
     }
@@ -418,7 +442,8 @@ class Algorithm extends Component
 
         // Modification behavior
         if ($old_value) {
-
+            Log::info("value: $value");
+            Log::info("old_value: $old_value");
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
@@ -775,13 +800,10 @@ class Algorithm extends Component
             });
 
             $this->current_cc = reset($this->chosen_complaint_categories);
-        }
-
-        // For registration step we do not know the $age_key yet
-        if ($step !== "consultation") {
-            $this->current_nodes = $cached_data['nodes_per_step'][$step];
-        } else {
             $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
+        } else {
+            // For registration step we do not know the $age_key yet
+            $this->current_nodes = $cached_data['nodes_per_step'][$step];
         }
 
         $this->current_step = $step;

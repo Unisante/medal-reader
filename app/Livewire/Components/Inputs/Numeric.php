@@ -39,7 +39,7 @@ class Numeric extends Component
                 'between' => ($result >= $minValue && $result < $maxValue) ? $answer['id'] : null,
                 default => null,
             };
-            if ($answer_id) {
+            if ($answer_id && $answer_id !== $this->answer) {
                 $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
                 $this->answer = $answer_id;
                 return;
