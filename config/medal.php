@@ -2,6 +2,35 @@
 
 return [
     'uuid' => env('APP_UUID'),
+
+    'projects' => [
+        'dynamic' => [
+            1,
+            5,
+            6,
+            7,
+            8,
+            26,
+            27,
+            29,
+            30,
+            40,
+            41,
+            42,
+            45,
+            46,
+            47,
+            48,
+            49,
+            56,
+            57,
+        ],
+        'eviprev' => [
+            50
+        ],
+        'others' => [],
+    ],
+
     'authentication' => [
         'hub_callback_url' => env('HUB_CALLBACK_URL', 'http://127.0.0.1:5555'),
         'reader_callback_url' => env('READER_CALLBACK_URL', 'aaa://callback'),
