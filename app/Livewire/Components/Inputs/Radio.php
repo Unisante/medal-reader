@@ -21,7 +21,7 @@ class Radio extends Component
 
     public function updatingAnswer($value)
     {
-        $this->dispatch('nodeUpdated', $value, $this->answer);
+        $this->dispatch('nodeUpdated', $this->node_id, $value, $this->answer);
         $this->answer = $value;
     }
 

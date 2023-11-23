@@ -349,11 +349,11 @@ class Algorithm extends Component
             }
         }
 
-        return $this->displayNextNode($answer_id, $old_answer_id);
+        return $this->displayNextNode($node_id, $answer_id, $old_answer_id);
     }
 
     #[On('nodeUpdated')]
-    public function displayNextNode($value, $old_value)
+    public function displayNextNode($node_id, $value, $old_value)
     {
         $cached_data = Cache::get($this->cache_key);
 
@@ -362,11 +362,11 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
+        $nodes_per_step = $cached_data['nodes_per_step'];
 
         // Modification behavior
         if ($old_value) {
-            Log::info("value: $value");
-            Log::info("old_value: $old_value");
+
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $key) {
@@ -406,9 +406,14 @@ class Algorithm extends Component
             foreach ($df_hash_map[$this->current_cc][$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
                     // We already know that this condition is met because it has been calulated
-                    if ($condition['answer_id'] !== $value) {
+                    // And we skip the same question if it's the condition
+                    if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
+                        //todo fix current nodes management. Should be the same for every step
                         // We only check if the other conditions node has no condition
-                        if (in_array($condition['node_id'], $this->current_nodes[$this->current_cc])) {
+                        // We need to find a way to do so as now the current_nodes is being changed depending on the step
+                        // getTopConditions in react-native reader
+
+                        if (in_array($condition['node_id'], $this->current_nodes)) {
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
@@ -694,6 +699,7 @@ class Algorithm extends Component
                 return array_search($a, $cc_order) <=> array_search($b, $cc_order);
             });
 
+            //todo fix current nodes management. Should be the same for every step
             $this->current_cc = reset($this->chosen_complaint_categories);
             $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
         } else {

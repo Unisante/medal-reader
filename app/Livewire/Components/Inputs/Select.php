@@ -21,7 +21,7 @@ class Select extends Component
 
     public function updatingAnswer($value)
     {
-        $this->dispatch('nodeUpdated', $value, $this->answer);
+        $this->dispatch('nodeUpdated', $this->node_id, $value, $this->answer);
     }
 
     public function render()
