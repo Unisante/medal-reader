@@ -43,6 +43,7 @@ class Text extends Component
                     return;
                 }
             }
+            $this->description = null;
             $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
         }
     }

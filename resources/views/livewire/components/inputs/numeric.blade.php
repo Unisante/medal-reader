@@ -1,12 +1,14 @@
 <div class="mb-2">
   <label class="form-label" for="{{ $node_id }}">
     {{ $label }}
-    <div x-data="{ open: false }">
-      <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">Description</button>
-      <div x-show="open">
-        <p>{{ $description }}</p>
-      </div>
-    </div>
+    @if($description)
+        <div x-data="{ open: false }">
+        <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">Description</button>
+        <div x-show="open">
+            <p>{{ $description }}</p>
+        </div>
+        </div>
+    @endif
   </label>
   <input class="form-control @error('value') is-invalid @enderror" type="text" wire:model.live="value"
     name="{{ $node_id }}" id="{{ $node_id }}">
