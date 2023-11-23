@@ -97,7 +97,11 @@ class Algorithm extends Component
                     ],
                     'basic_measurements_nodes_id' => $json['medal_r_json']['config']['full_order']['basic_measurements_step'],
                 ],
-                'consultation_nodes' => $json['medal_r_json']['config']['full_order']['medical_history_step'],
+
+                'consultation_nodes' => array_combine(
+                    array_column($json['medal_r_json']['config']['full_order']['medical_history_step'], 'title'),
+                    array_values($json['medal_r_json']['config']['full_order']['medical_history_step'])
+                ),
                 'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'],
                 'diagnoses_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['health_care_questions_step'],
@@ -291,9 +295,6 @@ class Algorithm extends Component
                     if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
                         continue;
                     }
-                    if (!array_key_exists('system', $cached_data['full_nodes'][$instance_id])) {
-                        continue;
-                    }
 
                     if ($instance_id === $cached_data['gender_question_id']) {
                         continue;
@@ -302,9 +303,17 @@ class Algorithm extends Component
                     $node = $cached_data['full_nodes'][$instance_id];
                     $age_key = $node['is_neonat'] ? 'neonat' : 'older';
                     if (empty($instance['conditions'])) {
-                        //todo remove the description for background calculation as it's taking space for nothing
 
-                        $consultation_nodes[$node['system']][$age_key][$step][$instance_id] = [
+                        // We don't care about background calculations
+                        if (!array_key_exists('system', $cached_data['full_nodes'][$instance_id])) {
+                            continue;
+                        }
+
+                        if ($cached_data['full_nodes'][$instance_id]['category'] === 'physical_exam') {
+                            continue;
+                        }
+
+                        $consultation_nodes[$age_key][$node['system']][$step][$instance_id] = [
                             'id' => $node['id'],
                             'category' => $node['category'],
                             'display_format' => $node['display_format'],
@@ -334,21 +343,39 @@ class Algorithm extends Component
         }
 
         // Order nodes
-        foreach ($consultation_nodes as $age_key => $nodes_by_age) {
-            foreach ($nodes_by_age as $step_id => $nodes) {
-                foreach ($cached_data['full_order_medical_history'] as $node_id) {
-                    if (isset($consultation_nodes[$age_key][$step_id][$node_id])) {
-                        $reordered_nodes[$step_id][$node_id] = $consultation_nodes[$age_key][$step_id][$node_id];
-                    }
+        $systems = array_keys($cached_data['consultation_nodes']);
+        $desired_systems_order = array_values($systems);
+        $title_position_map = array_flip($desired_systems_order);
+
+
+        // dd($consultation_nodes);
+        foreach ($consultation_nodes as &$system) {
+
+            uksort($system, function ($a, $b) use ($title_position_map) {
+                return $title_position_map[$a] - $title_position_map[$b];
+            });
+
+            foreach ($system as $key => &$cc_nodes) {
+                $order = array_flip($cached_data['consultation_nodes'][$key]['data']);
+                foreach ($cc_nodes as &$nodes) {
+
+                    uksort($nodes, function ($a, $b) use ($order) {
+                        return $order[$a] - $order[$b];
+                    });
                 }
-                foreach ($consultation_nodes[$age_key][$step_id] as $node_id => $node) {
-                    if (!isset($reordered_nodes[$node_id])) {
-                        $reordered_nodes[$step_id][$node_id] = $node;
-                    }
-                }
-                $consultation_nodes[$age_key][$step_id] = $reordered_nodes[$step_id];
             }
         }
+
+        // dd($consultation_nodes);
+        // dump($cached_data['consultation_nodes']);
+
+        // dump("$ cached_data['consultation_nodes'] = " . $cached_data['consultation_nodes']);
+
+
+
+
+
+
 
         if (!$cache_found) {
             Cache::put($this->cache_key, [
