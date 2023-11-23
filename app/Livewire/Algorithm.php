@@ -19,6 +19,7 @@ class Algorithm extends Component
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
+    public bool $is_dynamic_study;
     //todo remove definition when in prod
     public string $age_key = 'older';
     public string $current_step = 'registration';
@@ -66,6 +67,7 @@ class Algorithm extends Component
         }
         $this->title = $json['name'];
         $json_version = $json['medal_r_json_version'];
+        $this->is_dynamic_study = in_array($json['algorithm_id'], config('medal.projects.dynamic'));
 
         $this->cache_key = "json_data_{$this->id}_$json_version";
         //todo set the update cache behovior on json update and set it indefinitely
@@ -157,16 +159,16 @@ class Algorithm extends Component
                     'id' => $node_id,
                     'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
                     'category' => $cached_data['full_nodes'][$node_id]['category'],
-                    'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                    'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                    'answers' => array_map(function ($answer) {
-                        return [
-                            'id' => $answer['id'],
-                            'label' => $answer['label']['en'] ?? '',
-                            'value' => $answer['value'] ?? '',
-                            'operator' => $answer['operator'] ?? '',
-                        ];
-                    }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                    // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                    // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                    // 'answers' => array_map(function ($answer) {
+                    //     return [
+                    //         'id' => $answer['id'],
+                    //         'label' => $answer['label']['en'] ?? '',
+                    //         'value' => $answer['value'] ?? '',
+                    //         'operator' => $answer['operator'] ?? '',
+                    //     ];
+                    // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
                 ];
             }
         }
@@ -184,16 +186,16 @@ class Algorithm extends Component
                         'id' => $node_id,
                         'display_format' => $node['display_format'],
                         'category' => $node['category'],
-                        'label' => $node['label']['en'] ?? '',
-                        'description' => $node['description']['en'] ?? '',
-                        'answers' => array_map(function ($answer) {
-                            return [
-                                'id' => $answer['id'],
-                                'label' => $answer['label']['en'] ?? '',
-                                'value' => $answer['value'] ?? '',
-                                'operator' => $answer['operator'] ?? '',
-                            ];
-                        }, $node['answers'] ?? []),
+                        // 'label' => $node['label']['en'] ?? '',
+                        // 'description' => $node['description']['en'] ?? '',
+                        // 'answers' => array_map(function ($answer) {
+                        //     return [
+                        //         'id' => $answer['id'],
+                        //         'label' => $answer['label']['en'] ?? '',
+                        //         'value' => $answer['value'] ?? '',
+                        //         'operator' => $answer['operator'] ?? '',
+                        //     ];
+                        // }, $node['answers'] ?? []),
                     ];
                     if ($node['category'] === "basic_measurement" || $node['category'] === "unique_triage_question" || $node['category'] === "background_calculation") {
                         $first_look_assessment_nodes[$substep_name][$node_id] = $node_to_add;
@@ -229,16 +231,16 @@ class Algorithm extends Component
                 'id' => $node_id,
                 'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
                 'category' => $cached_data['full_nodes'][$node_id]['category'],
-                'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                'answers' => array_map(function ($answer) {
-                    return [
-                        'id' => $answer['id'],
-                        'label' => $answer['label']['en'] ?? '',
-                        'value' => $answer['value'] ?? '',
-                        'operator' => $answer['operator'] ?? '',
-                    ];
-                }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                // 'answers' => array_map(function ($answer) {
+                //     return [
+                //         'id' => $answer['id'],
+                //         'label' => $answer['label']['en'] ?? '',
+                //         'value' => $answer['value'] ?? '',
+                //         'operator' => $answer['operator'] ?? '',
+                //     ];
+                // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
             ];
         }
 
@@ -247,16 +249,16 @@ class Algorithm extends Component
                 'id' => $node_id,
                 'display_format' => $cached_data['full_nodes'][$node_id]['display_format'],
                 'category' => $cached_data['full_nodes'][$node_id]['category'],
-                'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
-                'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
-                'answers' => array_map(function ($answer) {
-                    return [
-                        'id' => $answer['id'],
-                        'label' => $answer['label']['en'] ?? '',
-                        'value' => $answer['value'] ?? '',
-                        'operator' => $answer['operator'] ?? '',
-                    ];
-                }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
+                // 'label' => $cached_data['full_nodes'][$node_id]['label']['en'] ?? '',
+                // 'description' => $cached_data['full_nodes'][$node_id]['description']['en'] ?? '',
+                // 'answers' => array_map(function ($answer) {
+                //     return [
+                //         'id' => $answer['id'],
+                //         'label' => $answer['label']['en'] ?? '',
+                //         'value' => $answer['value'] ?? '',
+                //         'operator' => $answer['operator'] ?? '',
+                //     ];
+                // }, $cached_data['full_nodes'][$node_id]['answers'] ?? []),
             ];
         }
 
@@ -317,16 +319,16 @@ class Algorithm extends Component
                             'id' => $node['id'],
                             'category' => $node['category'],
                             'display_format' => $node['display_format'],
-                            'label' => $node['label']['en'] ?? '',
-                            'description' => $node['description']['en'] ?? '',
-                            'answers' => array_map(function ($answer) {
-                                return [
-                                    'id' => $answer['id'],
-                                    'label' => $answer['label']['en'] ?? '',
-                                    'operator' => $answer['operator'] ?? '',
-                                    'value' => $answer['value'] ?? '',
-                                ];
-                            }, $node['answers'] ?? []),
+                            // 'label' => $node['label']['en'] ?? '',
+                            // 'description' => $node['description']['en'] ?? '',
+                            // 'answers' => array_map(function ($answer) {
+                            //     return [
+                            //         'id' => $answer['id'],
+                            //         'label' => $answer['label']['en'] ?? '',
+                            //         'operator' => $answer['operator'] ?? '',
+                            //         'value' => $answer['value'] ?? '',
+                            //     ];
+                            // }, $node['answers'] ?? []),
                         ];
                     } else {
                         foreach ($instance['conditions'] as $condition) {
@@ -668,16 +670,16 @@ class Algorithm extends Component
                 'id' => $full_nodes[$next_node_id]['id'],
                 'category' => $full_nodes[$next_node_id]['category'],
                 'display_format' => $full_nodes[$next_node_id]['display_format'],
-                'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
-                'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
-                'answers' => array_map(function ($answer) {
-                    return [
-                        'id' => $answer['id'],
-                        'label' => $answer['label']['en'] ?? '',
-                        'operator' => $answer['operator'] ?? '',
-                        'value' => $answer['value'] ?? '',
-                    ];
-                }, $full_nodes[$next_node_id]['answers'] ?? []),
+                // 'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
+                // 'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
+                // 'answers' => array_map(function ($answer) {
+                //     return [
+                //         'id' => $answer['id'],
+                //         'label' => $answer['label']['en'] ?? '',
+                //         'operator' => $answer['operator'] ?? '',
+                //         'value' => $answer['value'] ?? '',
+                //     ];
+                // }, $full_nodes[$next_node_id]['answers'] ?? []),
             ];
 
             $reordered_nodes = [];
@@ -690,16 +692,16 @@ class Algorithm extends Component
                             'id' => $full_nodes[$next_node_id]['id'],
                             'category' => $full_nodes[$next_node_id]['category'],
                             'display_format' => $full_nodes[$next_node_id]['display_format'],
-                            'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
-                            'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
-                            'answers' => array_map(function ($answer) {
-                                return [
-                                    'id' => $answer['id'],
-                                    'label' => $answer['label']['en'] ?? '',
-                                    'operator' => $answer['operator'] ?? '',
-                                    'value' => $answer['value'] ?? '',
-                                ];
-                            }, $full_nodes[$next_node_id]['answers'] ?? []),
+                            // 'label' => $full_nodes[$next_node_id]['label']['en'] ?? '',
+                            // 'description' => $full_nodes[$next_node_id]['description']['en'] ?? '',
+                            // 'answers' => array_map(function ($answer) {
+                            //     return [
+                            //         'id' => $answer['id'],
+                            //         'label' => $answer['label']['en'] ?? '',
+                            //         'operator' => $answer['operator'] ?? '',
+                            //         'value' => $answer['value'] ?? '',
+                            //     ];
+                            // }, $full_nodes[$next_node_id]['answers'] ?? []),
                         ];
                         $node_exists = true;
                     } else {
