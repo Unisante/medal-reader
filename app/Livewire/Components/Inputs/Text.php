@@ -15,20 +15,20 @@ class Text extends Component
     public $value;
     public $answers;
     public $answer;
-    public array $node;
     public string $cache_key;
+    public bool $is_background_calc;
 
-    public function mount($node, $value, $cache_key)
+    public function mount($node_id, $value = null, $cache_key)
     {
-        $this->node_id = $node['id'];
+        $this->node_id = $node_id;
         $this->cache_key = $cache_key;
-        // $this->label = $node['label'];
-        // $this->description = $node['description'];
-        $this->answers = $node['answers'];
+        $this->answers = $node_id;
         $this->value = $value;
+        $node = Cache::get($cache_key)['full_nodes'][$this->node_id];
 
         if ($node['category'] === 'background_calculation') {
-            foreach (Cache::get($cache_key)['full_nodes'][$this->node_id]["answers"] as $answer) {
+            $this->is_background_calc = true;
+            foreach ($node["answers"] as $answer) {
                 $result = intval($value);
                 $answer_value = $answer['value'];
                 $answer_values = explode(',', $answer_value);
@@ -49,6 +49,8 @@ class Text extends Component
             }
             $this->description = null;
             $this->dispatch('nodeToSave', $this->node_id, $value, $answer_id, $this->answer);
+        } else {
+            $this->is_background_calc = false;
         }
     }
 

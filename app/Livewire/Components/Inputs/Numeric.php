@@ -13,21 +13,15 @@ class Numeric extends Component
     public $description;
     public $answers = [];
     public $answer;
-    public array $node;
     public string $cache_key;
 
     #[Rule('required|numeric')]
     public $value;
 
-    public function mount($node, $cache_key)
+    public function mount($node_id, $cache_key)
     {
-        $this->node_id = $node['id'];
-        $this->cache_key =$cache_key;
-        // $this->label = $node['label'];
-        // $this->description = $node['description'];
-        // $this->answers = $node['answers'];
-        // $this->node = Cache::get($cache_key)['full_nodes'][$this->node_id];
-        // dd($this->node);
+        $this->node_id = $node_id;
+        $this->cache_key = $cache_key;
     }
 
     public function updatingValue($value)

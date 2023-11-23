@@ -13,14 +13,10 @@ class Radio extends Component
     public $answer;
     public string $cache_key;
 
-    public function mount($node, $cache_key)
+    public function mount($node_id, $cache_key)
     {
-        $this->node_id = $node['id'];
-        $this->cache_key =$cache_key;
-        // $this->label = $node['label'];
-        // $this->description = $node['description'];
-        // $this->answers = $node['answers'];
-        // dd($this->answers);
+        $this->node_id = $node_id;
+        $this->cache_key = $cache_key;
     }
 
     public function updatingAnswer($value)

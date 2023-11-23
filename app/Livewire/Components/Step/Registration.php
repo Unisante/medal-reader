@@ -18,7 +18,7 @@ class Registration extends Component
     {
         $this->nodes = $nodes;
         $this->villages = Cache::get($cache_key)['villages'];
-        $this->cache_key =$cache_key;
+        $this->cache_key = $cache_key;
     }
 
     public function updatingDateOfBirth($value)
