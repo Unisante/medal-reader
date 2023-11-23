@@ -3,6 +3,7 @@
 namespace App\Livewire\Components\Inputs;
 
 use Livewire\Attributes\On;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 
 class Text extends Component
@@ -14,17 +15,20 @@ class Text extends Component
     public $value;
     public $answers;
     public $answer;
+    public array $node;
+    public string $cache_key;
 
-    public function mount($node, $value)
+    public function mount($node, $value, $cache_key)
     {
         $this->node_id = $node['id'];
-        $this->label = $node['label'];
-        $this->description = $node['description'];
+        $this->cache_key = $cache_key;
+        // $this->label = $node['label'];
+        // $this->description = $node['description'];
         $this->answers = $node['answers'];
         $this->value = $value;
 
         if ($node['category'] === 'background_calculation') {
-            foreach ($this->answers as $answer) {
+            foreach (Cache::get($cache_key)['full_nodes'][$this->node_id]["answers"] as $answer) {
                 $result = intval($value);
                 $answer_value = $answer['value'];
                 $answer_values = explode(',', $answer_value);

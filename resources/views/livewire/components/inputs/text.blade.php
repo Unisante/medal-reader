@@ -1,11 +1,11 @@
 <div class="mb-2">
   <label class="form-label" for="{{ $node_id }}">
-    {{ $node_id }} : {{ $label }}
-    @if ($description)
+    {{ $node_id }} : {{ Cache::get($cache_key)['full_nodes'][$node_id]['label']['en'] }}
+    @if (Cache::get($cache_key)['full_nodes'][$node_id]['description']['en'])
       <div x-data="{ open: false }">
         <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">Description</button>
         <div x-show="open">
-          <p>{{ $description }}</p>
+          <p>{{ Cache::get($cache_key)['full_nodes'][$node_id]['description']['en'] }}</p>
         </div>
       </div>
     @endif

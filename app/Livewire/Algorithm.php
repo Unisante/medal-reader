@@ -800,7 +800,8 @@ class Algorithm extends Component
             });
 
             $this->current_cc = reset($this->chosen_complaint_categories);
-            $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
+            $this->current_nodes = $cached_data['nodes_per_step'][$step];
+            // [$this->age_key];
         } else {
             // For registration step we do not know the $age_key yet
             $this->current_nodes = $cached_data['nodes_per_step'][$step];

@@ -11,17 +11,19 @@ class Select extends Component
     public $description;
     public $answers = [];
     public $answer;
+    public string $cache_key;
 
-    public function mount($node)
+    public function mount($node, $cache_key)
     {
         $this->node_id = $node['id'];
-        $this->label = $node['label'];
-        $this->description = $node['description'];
-        $this->answers = collect($node['answers'])
-            ->filter(function ($answer) {
-                return $answer['value'] !== 'not_available';
-            })
-            ->sortBy('reference');
+        $this->cache_key =$cache_key;
+        // $this->label = $node['label'];
+        // $this->description = $node['description'];
+        // $this->answers = collect($node['answers'])
+        //     ->filter(function ($answer) {
+        //         return $answer['value'] !== 'not_available';
+        //     })
+        //     ->sortBy('reference');
         // dd($this->node['answers']);
     }
 

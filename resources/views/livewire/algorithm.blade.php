@@ -70,7 +70,7 @@
               @case('Input')
                 <div>
                   <livewire:components.inputs.numeric wire:key="{{ 'basic-measurement-' . $node['id'] }}"
-                    :node="$node" />
+                    :node="$node" :cache_key="$cache_key" />
                 </div>
               @break
 
@@ -100,32 +100,32 @@
                     @switch($node['display_format'])
                       @case('RadioButton')
                         <div>
-                          <livewire:components.inputs.radio wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          <livewire:components.inputs.radio wire:key="{{ $cc . $node['id'] }}" :node="$node" :cache_key="$cache_key"  />
                         </div>
                       @break
 
                       @case('String')
                         <div>
-                          <livewire:components.inputs.text wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          <livewire:components.inputs.text wire:key="{{ $cc . $node['id'] }}" :node="$node" :cache_key="$cache_key"  />
                         </div>
                       @break
 
                       @case('DropDownList')
                         <div>
-                          <livewire:components.inputs.select wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          <livewire:components.inputs.select wire:key="{{ $cc . $node['id'] }}" :node="$node" :cache_key="$cache_key"  />
                         </div>
                       @break
 
                       @case('Input')
                         <div>
-                          <livewire:components.inputs.numeric wire:key="{{ $cc . $node['id'] }}" :node="$node" />
+                          <livewire:components.inputs.numeric wire:key="{{ $cc . $node['id'] }}" :node="$node" :cache_key="$cache_key" />
                         </div>
                       @break
 
                       @case('Formula')
                         <div>
                           <livewire:components.inputs.text :value="$nodes_to_save[$node['id']]" wire:key="{{ $cc . $node['id'] }}"
-                            :node="$node" />
+                            :node="$node"  :cache_key="$cache_key"  />
                         </div>
                       @break
 

@@ -8,25 +8,25 @@
       @switch($node['display_format'])
         @case('RadioButton')
           <div>
-            <livewire:components.inputs.radio wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+            <livewire:components.inputs.radio wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node"  :cache_key="$cache_key"  />
           </div>
         @break
 
         @case('DropDownList')
           <div>
-            <livewire:components.inputs.select wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+            <livewire:components.inputs.select wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" :cache_key="$cache_key"  />
           </div>
         @break
 
         @case('Input')
           <div>
-            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" :cache_key="$cache_key" />
           </div>
         @break
 
         @case('String')
           <div>
-            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" />
+            <livewire:components.inputs.numeric wire:key="{{ 'registration-node-' . $node['id'] }}" :node="$node" :cache_key="$cache_key" />
           </div>
         @break
 
