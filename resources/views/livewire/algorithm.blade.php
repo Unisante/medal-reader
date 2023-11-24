@@ -5,7 +5,12 @@
   </div>
   <div class="row g-3">
     <div class="col-8">
-      @php $full_nodes=Cache::get($cache_key)["full_nodes"] @endphp
+      {{-- @dump(Cache::get($cache_key)["final_diagnoses"]) --}}
+      @php
+        $full_nodes = Cache::get($cache_key)['full_nodes'];
+
+        $final_diagnoses = Cache::get($cache_key)['final_diagnoses'];
+      @endphp
       {{-- Registration --}}
       @if ($current_step === 'registration')
         {{-- //todo do not send anything more than ID to any nested component ! --}}
@@ -169,7 +174,7 @@
               <span class="teleport-switch-control-description">Disagree</span>
               <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
                 id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                wire:model.live="agreed_diagnoses.{{ $df['id'] }}">
+                wire:model.live="diagnoses_status.{{ $df['id'] }}">
               <span class="teleport-switch-control-indicator"></span>
               <span class="teleport-switch-control-description">Agree</span>
             </label>
@@ -192,13 +197,33 @@
         @endforeach
 
         {{-- Managements --}}
-        @foreach ($managements_to_display as $management)
-          <div wire:key="{{ 'management-' . $management['id'] }}">
-            <p> Management : {{ $management['id'] }} </p>
-            <p> {{ $management['label'] }}</p>
-            <p> {{ $management['description'] }}</p>
-          </div>
-        @endforeach
+        <table class="table">
+          <thead class="table-dark">
+            <tr>
+              <th scope="col">Managements</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($managements_to_display as $management)
+              <tr wire:key="{{ 'management-' . $management['id'] }}">
+                <td>
+                  <b>{{ $management['label'] }}</b><br> <b>Indication:</b>
+                  {{ $final_diagnoses[$management['diagnosis_id']]['label']['en'] }}
+                  @if ($management['description'])
+                    <div x-data="{ open: false }">
+                      <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                        <i class="bi bi-info-circle"> Description</i>
+                      </button>
+                      <div x-show="open">
+                        <p>{{ $management['description'] }}</p>
+                      </div>
+                    </div>
+                  @endif
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
       @endif
 
     </div>

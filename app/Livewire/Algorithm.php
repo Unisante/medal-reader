@@ -458,12 +458,14 @@ class Algorithm extends Component
                     }
 
                     //todo when multiple managements sets what to do ?
+                    // dd($final_diagnoses[$df]['managements']);
                     $management_key = key($final_diagnoses[$df]['managements']);
 
                     // Because sometime df has no managements
                     if (isset($health_cares[$management_key]['id'])) {
                         if (!array_key_exists($health_cares[$management_key]['id'], $this->managements_to_display)) {
                             $this->managements_to_display[$management_key] = [
+                                'diagnosis_id'=>$final_diagnoses[$df]['id'],
                                 'id' => $health_cares[$management_key]['id'],
                                 'label' => $health_cares[$management_key]['label']['en'] ?? '',
                                 'description' => $health_cares[$management_key]['description']['en'] ?? '',
