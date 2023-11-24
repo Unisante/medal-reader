@@ -5,6 +5,7 @@ namespace App\Livewire;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use Exception;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -126,6 +127,7 @@ class Algorithm extends Component
                 'dependency_map' => [],
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
+                'no_condition_nodes' => [],
             ], $this->cache_expiration_time);
         }
 
@@ -259,9 +261,7 @@ class Algorithm extends Component
         $desired_systems_order = array_values($systems);
         $title_position_map = array_flip($desired_systems_order);
 
-
         foreach ($consultation_nodes as &$system) {
-
             uksort($system, function ($a, $b) use ($title_position_map) {
                 return $title_position_map[$a] - $title_position_map[$b];
             });
@@ -269,13 +269,23 @@ class Algorithm extends Component
             foreach ($system as $key => &$cc_nodes) {
                 $order = array_flip($cached_data['consultation_nodes'][$key]['data']);
                 foreach ($cc_nodes as &$nodes) {
-
                     uksort($nodes, function ($a, $b) use ($order) {
                         return $order[$a] - $order[$b];
                     });
                 }
             }
         }
+
+        $nodes_per_step = [
+            'registration' => $registration_nodes,
+            'first_look_assessment' => $first_look_assessment_nodes,
+            'consultation' => $consultation_nodes,
+            'tests' => $tests_nodes ?? [], // No tests for non dynamic study
+            'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic study
+        ];
+
+        $no_condition_nodes = array_unique(Arr::flatten($nodes_per_step));
+
 
         if (!$cache_found) {
             Cache::put($this->cache_key, [
@@ -286,13 +296,8 @@ class Algorithm extends Component
                 'df_hash_map' => $df_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
                 'dependency_map' => $dependency_map,
-                'nodes_per_step' => [
-                    'registration' => $registration_nodes,
-                    'first_look_assessment' => $first_look_assessment_nodes,
-                    'consultation' => $consultation_nodes,
-                    'tests' => $tests_nodes ?? [], // No tests for non dynamic study
-                    'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic study
-                ],
+                'nodes_per_step' => $nodes_per_step,
+                'no_condition_nodes' => $no_condition_nodes,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
@@ -315,6 +320,8 @@ class Algorithm extends Component
         // dump($this->nodes_to_save);
         // dump($cached_data['full_order']);
         // dump($cached_data['nodes_per_step']);
+        // dump($cached_data['nodes_per_step']);
+        // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
@@ -338,7 +345,10 @@ class Algorithm extends Component
 
             // If answer will set a drug, we add it to the drugs to display
             if (array_key_exists($value, $drugs_hash_map)) {
-                $this->drugs_to_display = array_merge($this->drugs_to_display, $drugs_hash_map[$value]);
+                $this->drugs_to_display = [
+                    ...$this->drugs_to_display,
+                    ...$drugs_hash_map[$value]
+                ];
             }
 
             // If node is linked to some bc(s) then we calculate them directly
