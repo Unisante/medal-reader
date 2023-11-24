@@ -10,7 +10,7 @@
         $cache = Cache::get($cache_key);
         $full_nodes = $cache['full_nodes'];
         $final_diagnoses = $cache['final_diagnoses'];
-        $health_cares = $cache['health_cares']
+        $health_cares = $cache['health_cares'];
       @endphp
       {{-- Registration --}}
       @if ($current_step === 'registration')
@@ -206,8 +206,7 @@
               </tr>
             </thead>
             <tbody>
-              @foreach ($managements_to_display as $management_key=>$diagnosis_id)
-
+              @foreach ($managements_to_display as $management_key => $diagnosis_id)
                 @if (isset($diagnoses_status[$diagnosis_id]))
                   <tr wire:key="{{ 'management-' . $management_key }}">
                     <td>

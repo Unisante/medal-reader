@@ -495,7 +495,9 @@ class Algorithm extends Component
 
         // Reorder DF and managements upon level_of_urgency
         uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
-        uksort($this->managements_to_display, function ($a, $b)use($health_cares) { return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];});
+        uksort($this->managements_to_display, function ($a, $b) use ($health_cares) {
+            return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];
+        });
 
         if ($next_node_id) {
             foreach ($next_node_id as $node) {
