@@ -165,91 +165,136 @@
       {{-- Tests --}}
       @if ($current_step === 'tests')
       @endif
-
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
-        @foreach ($df_to_display as $df)
-          <div class="m-0" wire:key="{{ 'df-' . $df['id'] }}">
-            <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
-            <label class="custom-control teleport-switch">
-              <span class="teleport-switch-control-description">Disagree</span>
-              <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                wire:model.live="diagnoses_status.{{ $df['id'] }}">
-              <span class="teleport-switch-control-indicator"></span>
-              <span class="teleport-switch-control-description">Agree</span>
-            </label>
-          </div>
-          @if (isset($diagnoses_status[$df['id']]))
-            @foreach ($df['drugs'] as $drug)
-              <div class="m-0" wire:key="{{ 'drug-' . $drug['id'] }}">
-                <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
-                <label class="custom-control teleport-switch">
-                  <span class="teleport-switch-control-description">Disagree</span>
-                  <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
-                    id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
-                    wire:model.live="drugs_status.{{ $drug['id'] }}">
-                  <span class="teleport-switch-control-indicator"></span>
-                  <span class="teleport-switch-control-description">Agree</span>
-                </label>
-              </div>
-            @endforeach
-          @endif
-        @endforeach
-
-        {{-- Managements --}}
-        @if (count(array_filter($diagnoses_status)))
+        {{-- we need to check the sub steps --}}
+        @if ($current_sub_step === 'final_diagnoses')
           <table class="table">
             <thead class="table-dark">
               <tr>
-                <th scope="col">Managements</th>
+                <th scope="col">Final Diagnoses</th>
+                <th scope="col">Action</th>
               </tr>
             </thead>
             <tbody>
-              @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                @if (isset($diagnoses_status[$diagnosis_id]))
-                  <tr wire:key="{{ 'management-' . $management_key }}">
-                    <td>
-                      <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
-                      {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                      @if ($health_cares[$management_key]['description']['en'])
-                        <div x-data="{ open: false }">
-                          <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                            <i class="bi bi-info-circle"> Description</i>
-                          </button>
-                          <div x-show="open">
-                            <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                          </div>
-                        </div>
-                      @endif
-                    </td>
-                  </tr>
-                @endif
+              @foreach ($df_to_display as $df)
+                <tr wire:key="{{ 'df-' . $df['id'] }}">
+                  <td>
+                    <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+                  </td>
+                  <td>
+                    <label class="custom-control teleport-switch">
+                      <span class="teleport-switch-control-description">Disagree</span>
+                      <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
+                        id="{{ $df['id'] }}" value="{{ $df['id'] }}"
+                        wire:model.live="diagnoses_status.{{ $df['id'] }}">
+                      <span class="teleport-switch-control-indicator"></span>
+                      <span class="teleport-switch-control-description">Agree</span>
+                    </label>
+                  </td>
+                </tr>
               @endforeach
             </tbody>
           </table>
         @endif
+        @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
+          @if ($current_sub_step === 'drugs')
+            <table class="table">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col">Drugs</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @php $unique_ids=[] @endphp
+                @foreach (array_filter($diagnoses_status) as $diagnosis_id => $value)
+                  @foreach ($df_to_display[$diagnosis_id]['drugs'] as $drug)
+                    @if (!in_array($drug['id'], $unique_ids))
+                      @php $unique_ids[]=$drug['id'] @endphp
+                      <tr wire:key="{{ 'drug-' . $drug['id'] }}">
+                        <td>
+                          <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
+                        </td>
+                        <td>
+                          <label class="custom-control teleport-switch">
+                            <span class="teleport-switch-control-description">Disagree</span>
+                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
+                              id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
+                              wire:model.live="drugs_status.{{ $drug['id'] }}">
+                            <span class="teleport-switch-control-indicator"></span>
+                            <span class="teleport-switch-control-description">Agree</span>
+                          </label>
+                        </td>
+                      </tr>
+                    @endif
+                  @endforeach
+                @endforeach
+              </tbody>
+            </table>
+          @endif
+          @if ($current_sub_step === 'managements')
+            <table class="table">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col">Managements</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($managements_to_display as $management_key => $diagnosis_id)
+                  @if (isset($diagnoses_status[$diagnosis_id]))
+                    <tr wire:key="{{ 'management-' . $management_key }}">
+                      <td>
+                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
+                        {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+                        @if ($health_cares[$management_key]['description']['en'])
+                          <div x-data="{ open: false }">
+                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                              <i class="bi bi-info-circle"> Description</i>
+                            </button>
+                            <div x-show="open">
+                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
+                            </div>
+                          </div>
+                        @endif
+                      </td>
+                    </tr>
+                  @endif
+                @endforeach
+              </tbody>
+            </table>
+          @endif
+        @endif
       @endif
-
     </div>
     <div class="col-4">
       <div class="container">
         Steps
-        @foreach (array_keys($steps) as $step)
-          <div wire:key="{{ 'go-step-' . $step }}">
-            <button class="btn btn-sm btn-outline-primary m-1"
-              wire:click="goToStep('{{ $step }}')">{{ $step }}</button>
+        @foreach ($steps as $key => $substeps)
+          <div wire:key="{{ 'go-step-' . $key }}">
+            <button class="btn btn-outline-primary m-1"
+              wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
+            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split"
+              data-bs-toggle="dropdown" aria-expanded="false"></button>
+            <ul class="dropdown-menu">
+              @foreach ($substeps as $substep)
+                <div wire:key="{{ 'go-sub-step-' . $substep }}">
+                  <li><a class="dropdown-item"
+                      wire:click="goToSubStep('{{ $key }}','{{ $substep }}')">{{ $substep }}</a>
+                  </li>
+                </div>
+              @endforeach
+            </ul>
           </div>
         @endforeach
-      </div>
-      <div class="container">
-        CCs chosen :
-        @foreach ($chosen_complaint_categories as $cc)
-          <div wire:key="{{ 'edit-cc-' . $cc }}">
-            <p class="mb-0">{{ $cc }}</p>
-          </div>
-        @endforeach
+        <div class="container">
+          CCs chosen :
+          @foreach ($chosen_complaint_categories as $cc)
+            <div wire:key="{{ 'edit-cc-' . $cc }}">
+              <p class="mb-0">{{ $cc }}</p>
+            </div>
+          @endforeach
+        </div>
       </div>
     </div>
   </div>
-</div>

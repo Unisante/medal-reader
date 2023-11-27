@@ -51,12 +51,13 @@ class Algorithm extends Component
         'tests' => [],
         'diagnoses' => [
             'final_diagnoses',
-            'managements',
             'drugs',
+            'managements',
             'summary',
             'referral',
         ],
     ];
+    public string $current_sub_step = '';
 
     public function mount($id = null)
     {
@@ -727,6 +728,17 @@ class Algorithm extends Component
         }
 
         $this->current_step = $step;
+        if (!empty($this->steps[$this->current_step])) {
+            $this->current_sub_step = $this->steps[$this->current_step][0];
+        }
+    }
+
+    public function goToSubStep(string $step, string $substep): void
+    {
+        // change the step accordingly
+        $this->goToStep($step);
+        // declare the current sub step
+        $this->current_sub_step = $substep;
     }
 
     public function goToNextCc(): void
