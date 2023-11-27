@@ -7,9 +7,10 @@
     <div class="col-8">
       {{-- @dump(Cache::get($cache_key)["final_diagnoses"]) --}}
       @php
-        $full_nodes = Cache::get($cache_key)['full_nodes'];
-
-        $final_diagnoses = Cache::get($cache_key)['final_diagnoses'];
+        $cache = Cache::get($cache_key);
+        $full_nodes = $cache['full_nodes'];
+        $final_diagnoses = $cache['final_diagnoses'];
+        $health_cares = $cache['health_cares'];
       @endphp
       {{-- Registration --}}
       @if ($current_step === 'registration')
@@ -187,7 +188,7 @@
                   <span class="teleport-switch-control-description">Disagree</span>
                   <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
                     id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
-                    wire:model.live="agreed_drugs.{{ $drug['id'] }}">
+                    wire:model.live="drugs_status.{{ $drug['id'] }}">
                   <span class="teleport-switch-control-indicator"></span>
                   <span class="teleport-switch-control-description">Agree</span>
                 </label>
@@ -197,33 +198,37 @@
         @endforeach
 
         {{-- Managements --}}
-        <table class="table">
-          <thead class="table-dark">
-            <tr>
-              <th scope="col">Managements</th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach ($managements_to_display as $management)
-              <tr wire:key="{{ 'management-' . $management['id'] }}">
-                <td>
-                  <b>{{ $management['label'] }}</b><br> <b>Indication:</b>
-                  {{ $final_diagnoses[$management['diagnosis_id']]['label']['en'] }}
-                  @if ($management['description'])
-                    <div x-data="{ open: false }">
-                      <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                        <i class="bi bi-info-circle"> Description</i>
-                      </button>
-                      <div x-show="open">
-                        <p>{{ $management['description'] }}</p>
-                      </div>
-                    </div>
-                  @endif
-                </td>
+        @if (count(array_filter($diagnoses_status)))
+          <table class="table">
+            <thead class="table-dark">
+              <tr>
+                <th scope="col">Managements</th>
               </tr>
-            @endforeach
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @foreach ($managements_to_display as $management_key => $diagnosis_id)
+                @if (isset($diagnoses_status[$diagnosis_id]))
+                  <tr wire:key="{{ 'management-' . $management_key }}">
+                    <td>
+                      <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
+                      {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+                      @if ($health_cares[$management_key]['description']['en'])
+                        <div x-data="{ open: false }">
+                          <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                            <i class="bi bi-info-circle"> Description</i>
+                          </button>
+                          <div x-show="open">
+                            <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
+                          </div>
+                        </div>
+                      @endif
+                    </td>
+                  </tr>
+                @endif
+              @endforeach
+            </tbody>
+          </table>
+        @endif
       @endif
 
     </div>

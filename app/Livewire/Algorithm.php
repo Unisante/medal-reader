@@ -284,7 +284,8 @@ class Algorithm extends Component
             'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic study
         ];
 
-        $no_condition_nodes = array_unique(Arr::flatten($nodes_per_step));
+        $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
+        // dd($no_condition_nodes);
 
         if (!$cache_found) {
             Cache::put($this->cache_key, [
@@ -365,7 +366,7 @@ class Algorithm extends Component
     public function displayNextNode($node_id, $value, $old_value)
     {
         $cached_data = Cache::get($this->cache_key);
-
+        $no_condition_nodes = $cached_data['no_condition_nodes'];
         $dependency_map = $cached_data['dependency_map'];
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
@@ -467,19 +468,24 @@ class Algorithm extends Component
                     }
 
                     //todo when multiple managements sets what to do ?
-                    // dd($final_diagnoses[$df]['managements']);
-                    $management_key = key($final_diagnoses[$df]['managements']);
-
-                    // Because sometime df has no managements
-                    if (isset($health_cares[$management_key]['id'])) {
-                        if (!array_key_exists($health_cares[$management_key]['id'], $this->managements_to_display)) {
-                            $this->managements_to_display[$management_key] = [
-                                'diagnosis_id' => $final_diagnoses[$df]['id'],
-                                'id' => $health_cares[$management_key]['id'],
-                                'label' => $health_cares[$management_key]['label']['en'] ?? '',
-                                'description' => $health_cares[$management_key]['description']['en'] ?? '',
-                                'level_of_urgency' => $health_cares[$management_key]['level_of_urgency'],
-                            ];
+                    foreach ($final_diagnoses[$df]['managements'] as $key => $management) {
+                        $other_conditions_met = true;
+                        foreach ($management['conditions'] as $condition) {
+                            if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
+                                if (array_key_exists($condition['node_id'], $no_condition_nodes)) {
+                                    if (
+                                        array_key_exists($condition['node_id'], $this->nodes_to_save)
+                                        && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
+                                    ) {
+                                        $other_conditons_met = false;
+                                    }
+                                }
+                            }
+                        }
+                        if ($other_conditions_met) {
+                            if (!array_key_exists($health_cares[$key]['id'], $this->managements_to_display)) {
+                                $this->managements_to_display[$key] = $final_diagnoses[$df]['id'];
+                            }
                         }
                     }
                 }
@@ -489,7 +495,9 @@ class Algorithm extends Component
 
         // Reorder DF and managements upon level_of_urgency
         uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
-        uasort($this->managements_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
+        uksort($this->managements_to_display, function ($a, $b) use ($health_cares) {
+            return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];
+        });
 
         if ($next_node_id) {
             foreach ($next_node_id as $node) {
