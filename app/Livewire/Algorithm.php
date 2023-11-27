@@ -121,6 +121,8 @@ class Algorithm extends Component
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
                 'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No villages for non dynamic study
+
+                // All logics that will be calulated
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
@@ -468,7 +470,7 @@ class Algorithm extends Component
                         ];
                     }
 
-                    //todo when multiple managements sets what to do ?
+                    //todo fix the fact that every managements are now true
                     foreach ($final_diagnoses[$df]['managements'] as $key => $management) {
                         $other_conditions_met = true;
                         foreach ($management['conditions'] as $condition) {
