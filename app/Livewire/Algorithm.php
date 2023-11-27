@@ -286,7 +286,6 @@ class Algorithm extends Component
 
         $no_condition_nodes = array_unique(Arr::flatten($nodes_per_step));
 
-
         if (!$cache_found) {
             Cache::put($this->cache_key, [
                 ...$cached_data,
@@ -475,7 +474,7 @@ class Algorithm extends Component
                     if (isset($health_cares[$management_key]['id'])) {
                         if (!array_key_exists($health_cares[$management_key]['id'], $this->managements_to_display)) {
                             $this->managements_to_display[$management_key] = [
-                                'diagnosis_id'=>$final_diagnoses[$df]['id'],
+                                'diagnosis_id' => $final_diagnoses[$df]['id'],
                                 'id' => $health_cares[$management_key]['id'],
                                 'label' => $health_cares[$management_key]['label']['en'] ?? '',
                                 'description' => $health_cares[$management_key]['description']['en'] ?? '',
