@@ -121,7 +121,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No villages for non dynamic study
+                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No village for non dynamic study
 
                 // All logics that will be calulated
                 'answers_hash_map' => [],
