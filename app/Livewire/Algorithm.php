@@ -31,6 +31,7 @@ class Algorithm extends Component
     public array $df_to_display;
     public array $drugs_to_display;
     public array $managements_to_display;
+    public array $all_managements_to_display;
     public array $nodes_to_save;
     public array $current_nodes;
     public array $nodes;
@@ -51,8 +52,8 @@ class Algorithm extends Component
         'tests' => [],
         'diagnoses' => [
             'final_diagnoses',
-            'drugs',
-            'managements',
+            'treatment_questions',
+            'medicines',
             'summary',
             'referral',
         ],
@@ -127,6 +128,7 @@ class Algorithm extends Component
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
                 'drugs_hash_map' => [],
+                'managements_hash_map' => [],
                 'dependency_map' => [],
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
@@ -138,6 +140,7 @@ class Algorithm extends Component
 
         $df_hash_map = [];
         $drugs_hash_map = [];
+        $managements_hash_map = [];
 
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
@@ -151,6 +154,17 @@ class Algorithm extends Component
                     } else {
                         if (!in_array($drug['id'], $drugs_hash_map[$condition['answer_id']])) {
                             $drugs_hash_map[$condition['answer_id']][] = $drug['id'];
+                        }
+                    }
+                }
+            }
+            foreach ($df['managements'] as $management) {
+                foreach ($management['conditions'] as $condition) {
+                    if (!array_key_exists($condition['answer_id'], $managements_hash_map)) {
+                        $managements_hash_map[$condition['answer_id']][] = $management['id'];
+                    } else {
+                        if (!in_array($management['id'], $managements_hash_map[$condition['answer_id']])) {
+                            $managements_hash_map[$condition['answer_id']][] = $management['id'];
                         }
                     }
                 }
@@ -298,6 +312,7 @@ class Algorithm extends Component
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
+                'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
@@ -329,6 +344,7 @@ class Algorithm extends Component
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['nodes_to_update']);
+        // dump($cached_data['managements_hash_map']);
     }
 
     #[On('nodeToSave')]
@@ -337,6 +353,7 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
+        $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
@@ -351,6 +368,14 @@ class Algorithm extends Component
                 $this->drugs_to_display = [
                     ...$this->drugs_to_display,
                     ...$drugs_hash_map[$value]
+                ];
+            }
+
+            // If answer will set a management, we add it to the managements to display
+            if (array_key_exists($value, $managements_hash_map)) {
+                $this->all_managements_to_display = [
+                    ...$this->all_managements_to_display,
+                    ...$managements_hash_map[$value]
                 ];
             }
 
@@ -392,7 +417,7 @@ class Algorithm extends Component
                 foreach ($df_hash_map[$this->current_cc][$old_value] as $df) {
                     if (array_key_exists($df, $this->df_to_display)) {
                         if (isset($final_diagnoses[$df]['managements'])) {
-                            unset($this->managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                            unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
                         }
                         unset($this->df_to_display[$df]);
                     }
@@ -415,7 +440,7 @@ class Algorithm extends Component
 
         //if next node is DF, add it to df_to_display <3
         if (isset($df_hash_map[$this->current_cc][$value])) {
-            $other_conditons_met = true;
+            $other_conditions_met = true;
             foreach ($df_hash_map[$this->current_cc][$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
                     // We already know that this condition is met because it has been calulated
@@ -432,17 +457,17 @@ class Algorithm extends Component
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
                                 && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
                             ) {
-                                $other_conditons_met = false;
+                                $other_conditions_met = false;
                             }
                         }
                     }
                 }
 
-                if ($other_conditons_met) {
+                if ($other_conditions_met) {
                     if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
                         foreach ($final_diagnoses[$df]['drugs'] as $drug) {
 
-                            $conditions = $final_diagnoses[$df]['conditions'];
+                            $conditions = $final_diagnoses[$df]['drugs'][$drug['id']]['conditions'];
 
                             if (empty($conditions)) {
                                 $drugs[] = [
@@ -468,28 +493,19 @@ class Algorithm extends Component
                             'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
                             'drugs' => $drugs ?? []
                         ];
-                    }
 
-                    //todo fix the fact that every managements are now true
-                    foreach ($final_diagnoses[$df]['managements'] as $key => $management) {
-                        $other_conditions_met = true;
-                        foreach ($management['conditions'] as $condition) {
-                            if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
-                                if (array_key_exists($condition['node_id'], $no_condition_nodes)) {
-                                    if (
-                                        array_key_exists($condition['node_id'], $this->nodes_to_save)
-                                        && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
-                                    ) {
-                                        $other_conditons_met = false;
-                                    }
+                        foreach ($final_diagnoses[$df]['managements'] as $management_key=>$management) {
+                            $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
+                            if (empty($conditions)) {
+                                $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
+                            } else {
+                                if (in_array($management_key, $this->all_managements_to_display)) {
+                                    $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
+
                                 }
                             }
                         }
-                        if ($other_conditions_met) {
-                            if (!array_key_exists($health_cares[$key]['id'], $this->managements_to_display)) {
-                                $this->managements_to_display[$key] = $final_diagnoses[$df]['id'];
-                            }
-                        }
+
                     }
                 }
             }
