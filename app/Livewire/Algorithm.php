@@ -37,6 +37,8 @@ class Algorithm extends Component
     public array $nodes;
     public array $diagnoses_status;
     public array $drugs_status;
+    public string $drug_formulation;
+    public array $drugs_formulations;
 
     public array $steps = [
         'registration' => [],
@@ -783,6 +785,14 @@ class Algorithm extends Component
 
 
         $this->current_cc = $this->chosen_complaint_categories[$previous_index];
+    }
+
+    public function updatedDrugFormulation($value)
+    {
+        // split the string and save it on the new array
+        $array = explode("_", $value);
+        $this->drugs_formulations[$array[0]]=$array[1];
+
     }
 
     public function render()

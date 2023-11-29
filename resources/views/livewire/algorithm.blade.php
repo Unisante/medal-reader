@@ -234,7 +234,17 @@
                             <tr wire:key="{{ 'drug-' . $drug['id'] }}">
                               <td><label class="form-check-label"
                                   for="{{ $drug['id'] }}">{{ $drug['label'] }}</label></td>
-                              <td>Fromulations</td>
+                              <td>
+                                @php $drug_formulations=$health_cares[$drug['id']]['formulations'] @endphp
+                                <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                                  wire:model.live="drug_formulation" id="formultaion-{{ $drug['id'] }}">
+                                  @foreach ($drug_formulations as $formulation)
+                                    <option value="{{ $drug['id'] }}_{{ $formulation['id'] }}">
+                                      {{ $formulation['description']['en'] }}
+                                    </option>
+                                  @endforeach
+                                </select>
+                              </td>
                               <td><label class="custom-control teleport-switch">
                                   <span class="teleport-switch-control-description">Disagree</span>
                                   <input type="checkbox" class="teleport-switch-control-input"
@@ -254,13 +264,13 @@
               @if ($current_sub_step === 'summary')
                 {{-- referral and treatment questions are no needed --}}
                 @php
-                $steps[$current_step][] = 'managements';
-                $steps[$current_step] = array_unique($steps[$current_step]);
+                  $steps[$current_step][] = 'managements';
+                  $steps[$current_step] = array_unique($steps[$current_step]);
                 @endphp
                 <div class="accordion" id="accordionExample">
                   @foreach ($steps[$current_step] as $index => $substep)
                     {{-- @if (!in_array($substep, ['treatment_questions', 'referral', $current_sub_step])) --}}
-                    @if($substep==='managements')
+                    @if ($substep === 'managements')
                       <div class="accordion-item">
                         <h2 class="accordion-header" id="heading{{ $index }}">
                           <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
@@ -277,34 +287,56 @@
                           <div class="accordion-body">
                             {{-- {!! $substep !!} --}}
                             <table class="table">
-                                <thead class="table-dark">
-                                  <tr>
-                                    <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                                    @if (isset($diagnoses_status[$diagnosis_id]))
-                                      <tr wire:key="{{ 'management-' . $management_key }}">
-                                        <td>
-                                          <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
-                                          {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                                          @if ($health_cares[$management_key]['description']['en'])
-                                            <div x-data="{ open: false }">
-                                              <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                                                <i class="bi bi-info-circle"> Description</i>
-                                              </button>
-                                              <div x-show="open">
-                                                <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                                              </div>
+                              <thead class="table-dark">
+                                <tr>
+                                  <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}git pull</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @foreach ($managements_to_display as $management_key => $diagnosis_id)
+                                  @if (isset($diagnoses_status[$diagnosis_id]))
+                                    <tr wire:key="{{ 'management-' . $management_key }}">
+                                      <td>
+                                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br>
+                                        <b>Indication:</b>
+                                        {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+                                        @if ($health_cares[$management_key]['description']['en'])
+                                          <div x-data="{ open: false }">
+                                            <button class="btn btn-sm btn-outline-secondary m-1"
+                                              @click="open = ! open">
+                                              <i class="bi bi-info-circle"> Description</i>
+                                            </button>
+                                            <div x-show="open">
+                                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
                                             </div>
-                                          @endif
-                                        </td>
-                                      </tr>
-                                    @endif
-                                  @endforeach
-                                </tbody>
-                              </table>
+                                          </div>
+                                        @endif
+                                      </td>
+                                    </tr>
+                                  @endif
+                                @endforeach
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    @endif
+                    @if ($substep === 'medicines')
+                      <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ $index }}">
+                          <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
+                            aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
+                            aria-controls="collapse{{ $index }}">
+                            {{-- {{ $substep }} --}}
+                            {{ ucwords(str_replace('_', ' ', $substep)) }}
+                          </button>
+                        </h2>
+                        <div id="collapse{{ $index }}"
+                          class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
+                          aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
+                          <div class="accordion-body">
+                            {!! $substep !!} will come here
                           </div>
                         </div>
                       </div>
