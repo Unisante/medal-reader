@@ -226,35 +226,34 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @php $unique_ids=[] @endphp
                       @foreach (array_filter($diagnoses_status) as $diagnosis_id => $value)
-                        @foreach ($df_to_display[$diagnosis_id]['drugs'] as $drug)
-                          @if (!in_array($drug['id'], $unique_ids))
-                            @php $unique_ids[]=$drug['id'] @endphp
-                            <tr wire:key="{{ 'drug-' . $drug['id'] }}">
-                              <td><label class="form-check-label"
-                                  for="{{ $drug['id'] }}">{{ $drug['label'] }}</label></td>
-                              <td>
-                                @php $drug_formulations=$health_cares[$drug['id']]['formulations'] @endphp
-                                <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                                  wire:model.live="drug_formulation" id="formultaion-{{ $drug['id'] }}">
-                                  @foreach ($drug_formulations as $formulation)
-                                    <option value="{{ $drug['id'] }}_{{ $formulation['id'] }}">
-                                      {{ $formulation['description']['en'] }}
-                                    </option>
-                                  @endforeach
-                                </select>
-                              </td>
-                              <td><label class="custom-control teleport-switch">
-                                  <span class="teleport-switch-control-description">Disagree</span>
-                                  <input type="checkbox" class="teleport-switch-control-input"
-                                    name="{{ $drug['id'] }}" id="{{ $drug['id'] }}"
-                                    value="{{ $drug['id'] }}" wire:model.live="drugs_status.{{ $drug['id'] }}">
-                                  <span class="teleport-switch-control-indicator"></span>
-                                  <span class="teleport-switch-control-description">Agree</span>
-                                </label></td>
-                            </tr>
-                          @endif
+                        @foreach ($df_to_display[$diagnosis_id]['drugs'] as $drug_id => $drug)
+                          <tr wire:key="{{ 'drug-' . $drug_id }}">
+                            @php $cache_drug=$health_cares[$drug_id] @endphp
+                            <td><label class="form-check-label"
+                                for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}</label></td>
+                            <td>
+                              <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                                wire:model.live="drugs_formulation.{{ $drug_id }}"
+                                id="formultaion-{{ $drug_id }}">
+                                <option selected>Please Select a formulation</option>
+                                @foreach ($cache_drug['formulations'] as $formulation)
+                                  <option @if ($loop->first) selected @endif
+                                    value={{ $formulation['id'] }}>
+                                    {{ $formulation['description']['en'] }}
+                                  </option>
+                                @endforeach
+                              </select>
+                            </td>
+                            <td><label class="custom-control teleport-switch">
+                                <span class="teleport-switch-control-description">Disagree</span>
+                                <input type="checkbox" class="teleport-switch-control-input"
+                                  name="{{ $drug_id }}" id="{{ $drug_id }}" value="{{ $drug_id }}"
+                                  wire:model.live="drugs_status.{{ $drug_id }}">
+                                <span class="teleport-switch-control-indicator"></span>
+                                <span class="teleport-switch-control-description">Agree</span>
+                              </label></td>
+                          </tr>
                         @endforeach
                       @endforeach
                     </tbody>
@@ -337,6 +336,30 @@
                           aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
                           <div class="accordion-body">
                             {!! $substep !!} will come here
+                            <table class="table">
+                              <thead>
+                                <tr>
+                                  <th scope="col">Treatments</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @foreach (array_filter($drugs_status) as $drug_id => $value)
+                                  <tr>
+                                    <td>
+                                      <b>{{ $health_cares[$drug_id]['label']['en'] }}</b><br>
+                                      <b>Indication:</b><br>
+                                      @foreach ($health_cares[$drug_id]['formulations'] as $formulation)
+                                        @if ($formulation['id'] == $drugs_formulation[$drug_id])
+                                        <b>Dose calculation:</b><br>
+                                        <b>Route:</b> {{ $formulation['administration_route_name'] }} <br>
+                                        <b>Formulation:</b> {{ $formulation['description']['en'] }} <br>
+                                        @endif
+                                      @endforeach
+                                    </td>
+                                  </tr>
+                                @endforeach
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       </div>

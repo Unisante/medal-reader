@@ -37,8 +37,8 @@ class Algorithm extends Component
     public array $nodes;
     public array $diagnoses_status;
     public array $drugs_status;
-    public string $drug_formulation;
-    public array $drugs_formulations;
+    public array $drugs_formulation;
+    // public array $drugs_formulations;
 
     public array $steps = [
         'registration' => [],
@@ -467,23 +467,17 @@ class Algorithm extends Component
 
                 if ($other_conditions_met) {
                     if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
-                        foreach ($final_diagnoses[$df]['drugs'] as $drug) {
+                        $drugs = [];
+                        foreach ($final_diagnoses[$df]['drugs'] as $drug_id => $drug) {
 
                             $conditions = $final_diagnoses[$df]['drugs'][$drug['id']]['conditions'];
 
+                            if (array_key_exists($drug_id, $drugs)) continue;
                             if (empty($conditions)) {
-                                $drugs[] = [
-                                    'id' => $health_cares[$drug['id']]['id'],
-                                    'label' => $health_cares[$drug['id']]['label']['en'],
-                                    'description' => $health_cares[$drug['id']]['description']['en'],
-                                ];
+                                $drugs[$drug_id] = $drug_id;
                             } else {
                                 if (in_array($drug['id'], $this->drugs_to_display)) {
-                                    $drugs[] = [
-                                        'id' => $health_cares[$drug['id']]['id'],
-                                        'label' => $health_cares[$drug['id']]['label']['en'],
-                                        'description' => $health_cares[$drug['id']]['description']['en'],
-                                    ];
+                                    $drugs[$drug_id] = $drug_id;
                                 }
                             }
                         }
@@ -493,21 +487,19 @@ class Algorithm extends Component
                             'label' => $final_diagnoses[$df]['label']['en'] ?? '',
                             'description' => $final_diagnoses[$df]['description']['en'] ?? '',
                             'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
-                            'drugs' => $drugs ?? []
+                            'drugs' => $drugs
                         ];
 
-                        foreach ($final_diagnoses[$df]['managements'] as $management_key=>$management) {
+                        foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
                             $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
                             if (empty($conditions)) {
                                 $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
                             } else {
                                 if (in_array($management_key, $this->all_managements_to_display)) {
                                     $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
-
                                 }
                             }
                         }
-
                     }
                 }
             }
@@ -755,10 +747,28 @@ class Algorithm extends Component
 
     public function goToSubStep(string $step, string $substep): void
     {
+        $cached_data = Cache::get($this->cache_key);
+        // $final_diagnoses = $cached_data['final_diagnoses'];
+        $health_cares = $cached_data['health_cares'];
         // change the step accordingly
         $this->goToStep($step);
         // declare the current sub step
         $this->current_sub_step = $substep;
+        if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
+            $agreed_diagnoses = array_filter($this->diagnoses_status);
+            $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
+            // dd($common_agreed_diag_key);
+            foreach ($common_agreed_diag_key as $diag_id => $value) {
+                // $final_diagnoses[$diag_key]['drugs'];
+                foreach ($this->df_to_display[$diag_id]['drugs'] as $drug_id => $drug) {
+                    //the first formulation
+                    if (count($health_cares[$drug_id]['formulations']) > 1) {
+                        $formulation = $health_cares[$drug_id]['formulations'][0];
+                        $this->drugs_formulation[$drug_id] = $formulation['id'];
+                    }
+                }
+            }
+        }
     }
 
     public function goToNextCc(): void
@@ -785,14 +795,6 @@ class Algorithm extends Component
 
 
         $this->current_cc = $this->chosen_complaint_categories[$previous_index];
-    }
-
-    public function updatedDrugFormulation($value)
-    {
-        // split the string and save it on the new array
-        $array = explode("_", $value);
-        $this->drugs_formulations[$array[0]]=$array[1];
-
     }
 
     public function render()
