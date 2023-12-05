@@ -410,6 +410,7 @@ class Algorithm extends Component
         $nodes_per_step = $cached_data['nodes_per_step'];
 
         // Modification behavior
+        //todo get that part working with the new nodes_per_step || current_nodes <3
         if ($old_value) {
 
             // Remove every old answer nodes dependency
@@ -668,7 +669,6 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $full_nodes = $cached_data['full_nodes'];
-        $full_order_medical_history = $cached_data['full_order_medical_history'];
 
         if (isset($full_nodes[$next_node_id])) {
 
@@ -676,9 +676,8 @@ class Algorithm extends Component
             $system = isset($node['system']) ? $node['system'] : 'others';
 
             $this->current_nodes[$system][$next_node_id] = $node['id'];
-            Log::info(json_encode($this->current_nodes));
+
             $this->current_nodes = $this->sortNodes($this->current_nodes);
-            Log::info(json_encode($this->current_nodes));
         }
     }
 
