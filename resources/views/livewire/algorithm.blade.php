@@ -239,7 +239,7 @@
                                 <option selected>Please Select a formulation</option>
                                 @foreach ($cache_drug['formulations'] as $formulation)
                                   <option @if ($loop->first) selected @endif
-                                    value={{ $formulation['id'] }}>
+                                    value="{{ intval(strval($formulation['id'])) }}">
                                     {{ $formulation['description']['en'] }}
                                   </option>
                                 @endforeach
@@ -343,18 +343,21 @@
                                 </tr>
                               </thead>
                               <tbody>
-                                @foreach (array_filter($drugs_status) as $drug_id => $value)
+                                @foreach ($formulations_to_display as $drug_id => $formulation)
                                   <tr>
                                     <td>
-                                      <b>{{ $health_cares[$drug_id]['label']['en'] }}</b><br>
-                                      <b>Indication:</b><br>
-                                      @foreach ($health_cares[$drug_id]['formulations'] as $formulation)
+                                      <b>{{ $formulation['drug_label'] }}</b><br>
+                                      <b>{{ $formulation['description'] }}</b><br>
+                                      <b>Indication:</b> {{$formulation['indication']}}<br>
+                                      <b>Route:</b> {{$formulation['route']}}<br>
+
+                                      {{-- @foreach ($health_cares[$drug_id]['formulations'] as $formulation)
                                         @if ($formulation['id'] == $drugs_formulation[$drug_id])
                                         <b>Dose calculation:</b><br>
                                         <b>Route:</b> {{ $formulation['administration_route_name'] }} <br>
                                         <b>Formulation:</b> {{ $formulation['description']['en'] }} <br>
                                         @endif
-                                      @endforeach
+                                      @endforeach --}}
                                     </td>
                                   </tr>
                                 @endforeach

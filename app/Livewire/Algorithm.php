@@ -2,17 +2,20 @@
 
 namespace App\Livewire;
 
-use Cerbero\JsonParser\JsonParser;
-use DateTime;
-use Exception;
+
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Livewire\Component;
+use DateTime;
+use Exception;
+use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use App\Services\FormulationService;
+use Cerbero\JsonParser\JsonParser;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
-use Livewire\Component;
-use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+
 
 class Algorithm extends Component
 {
@@ -38,6 +41,8 @@ class Algorithm extends Component
     public array $diagnoses_status;
     public array $drugs_status;
     public array $drugs_formulation;
+    public array $formulations_to_display;
+    // private array $diagnoses_formulation;
     // public array $drugs_formulations;
 
     public array $steps = [
@@ -768,12 +773,27 @@ class Algorithm extends Component
                 // $final_diagnoses[$diag_key]['drugs'];
                 foreach ($this->df_to_display[$diag_id]['drugs'] as $drug_id => $drug) {
                     //the first formulation
-                    if (count($health_cares[$drug_id]['formulations']) > 1) {
-                        $formulation = $health_cares[$drug_id]['formulations'][0];
-                        $this->drugs_formulation[$drug_id] = $formulation['id'];
+                    // $this->diagnoses_formulation[$drug_id]=$diag_id;
+                    if (empty($this->drugs_formulation[$drug_id])) {
+                        if ((count($health_cares[$drug_id]['formulations']) > 1)) {
+                            $formulation = $health_cares[$drug_id]['formulations'][0];
+                            $this->drugs_formulation[$drug_id] = $formulation['id'];
+                        }
                     }
                 }
             }
+        }
+        // summary
+        if(($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))){
+            // drug ids in drug_status and formulations in drugs_formulation
+            $common_agreed_diag_key = array_intersect_key($this->df_to_display,array_filter($this->diagnoses_status));
+            // dd($common_agreed_diag_key['drugs']);
+            $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
+            $formulations = new FormulationService($common_agreed_drugs,$common_agreed_diag_key, $this->cache_key);
+            $this->formulations_to_display=$formulations->getFormulations();
+            // give this to the service
+            // dd($this->formulations_to_display);
+
         }
     }
 
