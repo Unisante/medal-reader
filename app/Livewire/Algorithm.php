@@ -299,27 +299,7 @@ class Algorithm extends Component
             }
         }
 
-        // Order nodes
-        $systems = array_keys($cached_data['consultation_nodes']);
-        $desired_systems_order = array_values($systems);
-        $title_position_map = array_flip($desired_systems_order);
-
-        foreach ($consultation_nodes as &$system) {
-
-            uksort($system, function ($a, $b) use ($title_position_map) {
-                return $title_position_map[$a] - $title_position_map[$b];
-            });
-
-            foreach ($system as $key => &$cc_nodes) {
-                if (!isset($cached_data['consultation_nodes'][$key])) continue;
-                $order = array_flip($cached_data['consultation_nodes'][$key]['data']);
-                foreach ($cc_nodes as &$nodes) {
-                    uksort($nodes, function ($a, $b) use ($order) {
-                        return $order[$a] - $order[$b];
-                    });
-                }
-            }
-        }
+        $consultation_nodes = $this->sortSystemsAndNodes($consultation_nodes);
 
         $nodes_per_step = [
             'registration' => $registration_nodes,
@@ -422,7 +402,6 @@ class Algorithm extends Component
     public function displayNextNode($node_id, $value, $old_value)
     {
         $cached_data = Cache::get($this->cache_key);
-        $no_condition_nodes = $cached_data['no_condition_nodes'];
         $dependency_map = $cached_data['dependency_map'];
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
@@ -642,6 +621,49 @@ class Algorithm extends Component
 
 
 
+    public function sortSystemsAndNodes(array $nodes): array
+    {
+        $cached_data = Cache::get($this->cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+        $systems = array_keys($consultation_nodes);
+        $desired_systems_order = array_values($systems);
+        $title_position_map = array_flip($desired_systems_order);
+
+        foreach ($nodes as &$system) {
+
+            uksort($system, function ($a, $b) use ($title_position_map) {
+                return $title_position_map[$a] - $title_position_map[$b];
+            });
+
+            foreach ($system as $key => &$cc_nodes) {
+                $order = array_flip($consultation_nodes[$key]['data']);
+                foreach ($cc_nodes as &$nodes_per_cc) {
+                    uksort($nodes_per_cc, function ($a, $b) use ($order) {
+                        return $order[$a] - $order[$b];
+                    });
+                }
+            }
+        }
+
+        return $nodes;
+    }
+
+    public function sortNodes(array $nodes): array
+    {
+        $cached_data = Cache::get($this->cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+
+        foreach ($nodes as $system_name => &$nodes_per_system) {
+            $order = array_flip($consultation_nodes[$system_name]['data']);
+            uksort($nodes_per_system, function ($a, $b) use ($order) {
+                if (!isset($order[$a]) || !isset($order[$b])) return;
+                return $order[$a] - $order[$b];
+            });
+        }
+
+        return $nodes;
+    }
+
     public function setNextNodeAndSort($next_node_id)
     {
         $cached_data = Cache::get($this->cache_key);
@@ -654,28 +676,9 @@ class Algorithm extends Component
             $system = isset($node['system']) ? $node['system'] : 'others';
 
             $this->current_nodes[$system][$next_node_id] = $node['id'];
-
-            $reordered_nodes = [];
-            $node_exists = false;
-            foreach ($full_order_medical_history as $node_id) {
-                if (isset($this->current_nodes[$system][$node_id])) {
-                    if (!$node_exists && $node_id === $next_node_id) {
-                        $reordered_nodes[$next_node_id] = $node['id'];
-                        $node_exists = true;
-                    } else {
-                        $reordered_nodes[$node_id] = $this->current_nodes[$system][$node_id];
-                    }
-                }
-            }
-
-            // Merge nodes that were not in full_order_medical_history but are present in $this->current_nodes[$system]
-            foreach ($this->current_nodes[$system] as $node_id => $node) {
-                if (!isset($reordered_nodes[$node_id])) {
-                    $reordered_nodes[$node_id] = $node;
-                }
-            }
-
-            $this->current_nodes[$system] = $reordered_nodes;
+            Log::info(json_encode($this->current_nodes));
+            $this->current_nodes = $this->sortNodes($this->current_nodes);
+            Log::info(json_encode($this->current_nodes));
         }
     }
 
@@ -706,7 +709,6 @@ class Algorithm extends Component
             //todo fix current nodes management. Should be the same for every step
             $this->current_cc = reset($this->chosen_complaint_categories);
             $current_nodes_per_step = $nodes_per_step[$step][$this->age_key];
-
 
             foreach ($current_nodes_per_step as $system_name => $system_data) {
                 foreach ($system_data as $cc_id => $nodes) {
