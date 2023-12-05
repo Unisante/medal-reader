@@ -123,13 +123,14 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
-                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No village for non dynamic study
+                'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No village for non dynamic study;
 
                 // All logics that will be calulated
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
                 'drugs_hash_map' => [],
+                'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
                 'dependency_map' => [],
                 'nodes_to_update' => [],
@@ -209,9 +210,10 @@ class Algorithm extends Component
 
         $formula_hash_map = [];
         $nodes_to_update = [];
+        $conditioned_nodes_hash_map = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map, &$nodes_to_update) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map) {
                 foreach ($value as $node) {
                     //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
@@ -224,9 +226,13 @@ class Algorithm extends Component
                         $formula_hash_map[$node['id']] = $node['formula'];
                         $this->handleNodesToUpdate($node, $nodes_to_update);
                     }
+                    if (!empty($node['conditioned_by_cc'])) {
+                        foreach ($node['conditioned_by_cc'] as $cc_id) {
+                            $conditioned_nodes_hash_map[$cc_id][] = $node['id'];
+                        }
+                    }
                 }
             });
-
         $answers_hash_map = [];
         $dependency_map = [];
         $consultation_nodes = [];
@@ -321,7 +327,7 @@ class Algorithm extends Component
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
-
+        
         $this->current_nodes = $registration_nodes;
 
         //todo remove these when in prod
@@ -335,7 +341,7 @@ class Algorithm extends Component
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
-
+        dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
         // dump($cached_data['full_order']);
