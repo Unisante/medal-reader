@@ -137,6 +137,13 @@
                     </div>
                   @break
 
+                  @case('Reference')
+                    <div>
+                      <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}"
+                        :node_id="$node_id" />
+                    </div>
+                  @break
+
                   @default
                 @endswitch
               </div>
