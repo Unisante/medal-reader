@@ -8,7 +8,6 @@ use Livewire\Component;
 class Registration extends Component
 {
     public $nodes;
-    public $villages;
     public array $answered_nodes;
     public array $old_answered_nodes;
     public string $date_of_birth = '1960-01-01';
@@ -17,7 +16,6 @@ class Registration extends Component
     public function mount($nodes, $cache_key)
     {
         $this->nodes = $nodes;
-        $this->villages = Cache::get($cache_key)['villages'];
         $this->cache_key = $cache_key;
     }
 

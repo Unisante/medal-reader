@@ -154,6 +154,9 @@ class Algorithm extends Component
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
             }
+            foreach ($df['conditions'] as $condition) {
+                $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
+            }
 
             foreach ($df['drugs'] as $drug) {
                 foreach ($drug['conditions'] as $condition) {
@@ -238,10 +241,10 @@ class Algorithm extends Component
                     }
                 }
             });
+
         $answers_hash_map = [];
         $dependency_map = [];
         $consultation_nodes = [];
-
         foreach ($cached_data['complaint_categories_steps'] as $step) {
             $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step) {
                 return $diag['complaint_category'] === $step;
@@ -325,6 +328,7 @@ class Algorithm extends Component
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
+                'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map,
                 'nodes_per_step' => $nodes_per_step,
@@ -332,7 +336,7 @@ class Algorithm extends Component
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
-        
+
         $this->current_nodes = $registration_nodes;
 
         //todo remove these when in prod
@@ -350,7 +354,7 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
         // dump($cached_data['full_order']);
-        // dump($cached_data['nodes_per_step']);
+        dump($cached_data['nodes_per_step']);
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
@@ -732,6 +736,8 @@ class Algorithm extends Component
     public function goToStep(string $step): void
     {
         $cached_data = Cache::get($this->cache_key);
+        $nodes_per_step = $cached_data['nodes_per_step'];
+        $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
 
         if ($step === 'consultation') {
             // $cached_data = Cache::get($this->cache_key);
@@ -744,12 +750,30 @@ class Algorithm extends Component
 
             //todo fix current nodes management. Should be the same for every step
             $this->current_cc = reset($this->chosen_complaint_categories);
-            $this->current_nodes = $cached_data['nodes_per_step'][$step][$this->age_key];
+            $current_nodes_per_step = $nodes_per_step[$step][$this->age_key];
+
+            foreach ($current_nodes_per_step as $system_name => $system_data) {
+                foreach ($system_data as $cc_id => $nodes) {
+                    // We only add nodes that are not excluded by CC
+                    if (!in_array($cc_id, $this->chosen_complaint_categories)) {
+                        if (isset($conditioned_nodes_hash_map[$cc_id])) {
+                            $current_nodes[$system_name] = array_diff(
+                                $system_data[$cc_id],
+                                $conditioned_nodes_hash_map[$cc_id]
+                            );
+                        }
+                    } else {
+                        $current_nodes[$system_name] = $system_data[$cc_id];
+                    }
+                }
+            }
+
+            // dd($current_nodes);
+            $this->current_nodes = $current_nodes;
         } else {
             // For registration step we do not know the $age_key yet
             $this->current_nodes = $cached_data['nodes_per_step'][$step];
         }
-
         $this->current_step = $step;
         if (!empty($this->steps[$this->current_step])) {
             $this->current_sub_step = $this->steps[$this->current_step][0];
@@ -784,13 +808,13 @@ class Algorithm extends Component
             }
         }
         // summary
-        if(($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))){
+        if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
-            $common_agreed_diag_key = array_intersect_key($this->df_to_display,array_filter($this->diagnoses_status));
+            $common_agreed_diag_key = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
             // dd($common_agreed_diag_key['drugs']);
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
-            $formulations = new FormulationService($common_agreed_drugs,$common_agreed_diag_key, $this->cache_key);
-            $this->formulations_to_display=$formulations->getFormulations();
+            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_diag_key, $this->cache_key);
+            $this->formulations_to_display = $formulations->getFormulations();
             // give this to the service
             // dd($this->formulations_to_display);
 

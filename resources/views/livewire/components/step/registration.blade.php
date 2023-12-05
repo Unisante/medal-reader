@@ -1,5 +1,9 @@
 <div>
-  @php $full_nodes=Cache::get($cache_key)["full_nodes"] @endphp
+  @php
+    $cache_data = Cache::get($cache_key);
+    $full_nodes = $cache_data['full_nodes'];
+    $villages = $cache_data['villages'];
+  @endphp
   {{-- add first and last name inputs --}}
   <label class="form-label" for="birth_date">Date of birth</label>
   <input class="form-control" wire:model.live="date_of_birth" type="date" pattern="\d{4}-\d{2}-\d{2}" id="birth_date"
