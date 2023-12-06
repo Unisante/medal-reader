@@ -453,9 +453,9 @@ class Algorithm extends Component
         }
 
         //if next node is DF, add it to df_to_display <3
-        if (isset($df_hash_map[$this->current_cc][$value])) {
+        if (isset($df_hash_map[$value])) {
             $other_conditions_met = true;
-            foreach ($df_hash_map[$this->current_cc][$value] as $df) {
+            foreach ($df_hash_map[$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
                     // We already know that this condition is met because it has been calulated
                     // And we skip the same question if it's the condition
