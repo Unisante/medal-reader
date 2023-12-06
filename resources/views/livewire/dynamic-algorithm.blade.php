@@ -226,15 +226,17 @@
                           <tr wire:key="{{ 'drug-' . $drug_id }}">
                             @php $cache_drug=$health_cares[$drug_id] @endphp
                             <td><label class="form-check-label"
-                                for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}</label></td>
+                                for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
+                              </label>
+                            </td>
                             <td>
+                              {{-- todo this is not working as intended --}}
                               <select class="form-select form-select-sm" aria-label=".form-select-sm example"
                                 wire:model.live="drugs_formulation.{{ $drug_id }}"
                                 id="formultaion-{{ $drug_id }}">
                                 <option selected>Please Select a formulation</option>
                                 @foreach ($cache_drug['formulations'] as $formulation)
-                                  <option @if ($loop->first) selected @endif
-                                    value="{{ intval(strval($formulation['id'])) }}">
+                                  <option value="{{ intval(strval($formulation['id'])) }}">
                                     {{ $formulation['description']['en'] }}
                                   </option>
                                 @endforeach

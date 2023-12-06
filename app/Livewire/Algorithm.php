@@ -765,21 +765,17 @@ class Algorithm extends Component
     public function goToSubStep(string $step, string $substep): void
     {
         $cached_data = Cache::get($this->cache_key);
-        // $final_diagnoses = $cached_data['final_diagnoses'];
         $health_cares = $cached_data['health_cares'];
-        // change the step accordingly
+
         $this->goToStep($step);
-        // declare the current sub step
         $this->current_sub_step = $substep;
+
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
-            // dd($common_agreed_diag_key);
             foreach ($common_agreed_diag_key as $diag_id => $value) {
-                // $final_diagnoses[$diag_key]['drugs'];
                 foreach ($this->df_to_display[$diag_id]['drugs'] as $drug_id => $drug) {
-                    //the first formulation
-                    // $this->diagnoses_formulation[$drug_id]=$diag_id;
+                    //todo this is not working as intended
                     if (empty($this->drugs_formulation[$drug_id])) {
                         if ((count($health_cares[$drug_id]['formulations']) > 1)) {
                             $formulation = $health_cares[$drug_id]['formulations'][0];
@@ -789,6 +785,7 @@ class Algorithm extends Component
                 }
             }
         }
+
         // summary
         if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
