@@ -334,12 +334,13 @@ class Algorithm extends Component
         $this->current_nodes = $registration_nodes;
 
         //todo remove these when in prod
-        $this->current_cc = $this->age_key === "older"
-            ? $cached_data['general_cc_id']
-            : $cached_data['yi_general_cc_id'];
+        if ($this->is_dynamic_study) {
+            $this->current_cc = $this->age_key === "older"
+                ? $cached_data['general_cc_id']
+                : $cached_data['yi_general_cc_id'];
+            $this->chosen_complaint_categories[] = "{$cached_data['general_cc_id']}";
+        }
 
-
-        $this->chosen_complaint_categories[] = "{$cached_data['general_cc_id']}";
 
 
         // dd($this->registration_nodes_id);
@@ -830,6 +831,10 @@ class Algorithm extends Component
 
     public function render()
     {
+        if ($this->is_dynamic_study) {
+            return view('livewire.dynamic-algorithm');
+        }
+
         return view('livewire.algorithm');
     }
 }
