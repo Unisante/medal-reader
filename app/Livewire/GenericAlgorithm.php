@@ -161,7 +161,7 @@ class Algorithm extends Component
 
         foreach ($cached_data['final_diagnoses'] as $df) {
             foreach ($df['conditions'] as $condition) {
-                $df_hash_map[$condition['answer_id']][] = $df['id'];
+                $df_hash_map[$df['cc']][$condition['answer_id']][] = $df['id'];
             }
 
             foreach ($df['drugs'] as $drug) {
@@ -344,7 +344,7 @@ class Algorithm extends Component
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
-        dump($conditioned_nodes_hash_map);
+        // dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
         // dump($this->nodes_to_save);
         // dump($cached_data['full_order']);
@@ -417,18 +417,15 @@ class Algorithm extends Component
 
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
-                foreach ($dependency_map[$old_value] as $node_id) {
-                    foreach ($this->current_nodes as $system_name => $nodes_per_system) {
-                        if (isset($this->current_nodes[$system_name][$node_id])) {
-                            unset($this->current_nodes[$system_name][$node_id]);
-                        }
-                    }
+                foreach ($dependency_map[$old_value] as $key) {
+                    // dd($this->current_nodes);
+                    unset($this->current_nodes[$this->current_cc][$key]);
                 }
             }
 
             // Remove every df and managements dependency
-            if (isset($df_hash_map[$old_value])) {
-                foreach ($df_hash_map[$old_value] as $df) {
+            if (isset($df_hash_map[$this->current_cc][$old_value])) {
+                foreach ($df_hash_map[$this->current_cc][$old_value] as $df) {
                     if (array_key_exists($df, $this->df_to_display)) {
                         if (isset($final_diagnoses[$df]['managements'])) {
                             unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
@@ -679,13 +676,8 @@ class Algorithm extends Component
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
             $system = isset($node['system']) ? $node['system'] : 'others';
-            //We don't sort non dynamic study for now
-            if ($this->is_dynamic_study) {
-                $this->current_nodes[$system][$next_node_id] = $node['id'];
-                $this->sortSystemsAndNodes($this->current_nodes);
-            } else {
-                $this->current_nodes[$this->current_cc][$next_node_id] = $node['id'];
-            }
+            $this->current_nodes[$system][$next_node_id] = $node['id'];
+            $this->sortSystemsAndNodes($this->current_nodes);
         }
     }
 
@@ -730,11 +722,7 @@ class Algorithm extends Component
                 foreach ($system_data as $cc_id => $nodes) {
 
                     if (in_array($cc_id, $this->chosen_complaint_categories)) {
-                        if ($this->is_dynamic_study) {
-                            $current_nodes[$system_name] = $system_data[$cc_id];
-                        } else {
-                            $current_nodes[$cc_id] = $system_data[$cc_id];
-                        }
+                        $current_nodes[$system_name] = $system_data[$cc_id];
                         continue;
                     }
 

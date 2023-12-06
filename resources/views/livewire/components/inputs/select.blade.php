@@ -15,9 +15,13 @@
   </label>
   <select wire:model.live="answer" id="{{ $node_id }}" class="form-select">
     <option selected>Select an answer</option>
-    {{ $answers = collect($full_nodes[$node_id]['answers'])->filter(function ($answer) {
-            return $answer['value'] !== 'not_available';
-        })->sortBy('reference') }}
+    @php
+      $answers = collect($full_nodes[$node_id]['answers'])
+          ->filter(function ($answer) {
+              return $answer['value'] !== 'not_available';
+          })
+          ->sortBy('reference');
+    @endphp
     @foreach ($answers as $answer)
       <option value="{{ $answer['id'] }}">{{ $answer['label']['en'] }}</option>
     @endforeach

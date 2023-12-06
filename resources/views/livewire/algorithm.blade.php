@@ -95,59 +95,62 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
+        @dump($current_nodes)
         @foreach ($current_nodes as $title => $system)
           {{-- System container --}}
           <div wire:key="{{ 'system-' . $title }}">
-            <h4>{{ $title }}</h4>
-            @foreach ($system as $node_id)
-              <div wire:key="{{ 'nodes-' . $node_id }}">
-                @switch($full_nodes[$node_id]['display_format'])
-                  @case('RadioButton')
-                    <div>
-                      <livewire:components.inputs.radio wire:key="{{ 'radio-' . $node_id }}" :node_id="$node_id"
-                        :cache_key="$cache_key" />
-                    </div>
-                  @break
+            @if (count($system))
+              <h4>{{ $title }}</h4>
+              @foreach ($system as $node_id)
+                <div wire:key="{{ 'nodes-' . $node_id }}">
+                  @switch($full_nodes[$node_id]['display_format'])
+                    @case('RadioButton')
+                      <div>
+                        <livewire:components.inputs.radio wire:key="{{ 'radio-' . $node_id }}" :node_id="$node_id"
+                          :cache_key="$cache_key" />
+                      </div>
+                    @break
 
-                  @case('String')
-                    <div>
-                      <livewire:components.inputs.text wire:key="{{ 'text' . $node_id }}" :node_id="$node_id"
-                        :cache_key="$cache_key" />
-                    </div>
-                  @break
+                    @case('String')
+                      <div>
+                        <livewire:components.inputs.text wire:key="{{ 'text' . $node_id }}" :node_id="$node_id"
+                          :cache_key="$cache_key" />
+                      </div>
+                    @break
 
-                  @case('DropDownList')
-                    <div>
-                      <livewire:components.inputs.select wire:key="{{ 'select' . $node_id }}" :node_id="$node_id"
-                        :cache_key="$cache_key" />
-                    </div>
-                  @break
+                    @case('DropDownList')
+                      <div>
+                        <livewire:components.inputs.select wire:key="{{ 'select' . $node_id }}" :node_id="$node_id"
+                          :cache_key="$cache_key" />
+                      </div>
+                    @break
 
-                  @case('Input')
-                    <div>
-                      <livewire:components.inputs.numeric wire:key="{{ 'numeric' . $node_id }}" :node_id="$node_id"
-                        :cache_key="$cache_key" />
-                    </div>
-                  @break
+                    @case('Input')
+                      <div>
+                        <livewire:components.inputs.numeric wire:key="{{ 'numeric' . $node_id }}" :node_id="$node_id"
+                          :cache_key="$cache_key" />
+                      </div>
+                    @break
 
-                  @case('Formula')
-                    <div>
-                      <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ 'text' . $node_id }}"
-                        :node_id="$node_id" :cache_key="$cache_key" />
-                    </div>
-                  @break
+                    @case('Formula')
+                      <div>
+                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ 'text' . $node_id }}"
+                          :node_id="$node_id" :cache_key="$cache_key" />
+                      </div>
+                    @break
 
-                  @case('Reference')
-                    <div>
-                      <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}"
-                        :node_id="$node_id" />
-                    </div>
-                  @break
+                    @case('Reference')
+                      <div>
+                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}"
+                          :node_id="$node_id" />
+                      </div>
+                    @break
 
-                  @default
-                @endswitch
-              </div>
-            @endforeach
+                    @default
+                  @endswitch
+                </div>
+              @endforeach
+            @endif
           </div>
           @if ($loop->last)
             <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('tests')">tests</button>
@@ -281,7 +284,7 @@
                             <table class="table">
                               <thead class="table-dark">
                                 <tr>
-                                  <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}git pull</th>
+                                  <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}</th>
                                 </tr>
                               </thead>
                               <tbody>
