@@ -95,7 +95,6 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        @dump($current_nodes)
         @foreach ($current_nodes as $title => $system)
           {{-- System container --}}
           <div wire:key="{{ 'system-' . $title }}">
