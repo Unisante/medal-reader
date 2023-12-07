@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
+
 class AlgorithmService
 {
 
@@ -68,5 +70,55 @@ class AlgorithmService
         }, $formula);
 
         return $nodes_to_update;
+    }
+
+    public function sortSystemsAndNodesPerCC(array &$nodes, string $cache_key)
+    {
+        $cached_data = Cache::get($cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+
+        $this->sortSystems($consultation_nodes, $nodes);
+        $this->sortNodes($consultation_nodes, $nodes, true);
+    }
+
+    public function sortSystemsAndNodes(array &$nodes, string $cache_key)
+    {
+        $cached_data = Cache::get($cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+
+        $this->sortSystems($consultation_nodes, $nodes);
+        $this->sortNodes($consultation_nodes, $nodes, false);
+    }
+
+    public function sortSystems(array $consultation_nodes, array &$nodes)
+    {
+        $systems = array_keys($consultation_nodes);
+        $desired_systems_order = array_values($systems);
+        $title_position_map = array_flip($desired_systems_order);
+
+        uksort($nodes, function ($a, $b) use ($title_position_map) {
+            return $title_position_map[$a] - $title_position_map[$b];
+        });
+    }
+
+    public function sortNodes(array $consultation_nodes, array &$nodes, $perCC)
+    {
+        foreach ($nodes as $key => &$nodes_per_system) {
+            $order = array_flip($consultation_nodes[$key]['data']);
+            if ($perCC) {
+                foreach ($nodes_per_system as &$nodes_per_cc) {
+                    uksort($nodes_per_cc, function ($a, $b) use ($order) {
+                        return $order[$a] - $order[$b];
+                    });
+                }
+            } else {
+                uksort($nodes_per_system, function ($a, $b) use ($order) {
+                    //Because we don't have any orders set for others system
+                    if (!isset($order[$a]) || !isset($order[$b])) return;
+
+                    return $order[$a] - $order[$b];
+                });
+            }
+        }
     }
 }

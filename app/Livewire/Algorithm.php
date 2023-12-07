@@ -300,7 +300,7 @@ class Algorithm extends Component
 
         foreach ($consultation_nodes as &$nodes) {
             //Sort the nodes inside the older or neonat keys
-            $this->sortSystemsAndNodesPerCC($nodes);
+            $this->algorithmService->sortSystemsAndNodesPerCC($nodes, $this->cache_key);
         }
 
         $nodes_per_step = [
@@ -413,7 +413,6 @@ class Algorithm extends Component
         $nodes_per_step = $cached_data['nodes_per_step'];
 
         // Modification behavior
-        //todo get that part working with the new nodes_per_step || current_nodes <3
         if ($old_value) {
 
             // Remove every old answer nodes dependency
@@ -621,57 +620,6 @@ class Algorithm extends Component
         }
     }
 
-
-
-    public function sortSystemsAndNodesPerCC(array &$nodes)
-    {
-        $this->sortSystems($nodes);
-        $this->sortNodes($nodes, true);
-    }
-
-    public function sortSystemsAndNodes(array &$nodes)
-    {
-        $this->sortSystems($nodes);
-        $this->sortNodes($nodes, false);
-    }
-
-    public function sortSystems(array &$nodes)
-    {
-        $cached_data = Cache::get($this->cache_key);
-        $consultation_nodes = $cached_data['consultation_nodes'];
-        $systems = array_keys($consultation_nodes);
-        $desired_systems_order = array_values($systems);
-        $title_position_map = array_flip($desired_systems_order);
-
-        uksort($nodes, function ($a, $b) use ($title_position_map) {
-            return $title_position_map[$a] - $title_position_map[$b];
-        });
-    }
-
-    public function sortNodes(array &$nodes, $perCC = false)
-    {
-        $cached_data = Cache::get($this->cache_key);
-        $consultation_nodes = $cached_data['consultation_nodes'];
-
-        foreach ($nodes as $key => &$nodes_per_system) {
-            $order = array_flip($consultation_nodes[$key]['data']);
-            if ($perCC) {
-                foreach ($nodes_per_system as &$nodes_per_cc) {
-                    uksort($nodes_per_cc, function ($a, $b) use ($order) {
-                        return $order[$a] - $order[$b];
-                    });
-                }
-            } else {
-                uksort($nodes_per_system, function ($a, $b) use ($order) {
-                    //Because we don't have any orders set for others system
-                    if (!isset($order[$a]) || !isset($order[$b])) return;
-
-                    return $order[$a] - $order[$b];
-                });
-            }
-        }
-    }
-
     public function setNextNode($next_node_id)
     {
         $cached_data = Cache::get($this->cache_key);
@@ -683,7 +631,7 @@ class Algorithm extends Component
             //We don't sort non dynamic study for now
             if ($this->is_dynamic_study) {
                 $this->current_nodes[$system][$next_node_id] = $node['id'];
-                $this->sortSystemsAndNodes($this->current_nodes);
+                $this->algorithmService->sortSystemsAndNodes($this->current_nodes, $this->cache_key);
             } else {
                 $this->current_nodes[$this->current_cc][$next_node_id] = $node['id'];
             }
