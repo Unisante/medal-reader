@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use DateTime;
 use Illuminate\Support\Facades\Cache;
 
 class AlgorithmService
@@ -120,5 +121,11 @@ class AlgorithmService
                 });
             }
         }
+    }
+
+    function isDate($date, $format = 'Y-m-d')
+    {
+        $d = DateTime::createFromFormat($format, $date);
+        return $d && $d->format($format) === $date;
     }
 }

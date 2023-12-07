@@ -12,166 +12,34 @@
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
       @endphp
-      @dump($current_nodes['registration'])
       {{-- Registration --}}
       @if ($current_step === 'registration')
-        {{-- //todo do not send anything more than ID to any nested component ! --}}
-        {{-- <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes['registration']" :cache_key="$cache_key" /> --}}
         <x-step.registration :nodes="$current_nodes['registration']" :cache_key="$cache_key" />
-        <button class="btn btn-sm btn-outline-primary m-1"
-          wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
       @endif
+
+      {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-
-        {{-- Vitals --}}
-        @foreach ($current_nodes['first_look_nodes_id'] ?? [] as $node_id)
-          <div class="m-0" wire:key="{{ 'first-look-' . $node_id }}">
-            <label class="form-check-label" for="{{ $node_id }}">{{ $full_nodes[$node_id]['label']['en'] }}</label>
-            <label class="custom-control teleport-switch">
-              <span class="teleport-switch-control-description">No</span>
-              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node_id }}"
-                id="{{ $node_id }}" value="{{ $node_id }}" wire:model.live="chosen_complaint_categories">
-              <span class="teleport-switch-control-indicator"></span>
-              <span class="teleport-switch-control-description">Yes</span>
-            </label>
-          </div>
-        @endforeach
-
-        {{-- Complaint categories --}}
-        @foreach ($current_nodes['complaint_categories_nodes_id'][$age_key] as $node_id)
-          <div class="m-0" wire:key="{{ 'cc-' . $node_id }}">
-            <label class="form-check-label"
-              for="{{ $node_id }}">{{ $full_nodes[$node_id]['label']['en'] }}</label>
-            <label class="custom-control teleport-switch">
-              <span class="teleport-switch-control-description">No</span>
-              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node_id }}"
-                id="{{ $node_id }}" value="{{ $node_id }}" wire:model.live="chosen_complaint_categories">
-              <span class="teleport-switch-control-indicator"></span>
-              <span class="teleport-switch-control-description">Yes</span>
-            </label>
-          </div>
-        @endforeach
-
-        {{-- Basic measurement --}}
-        @foreach ($current_nodes['basic_measurements_nodes_id'] ?? [] as $node_id)
-          <div class="m-0" wire:key="{{ 'cc-' . $node_id }}">
-            @switch($full_nodes[$node_id]['display_format'])
-              @case('RadioButton')
-                <div>
-                  <livewire:components.inputs.radio wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('String')
-                <div>
-                  <livewire:components.inputs.text wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('DropDownList')
-                <div>
-                  <livewire:components.inputs.select wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('Input')
-                <div>
-                  <livewire:components.inputs.numeric wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id"
-                    :cache_key="$cache_key" />
-                </div>
-              @break
-
-              @case('Formula')
-                <div>
-                  <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @default
-            @endswitch
-          </div>
-        @endforeach
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('consultation')">consultation</button>
-        {{-- <button class="btn btn-sm btn-outline-secondary m-1" wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
+        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :cache_key="$cache_key" />
       @endif
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        @foreach ($current_nodes as $title => $system)
-          {{-- System container --}}
-          <div wire:key="{{ 'system-' . $title }}">
-            @if (count($system))
-              <h4>{{ $title }}</h4>
-              @foreach ($system as $node_id)
-                <div wire:key="{{ 'nodes-' . $node_id }}">
-                  @switch($full_nodes[$node_id]['display_format'])
-                    @case('RadioButton')
-                      <div>
-                        <livewire:components.inputs.radio wire:key="{{ 'radio-' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('String')
-                      <div>
-                        <livewire:components.inputs.text wire:key="{{ 'text' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('DropDownList')
-                      <div>
-                        <livewire:components.inputs.select wire:key="{{ 'select' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Input')
-                      <div>
-                        <livewire:components.inputs.numeric wire:key="{{ 'numeric' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Formula')
-                      <div>
-                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ 'text' . $node_id }}"
-                          :node_id="$node_id" :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Reference')
-                      <div>
-                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}"
-                          :node_id="$node_id" />
-                      </div>
-                    @break
-
-                    @default
-                  @endswitch
-                </div>
-              @endforeach
-            @endif
-          </div>
-          @if ($loop->last)
-            <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('tests')">tests</button>
-          @endif
-        @endforeach
+        <x-step.consultation :nodes="$current_nodes['consultation']" :cache_key="$cache_key" />
       @endif
 
       {{-- Tests --}}
       @if ($current_step === 'tests')
       @endif
+
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
         <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
         <ul class="nav nav-tabs" id="myTab" role="tablist">
           @foreach ($steps[$current_step] as $index => $title)
             <li class="nav-item" role="presentation">
-              <button class="nav-link @if ($current_sub_step === $title) active @endif"
-                id="{{ Str::slug($title) }}-tab" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}"
-                type="button" role="tab" aria-controls="{{ Str::slug($title) }}"
-                aria-selected="{{ $current_sub_step === $index }}"
+              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
                 wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
               </button>
             </li>
@@ -247,8 +115,8 @@
                             <td>
                               <label class="custom-control teleport-switch">
                                 <span class="teleport-switch-control-description">Disagree</span>
-                                <input type="checkbox" class="teleport-switch-control-input"
-                                  name="{{ $drug_id }}" id="{{ $drug_id }}" value="{{ $drug_id }}"
+                                <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
+                                  id="{{ $drug_id }}" value="{{ $drug_id }}"
                                   wire:model.live="drugs_status.{{ $drug_id }}">
                                 <span class="teleport-switch-control-indicator"></span>
                                 <span class="teleport-switch-control-description">Agree</span>
@@ -302,8 +170,7 @@
                                         {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
                                         @if ($health_cares[$management_key]['description']['en'])
                                           <div x-data="{ open: false }">
-                                            <button class="btn btn-sm btn-outline-secondary m-1"
-                                              @click="open = ! open">
+                                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
                                               <i class="bi bi-info-circle"> Description</i>
                                             </button>
                                             <div x-show="open">

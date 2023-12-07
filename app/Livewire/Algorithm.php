@@ -13,6 +13,7 @@ use DateTime;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
@@ -26,7 +27,6 @@ class Algorithm extends Component
     //todo remove definition when in prod
     public string $age_key = 'older';
     public string $current_step = 'registration';
-    public string $date_of_birth = '1960-01-01';
     public string $current_cc;
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
@@ -190,12 +190,8 @@ class Algorithm extends Component
         }
 
         foreach ($cached_data['registration_nodes_id'] as $node_id) {
-            $this->nodes_to_save[$node_id] = "";
-            if ($node_id) {
-                $registration_nodes[$node_id] = is_int($node_id) ? $node_id : '';
-            }
+            $registration_nodes[$node_id] = '';
         }
-
 
 
         // First Look Assessment nodes
@@ -205,11 +201,14 @@ class Algorithm extends Component
                     $this->nodes_to_save[$node_id] = "";
                     $node = $cached_data['full_nodes'][$node_id];
                     $age_key = $node['is_neonat'] ? 'neonat' : 'older';
-                    $node_to_add = $node_id;
-                    if ($node['category'] === "basic_measurement" || $node['category'] === "unique_triage_question" || $node['category'] === "background_calculation") {
-                        $first_look_assessment_nodes[$substep_name][$node_id] = $node_to_add;
+                    if (
+                        $node['category'] === "basic_measurement"
+                        || $node['category'] === "unique_triage_question"
+                        || $node['category'] === "background_calculation"
+                    ) {
+                        $first_look_assessment_nodes[$substep_name][$node_id] = '';
                     } else {
-                        $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = $node_to_add;
+                        $first_look_assessment_nodes[$substep_name][$age_key][$node_id] = '';
                     }
                 }
             }
@@ -282,7 +281,7 @@ class Algorithm extends Component
                         }
 
                         $system = $node['category'] !== 'background_calculation' ? $node['system'] : 'others';
-                        $consultation_nodes[$age_key][$system][$step][$instance_id] = $node['id'];
+                        $consultation_nodes[$age_key][$system][$step][$instance_id] = '';
                     } else {
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
@@ -331,7 +330,6 @@ class Algorithm extends Component
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
-
         $this->current_nodes['registration'] = $registration_nodes;
 
         //todo remove these when in prod
@@ -340,14 +338,15 @@ class Algorithm extends Component
                 ? $cached_data['general_cc_id']
                 : $cached_data['yi_general_cc_id'];
             $this->chosen_complaint_categories[] = "{$cached_data['general_cc_id']}";
+            $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
+                $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
         }
-
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
-        // dump($this->nodes_to_save);
+        dump($this->current_nodes);
         // dump($cached_data['full_order']);
         // dump($cached_data['df_hash_map']);
         dump($cached_data['nodes_per_step']);
@@ -359,8 +358,27 @@ class Algorithm extends Component
         // dump($cached_data['managements_hash_map']);
     }
 
-    public function updatedCurrentNodes($value, $key)
+    public function updatingCurrentNodes($value, $key)
     {
+        $cached_data = Cache::get($this->cache_key);
+
+        if ($this->algorithmService->isDate($value)) {
+            if ($value !== "") {
+                //todo optimize this function. As it take 1,3s for 35 nodes
+                $this->updateLinkedNodesOfDob($value);
+
+                // Set the first_look_assessment nodes that are depending on the age key
+                $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
+                    $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
+            }
+            return;
+        }
+
+        $node_id = Str::of($key)->explode('.')->last();
+
+        $old_answer_id = Arr::get($this->current_nodes, $key);
+        $this->saveNode($node_id, $value, $value, $old_answer_id);
+
         // We force to int the value comming from
         $intvalue = intval($value);
         if ($intvalue == $value || intval($value) !== 0) {
@@ -552,7 +570,7 @@ class Algorithm extends Component
 
         if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
             $today = new DateTime('today');
-            $dob = new DateTime($this->date_of_birth);
+            $dob = new DateTime($this->current_nodes['registration']['birth_date']);
             $interval = $today->diff($dob);
 
             if ($formula === "ToDay") {
@@ -565,11 +583,15 @@ class Algorithm extends Component
                         $this->current_cc = $yi_general_cc_id;
                         //todo in case of change need to remove the other
                         // Ouch btw having to set it as a string
-                        $this->chosen_complaint_categories[] = "$yi_general_cc_id";
+                        if (!in_array("$yi_general_cc_id", $this->chosen_complaint_categories)) {
+                            $this->chosen_complaint_categories[] = "$yi_general_cc_id";
+                        }
                     } else {
                         $this->age_key = 'older';
                         $this->current_cc = $general_cc_id;
-                        $this->chosen_complaint_categories[] = "$general_cc_id";
+                        if (!in_array("$general_cc_id", $this->chosen_complaint_categories)) {
+                            $this->chosen_complaint_categories[] = "$general_cc_id";
+                        }
                     }
                 }
                 return $days;
@@ -611,15 +633,8 @@ class Algorithm extends Component
         return null;
     }
 
-    #[On('dobUpdated')]
     public function updateLinkedNodesOfDob($value)
     {
-        if ($value === "") {
-            return;
-        }
-
-        $this->date_of_birth = $value;
-
         $cached_data = Cache::get($this->cache_key);
         $birth_date_formulas = $cached_data['birth_date_formulas'];
 
@@ -639,8 +654,8 @@ class Algorithm extends Component
             $system = isset($node['system']) ? $node['system'] : 'others';
             //We don't sort non dynamic study for now
             if ($this->is_dynamic_study) {
-                $this->current_nodes[$system][$next_node_id] = $node['id'];
-                $this->algorithmService->sortSystemsAndNodes($this->current_nodes, $this->cache_key);
+                $this->current_nodes[$this->current_step][$system][$next_node_id] = $node['id'];
+                $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
             } else {
                 $this->current_nodes[$this->current_cc][$next_node_id] = $node['id'];
             }
@@ -672,6 +687,14 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
+
+        if ($step === 'first_look_assessment') {
+            $this->current_nodes['first_look_assessment']['first_look_nodes_id'] =
+                $nodes_per_step['first_look_assessment']['first_look_nodes_id'];
+
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
+                $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+        }
 
         if ($step === 'consultation') {
             $cc_order = $cached_data['complaint_categories_steps'];
@@ -706,10 +729,10 @@ class Algorithm extends Component
                 }
             }
 
-            $this->current_nodes = $current_nodes;
+            $this->current_nodes['consultation'] = $current_nodes;
         } else {
             // For registration step we do not know the $age_key yet
-            $this->current_nodes = $cached_data['nodes_per_step'][$step];
+            // $this->current_nodes = $cached_data['nodes_per_step'][$step];
         }
         $this->current_step = $step;
 
