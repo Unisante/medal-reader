@@ -358,6 +358,16 @@ class Algorithm extends Component
         // dump($cached_data['managements_hash_map']);
     }
 
+    public function updatedCurrentNodes($value, $key)
+    {
+        if ($this->algorithmService->isDate($value)) return;
+
+        // We force to int the value comming from
+        $intvalue = intval($value);
+        if ($intvalue == $value || intval($value) !== 0) {
+            Arr::set($this->current_nodes, $key, $intvalue);
+        }
+    }
     public function updatingCurrentNodes($value, $key)
     {
         $cached_data = Cache::get($this->cache_key);
@@ -375,15 +385,9 @@ class Algorithm extends Component
         }
 
         $node_id = Str::of($key)->explode('.')->last();
-
         $old_answer_id = Arr::get($this->current_nodes, $key);
-        $this->saveNode($node_id, $value, $value, $old_answer_id);
 
-        // We force to int the value comming from
-        $intvalue = intval($value);
-        if ($intvalue == $value || intval($value) !== 0) {
-            Arr::set($this->current_nodes, $key, $intvalue);
-        }
+        $this->saveNode($node_id, $value, $value, $old_answer_id);
     }
 
     #[On('nodeToSave')]

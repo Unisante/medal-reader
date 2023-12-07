@@ -42,32 +42,36 @@
     @switch($full_nodes[$node_id]['display_format'])
       @case('RadioButton')
         <div>
-          <livewire:components.inputs.radio wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
+          <livewire:components.inputs.radio step="first_look_assessment.basic_measurements_nodes_id"
+            wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
         </div>
       @break
 
       @case('String')
         <div>
-          <livewire:components.inputs.text wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
+          <livewire:components.inputs.text step="first_look_assessment.basic_measurements_nodes_id"
+            wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
         </div>
       @break
 
       @case('DropDownList')
         <div>
-          <livewire:components.inputs.select wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
+          <livewire:components.inputs.select step="first_look_assessment.basic_measurements_nodes_id"
+            wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
         </div>
       @break
 
       @case('Input')
         <div>
-          <livewire:components.inputs.numeric wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id"
-            :cache_key="$cache_key" />
+          <livewire:components.inputs.numeric step="first_look_assessment.basic_measurements_nodes_id"
+            wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" :cache_key="$cache_key" />
         </div>
       @break
 
       @case('Formula')
         <div>
-          <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}" :node_id="$node_id" />
+          <livewire:components.inputs.text step="first_look_assessment.basic_measurements_nodes_id" :value="$nodes_to_save[$node_id]"
+            wire:key="{{ $cc . $node_id }}" :node_id="$node_id" />
         </div>
       @break
 
