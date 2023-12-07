@@ -12,10 +12,12 @@
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
       @endphp
+      @dump($current_nodes['registration'])
       {{-- Registration --}}
       @if ($current_step === 'registration')
         {{-- //todo do not send anything more than ID to any nested component ! --}}
-        <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" :cache_key="$cache_key" />
+        {{-- <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes['registration']" :cache_key="$cache_key" /> --}}
+        <x-step.registration :nodes="$current_nodes['registration']" :cache_key="$cache_key" />
         <button class="btn btn-sm btn-outline-primary m-1"
           wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
       @endif
@@ -242,14 +244,16 @@
                                 @endforeach
                               </select>
                             </td>
-                            <td><label class="custom-control teleport-switch">
+                            <td>
+                              <label class="custom-control teleport-switch">
                                 <span class="teleport-switch-control-description">Disagree</span>
                                 <input type="checkbox" class="teleport-switch-control-input"
                                   name="{{ $drug_id }}" id="{{ $drug_id }}" value="{{ $drug_id }}"
                                   wire:model.live="drugs_status.{{ $drug_id }}">
                                 <span class="teleport-switch-control-indicator"></span>
                                 <span class="teleport-switch-control-description">Agree</span>
-                              </label></td>
+                              </label>
+                            </td>
                           </tr>
                         @endforeach
                       @endforeach

@@ -137,6 +137,7 @@ class Algorithm extends Component
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
+                'weight_question_id' => $json['medal_r_json']['config']['basic_questions']['weight_question_id'],
                 'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No village for non dynamic study;
 
                 // All logics that will be calulated
@@ -190,8 +191,8 @@ class Algorithm extends Component
 
         foreach ($cached_data['registration_nodes_id'] as $node_id) {
             $this->nodes_to_save[$node_id] = "";
-            if (is_int($node_id)) {
-                $registration_nodes[$node_id] = $node_id;
+            if ($node_id) {
+                $registration_nodes[$node_id] = is_int($node_id) ? $node_id : '';
             }
         }
 
@@ -331,7 +332,7 @@ class Algorithm extends Component
             $cached_data = Cache::get($this->cache_key);
         }
 
-        $this->current_nodes = $registration_nodes;
+        $this->current_nodes['registration'] = $registration_nodes;
 
         //todo remove these when in prod
         if ($this->is_dynamic_study) {
@@ -342,7 +343,6 @@ class Algorithm extends Component
         }
 
 
-
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
@@ -350,13 +350,22 @@ class Algorithm extends Component
         // dump($this->nodes_to_save);
         // dump($cached_data['full_order']);
         // dump($cached_data['df_hash_map']);
-        // dump($cached_data['nodes_per_step']);
+        dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
+    }
+
+    public function updatedCurrentNodes($value, $key)
+    {
+        // We force to int the value comming from
+        $intvalue = intval($value);
+        if ($intvalue == $value || intval($value) !== 0) {
+            Arr::set($this->current_nodes, $key, $intvalue);
+        }
     }
 
     #[On('nodeToSave')]
