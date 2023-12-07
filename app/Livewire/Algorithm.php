@@ -778,13 +778,14 @@ class Algorithm extends Component
             }
         }
         // summary
-        if(($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))){
+        if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
-            $common_agreed_diag_key = array_intersect_key($this->df_to_display,array_filter($this->diagnoses_status));
+            $common_agreed_diag_key = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
             // dd($common_agreed_diag_key['drugs']);
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
-            $formulations = new FormulationService($common_agreed_drugs,$common_agreed_diag_key, $this->cache_key);
-            $this->formulations_to_display=$formulations->getFormulations();
+            // $weight = $this->current_nodes['first_look_assessment']['basic_measurement'][$cached_data['weight_question_id']];
+            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_diag_key, $this->cache_key, $weight = 10);
+            $this->formulations_to_display = $formulations->getFormulations();
             // give this to the service
             // dd($this->formulations_to_display);
 
