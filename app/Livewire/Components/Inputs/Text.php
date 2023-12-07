@@ -18,7 +18,7 @@ class Text extends Component
     public string $cache_key;
     public bool $is_background_calc;
 
-    public function mount($node_id, $value = null, $cache_key)
+    public function mount($node_id,  $cache_key, $value = null)
     {
         $this->node_id = $node_id;
         $this->cache_key = $cache_key;
