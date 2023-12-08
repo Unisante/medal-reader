@@ -446,13 +446,12 @@ class Algorithm extends Component
 
         // Modification behavior
         if ($old_value) {
-
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $node_id) {
-                    foreach ($this->current_nodes as $system_name => $nodes_per_system) {
-                        if (isset($this->current_nodes[$system_name][$node_id])) {
-                            unset($this->current_nodes[$system_name][$node_id]);
+                    foreach ($this->current_nodes['consultation'] as $system_name => $nodes_per_system) {
+                        if (isset($this->current_nodes['consultation'][$system_name][$node_id])) {
+                            unset($this->current_nodes['consultation'][$system_name][$node_id]);
                         }
                     }
                 }
