@@ -31,7 +31,7 @@
     <label class="custom-control teleport-switch">
       <span class="teleport-switch-control-description">No</span>
       <input type="checkbox" class="teleport-switch-control-input" name="{{ $node_id }}" id="{{ $node_id }}"
-        value="{{ $node_id }}" wire:model.live="chosen_complaint_categories">
+        value="{{ $node_id }}" wire:model.live="chosen_complaint_categories.{{ $node_id }}">
       <span class="teleport-switch-control-indicator"></span>
       <span class="teleport-switch-control-description">Yes</span>
     </label>

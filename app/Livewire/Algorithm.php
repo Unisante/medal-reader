@@ -337,7 +337,7 @@ class Algorithm extends Component
             $this->current_cc = $this->age_key === "older"
                 ? $cached_data['general_cc_id']
                 : $cached_data['yi_general_cc_id'];
-            $this->chosen_complaint_categories[] = "{$cached_data['general_cc_id']}";
+            $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
         }
@@ -389,6 +389,73 @@ class Algorithm extends Component
         $old_answer_id = Arr::get($this->current_nodes, $key);
 
         $this->saveNode($node_id, $value, $value, $old_answer_id);
+    }
+    public function updatingChosenComplaintCategories(int $modified_cc_id, $value)
+    {
+        $cached_data = Cache::get($this->cache_key);
+        $nodes_per_step = $cached_data['nodes_per_step'];
+        $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
+        $old_value = $this->chosen_complaint_categories[$modified_cc_id] ?? null;
+        $current_nodes_per_step = $nodes_per_step['consultation'][$this->age_key];
+
+
+        // dump($value, $cc_id);
+        // dump($this->chosen_complaint_categories[$cc_id]);
+        // We only do this modification behavior if the consultation step has already been calculated
+        if (isset($this->current_nodes['consultation'])) {
+
+            // Meaning the complaint category has been changed to no
+            if ($old_value) {
+
+                foreach ($this->current_nodes['consultation'] as $system_name => $system_data) {
+                    foreach ($current_nodes_per_step as $system_name => $system_data) {
+                        foreach ($system_data as $cc_id => $nodes) {
+
+                            // We remove nodes that were linked to that CC
+                            if (isset($conditioned_nodes_hash_map[$modified_cc_id])) {
+                                $this->current_nodes['consultation'][$system_name] = array_diff(
+                                    $this->current_nodes['consultation'][$system_name] ?? [],
+                                    $conditioned_nodes_hash_map[$modified_cc_id]
+                                );
+                            }
+
+
+                            // We remove nodes that are excluded by CC
+                            if (isset($conditioned_nodes_hash_map[$modified_cc_id])) {
+                                $this->current_nodes['consultation'][$system_name] = array_diff(
+                                    $this->current_nodes['consultation'][$system_name] ?? [],
+                                    $conditioned_nodes_hash_map[$modified_cc_id]
+                                );
+                            }
+                        }
+                    }
+                }
+            } else {
+
+                //The complaint category has been changed to yes
+                foreach ($this->current_nodes['consultation'] as $system_name => $system_data) {
+                    foreach ($current_nodes_per_step as $system_name => $system_data) {
+                        foreach ($system_data as $cc_id => $nodes) {
+
+                            // We add the nodes linked to that newly chosen cc
+                            if ($modified_cc_id === $cc_id) {
+                                if ($this->is_dynamic_study) {
+                                    $this->current_nodes['consultation'][$system_name] = array_unique(
+                                        [
+                                            ...$this->current_nodes['consultation'][$system_name],
+                                            ...$system_data[$modified_cc_id],
+                                        ]
+                                    );
+                                } else {
+                                    $this->current_nodes[$modified_cc_id] = $system_data[$modified_cc_id];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            dump($this->current_nodes['consultation']);
+        }
     }
 
     #[On('nodeToSave')]
@@ -589,13 +656,13 @@ class Algorithm extends Component
                         //todo in case of change need to remove the other
                         // Ouch btw having to set it as a string
                         if (!in_array("$yi_general_cc_id", $this->chosen_complaint_categories)) {
-                            $this->chosen_complaint_categories[] = "$yi_general_cc_id";
+                            $this->chosen_complaint_categories[$yi_general_cc_id] = true;
                         }
                     } else {
                         $this->age_key = 'older';
                         $this->current_cc = $general_cc_id;
                         if (!in_array("$general_cc_id", $this->chosen_complaint_categories)) {
-                            $this->chosen_complaint_categories[] = "$general_cc_id";
+                            $this->chosen_complaint_categories[$general_cc_id] = true;
                         }
                     }
                 }
@@ -675,12 +742,14 @@ class Algorithm extends Component
 
         $next_nodes = [];
 
-        foreach ($this->chosen_complaint_categories as $category) {
-            if (isset($answers_hash_map[$category][$node_id])) {
-                $next_nodes = [
-                    ...$next_nodes,
-                    ...$answers_hash_map[$category][$node_id]
-                ];
+        foreach ($this->chosen_complaint_categories as $category => $chosen) {
+            if ($chosen) {
+                if (isset($answers_hash_map[$category][$node_id])) {
+                    $next_nodes = [
+                        ...$next_nodes,
+                        ...$answers_hash_map[$category][$node_id]
+                    ];
+                }
             }
         }
 
@@ -703,21 +772,24 @@ class Algorithm extends Component
             }
         }
 
-        if ($step === 'consultation') {
+        if ($step === 'consultation' && !isset($this->current_nodes['consultation'])) {
             $cc_order = $cached_data['complaint_categories_steps'];
 
             // Respect the order in the complaint_categories_step key
-            usort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
-                return array_search($a, $cc_order) <=> array_search($b, $cc_order);
-            });
+            //todo fix it as now chosen_complaint_categories is key => true
+            if (!$this->is_dynamic_study) {
+                usort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
+                    return array_search($a, $cc_order) <=> array_search($b, $cc_order);
+                });
+            }
 
-            $this->current_cc = reset($this->chosen_complaint_categories);
+            $this->current_cc = key($this->chosen_complaint_categories);
             $current_nodes_per_step = $nodes_per_step[$step][$this->age_key];
 
             foreach ($current_nodes_per_step as $system_name => $system_data) {
                 foreach ($system_data as $cc_id => $nodes) {
 
-                    if (in_array($cc_id, $this->chosen_complaint_categories)) {
+                    if (isset($cc_id, $this->chosen_complaint_categories)) {
                         if ($this->is_dynamic_study) {
                             $consultation_nodes[$system_name] = $system_data[$cc_id];
                         } else {
