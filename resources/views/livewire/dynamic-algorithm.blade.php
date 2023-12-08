@@ -5,7 +5,6 @@
   </div>
   <div class="row g-3">
     <div class="col-8">
-      {{-- @dump(Cache::get($cache_key)["final_diagnoses"]) --}}
       @php
         $cache = Cache::get($cache_key);
         $full_nodes = $cache['full_nodes'];
@@ -60,16 +59,16 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @foreach ($df_to_display as $df)
-                      <tr wire:key="{{ 'df-' . $df['id'] }}">
+                    @foreach ($df_to_display as $diagnosis_id=>$drugs)
+                      <tr wire:key="{{ 'df-' . $diagnosis_id }}">
                         <td>
-                          <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+                          <label class="form-check-label" for="{{ $diagnosis_id }}">{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</label>
                         </td>
                         <td><label class="custom-control teleport-switch">
                             <span class="teleport-switch-control-description">Disagree</span>
-                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                              id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                              wire:model.live="diagnoses_status.{{ $df['id'] }}">
+                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $diagnosis_id }}"
+                              id="{{ $diagnosis_id }}" value="{{ $diagnosis_id }}"
+                              wire:model.live="diagnoses_status.{{ $diagnosis_id }}">
                             <span class="teleport-switch-control-indicator"></span>
                             <span class="teleport-switch-control-description">Agree</span>
                           </label></td>
@@ -92,8 +91,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @foreach (array_filter($diagnoses_status) as $diagnosis_id => $value)
-                        @foreach ($df_to_display[$diagnosis_id]['drugs'] as $drug_id => $drug)
+                        @foreach ($drugs_to_display as $drug_id => $drug_id)
                           <tr wire:key="{{ 'drug-' . $drug_id }}">
                             @php $cache_drug=$health_cares[$drug_id] @endphp
                             <td><label class="form-check-label"
@@ -101,13 +99,12 @@
                               </label>
                             </td>
                             <td>
-                              {{-- todo this is not working as intended --}}
                               <select class="form-select form-select-sm" aria-label=".form-select-sm example"
                                 wire:model.live="drugs_formulation.{{ $drug_id }}"
                                 id="formultaion-{{ $drug_id }}">
                                 <option selected>Please Select a formulation</option>
                                 @foreach ($cache_drug['formulations'] as $formulation)
-                                  <option value="{{ intval(strval($formulation['id'])) }}">
+                                  <option value="{{ $formulation['id'] }}">
                                     {{ $formulation['description']['en'] }}
                                   </option>
                                 @endforeach
@@ -125,20 +122,17 @@
                             </td>
                           </tr>
                         @endforeach
-                      @endforeach
                     </tbody>
                   </table>
                 @endif
               @endif
               @if ($current_sub_step === 'summary')
-                {{-- referral and treatment questions are no needed --}}
                 @php
                   $steps[$current_step][] = 'managements';
                   $steps[$current_step] = array_unique($steps[$current_step]);
                 @endphp
                 <div class="accordion" id="accordionExample">
                   @foreach ($steps[$current_step] as $index => $substep)
-                    {{-- @if (!in_array($substep, ['treatment_questions', 'referral', $current_sub_step])) --}}
                     @if ($substep === 'managements')
                       <div class="accordion-item">
                         <h2 class="accordion-header" id="heading{{ $index }}">
@@ -146,7 +140,6 @@
                             data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
                             aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
                             aria-controls="collapse{{ $index }}">
-                            {{-- {{ $substep }} --}}
                             {{ ucwords(str_replace('_', ' ', $substep)) }}
                           </button>
                         </h2>
@@ -154,7 +147,6 @@
                           class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
                           aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
                           <div class="accordion-body">
-                            {{-- {!! $substep !!} --}}
                             <table class="table">
                               <thead class="table-dark">
                                 <tr>
@@ -196,7 +188,6 @@
                             data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
                             aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
                             aria-controls="collapse{{ $index }}">
-                            {{-- {{ $substep }} --}}
                             {{ ucwords(str_replace('_', ' ', $substep)) }}
                           </button>
                         </h2>
@@ -204,7 +195,6 @@
                           class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
                           aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
                           <div class="accordion-body">
-                            {!! $substep !!} will come here
                             <table class="table">
                               <thead>
                                 <tr>
@@ -245,256 +235,6 @@
             </div>
           @endforeach
         </div>
-
-        {{-- <ul class="nav nav-tabs" id="myTab" role="tablist">
-        @foreach ($steps[$current_step] as $substep)
-            <li class="nav-item" role="presentation">
-                <button class="nav-link  @if ($current_sub_step) active @endif" id="final_diagnoses-tab" data-bs-toggle="tab"
-                data-bs-target="#{{$substep}}" type="button" role="tab" aria-controls="{{$substep}}"
-                aria-selected="true" wire:click="goToSubStep('diagnoses','final_diagnoses')">{{$substep}}</button>
-            </li>
-        @endforeach
-        </ul> --}}
-        {{-- <ul class="nav nav-tabs" id="myTab" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link  @if ($current_sub_step === 'final_diagnoses') active @endif" id="final_diagnoses-tab" data-bs-toggle="tab"
-              data-bs-target="#final_diagnoses" type="button" role="tab" aria-controls="final_diagnoses"
-              aria-selected="true" wire:click="goToSubStep('diagnoses','final_diagnoses')">Final diagnoses</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="treatment-tab" data-bs-toggle="tab" data-bs-target="#treatment" type="button"
-              role="tab" aria-controls="treatment" aria-selected="false">Treatment Questions</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link @if ($current_sub_step === 'drugs') active @endif" id="drugs-tab" data-bs-toggle="tab" data-bs-target="#drugs" type="button"
-              role="tab" aria-controls="drugs" aria-selected="false" wire:click="goToSubStep('diagnoses','drugs')">Medicines</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link @if ($current_sub_step === 'summary') active @endif" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button"
-              role="tab" aria-controls="summary" aria-selected="false" wire:click="goToSubStep('diagnoses','summary')">Summary</button>
-          </li>
-          <li class="nav-item @if ($current_sub_step === 'referral') active @endif" role="presentation">
-            <button class="nav-link" id="referral-tab" data-bs-toggle="tab" data-bs-target="#referral"
-              type="button" role="tab" aria-controls="referral" aria-selected="false" wire:click="goToSubStep('diagnoses','referral')">Referral</button>
-          </li>
-        </ul> --}}
-        {{-- <div class="tab-content" id="myTabContent">
-          <div class="tab-pane fade show active" id="final_diagnoses" role="tabpanel"
-            aria-labelledby="final_diagnoses-tab">
-              @foreach ($df_to_display as $df)
-                <div wire:key="{{ 'df-' . $df['id'] }}" class="d-flex ">
-                  <label class="form-check-label col-md-8" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
-                  <label class="custom-control teleport-switch col-md-4">
-                    <span class="teleport-switch-control-description">Disagree</span>
-                    <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                      id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                      wire:model.live="diagnoses_status.{{ $df['id'] }}">
-                    <span class="teleport-switch-control-indicator"></span>
-                    <span class="teleport-switch-control-description">Agree</span>
-                  </label>
-                </div>
-                <hr class="my-4">
-              @endforeach
-          </div>
-          <div class="tab-pane fade" id="treatment" role="tabpanel" aria-labelledby="treatment-tab">Treatment</div>
-          <div class="tab-pane fade" id="drugs" role="tabpanel" aria-labelledby="drugs-tab">
-            @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
-              @php $unique_ids=[] @endphp
-              @foreach (array_filter($diagnoses_status) as $diagnosis_id => $value)
-                @forelse ($df_to_display[$diagnosis_id]['drugs'] as $drug)
-                  @if (!in_array($drug['id'], $unique_ids))
-                    @php $unique_ids[]=$drug['id'] @endphp
-                    <div wire:key="{{ 'drug-' . $drug['id'] }}" class="d-flex ">
-                      <label class="form-check-label col-md-8" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
-                      <label class="custom-control teleport-switch col-md-4">
-                        <span class="teleport-switch-control-description">Disagree</span>
-                        <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
-                          id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
-                          wire:model.live="drugs_status.{{ $drug['id'] }}">
-                        <span class="teleport-switch-control-indicator"></span>
-                        <span class="teleport-switch-control-description">Agree</span>
-                      </label>
-                    </div>
-                    <hr class="my-4">
-                  @endif
-                @endforeach
-              @endforeach
-            @endif
-          </div>
-          <div class="tab-pane fade" id="summary" role="tabpanel" aria-labelledby="summary-tab">
-            <div class="accordion" id="accordionExample">
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="headingOne">
-                  <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                    FINAL DIAGNOSES
-                  </button>
-                </h2>
-                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
-                  data-bs-parent="#accordionExample">
-                  <div class="accordion-body">
-                    <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse
-                    plugin adds the appropriate classes that we use to style each element. These classes control the
-                    overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of
-                    this with custom CSS or overriding our default variables. It's also worth noting that just about any
-                    HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
-                  </div>
-                </div>
-              </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="headingTwo">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                    TREATMENTS
-                  </button>
-                </h2>
-                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
-                  data-bs-parent="#accordionExample">
-                  <div class="accordion-body">
-                    <strong>This is the second item's accordion body.</strong> It is hidden by default, until the
-                    collapse plugin adds the appropriate classes that we use to style each element. These classes
-                    control the overall appearance, as well as the showing and hiding via CSS transitions. You can
-                    modify any of this with custom CSS or overriding our default variables. It's also worth noting that
-                    just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit
-                    overflow.
-                  </div>
-                </div>
-              </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="headingThree">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                    MANAGEMENT
-                  </button>
-                </h2>
-                <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree"
-                  data-bs-parent="#accordionExample">
-                  <div class="accordion-body">
-                    @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
-                        @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                          @if (isset($diagnoses_status[$diagnosis_id]))
-                            <div wire:key="{{ 'management-' . $management_key }}">
-                              <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
-                              {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                              @if ($health_cares[$management_key]['description']['en'])
-                                <div x-data="{ open: false }">
-                                  <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                                    <i class="bi bi-info-circle"> Description</i>
-                                  </button>
-                                  <div x-show="open">
-                                    <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                                  </div>
-                                </div>
-                              @endif
-                            </div>
-                          @endif
-                        @endforeach
-                    @endif
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="tab-pane fade" id="referral" role="tabpanel" aria-labelledby="referral-tab">Referral</div>
-        </div> --}}
-        {{-- we need to check the sub steps --}}
-        {{-- @if ($current_sub_step === 'final_diagnoses')
-          <table class="table">
-            <thead class="table-dark">
-              <tr>
-                <th scope="col">Final Diagnoses</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach ($df_to_display as $df)
-                <tr wire:key="{{ 'df-' . $df['id'] }}">
-                  <td>
-                    <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
-                  </td>
-                  <td>
-                    <label class="custom-control teleport-switch">
-                      <span class="teleport-switch-control-description">Disagree</span>
-                      <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                        id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                        wire:model.live="diagnoses_status.{{ $df['id'] }}">
-                      <span class="teleport-switch-control-indicator"></span>
-                      <span class="teleport-switch-control-description">Agree</span>
-                    </label>
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
-        @endif
-        @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
-          @if ($current_sub_step === 'drugs')
-            <table class="table">
-              <thead class="table-dark">
-                <tr>
-                  <th scope="col">Drugs</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @php $unique_ids=[] @endphp
-                @foreach (array_filter($diagnoses_status) as $diagnosis_id => $value)
-                  @foreach ($df_to_display[$diagnosis_id]['drugs'] as $drug)
-                    @if (!in_array($drug['id'], $unique_ids))
-                      @php $unique_ids[]=$drug['id'] @endphp
-                      <tr wire:key="{{ 'drug-' . $drug['id'] }}">
-                        <td>
-                          <label class="form-check-label" for="{{ $drug['id'] }}">{{ $drug['label'] }}</label>
-                        </td>
-                        <td>
-                          <label class="custom-control teleport-switch">
-                            <span class="teleport-switch-control-description">Disagree</span>
-                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
-                              id="{{ $drug['id'] }}" value="{{ $drug['id'] }}"
-                              wire:model.live="drugs_status.{{ $drug['id'] }}">
-                            <span class="teleport-switch-control-indicator"></span>
-                            <span class="teleport-switch-control-description">Agree</span>
-                          </label>
-                        </td>
-                      </tr>
-                    @endif
-                  @endforeach
-                @endforeach
-              </tbody>
-            </table>
-          @endif
-          @if ($current_sub_step === 'managements')
-            <table class="table">
-              <thead class="table-dark">
-                <tr>
-                  <th scope="col">Managements</th>
-                </tr>
-              </thead>
-              <tbody>
-                @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                  @if (isset($diagnoses_status[$diagnosis_id]))
-                    <tr wire:key="{{ 'management-' . $management_key }}">
-                      <td>
-                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br> <b>Indication:</b>
-                        {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                        @if ($health_cares[$management_key]['description']['en'])
-                          <div x-data="{ open: false }">
-                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                              <i class="bi bi-info-circle"> Description</i>
-                            </button>
-                            <div x-show="open">
-                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                            </div>
-                          </div>
-                        @endif
-                      </td>
-                    </tr>
-                  @endif
-                @endforeach
-              </tbody>
-            </table>
-          @endif
-        @endif --}}
       @endif
     </div>
     <div class="col-4">

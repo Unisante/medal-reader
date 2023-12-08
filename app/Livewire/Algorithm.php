@@ -475,10 +475,12 @@ class Algorithm extends Component
 
             // If answer will set a drug, we add it to the drugs to display
             if (array_key_exists($value, $drugs_hash_map)) {
-                $this->drugs_to_display = [
-                    ...$this->drugs_to_display,
-                    ...$drugs_hash_map[$value]
-                ];
+                if (!in_array($value, $this->drugs_to_display)) {
+                    $this->drugs_to_display = [
+                        ...$this->drugs_to_display,
+                        ...$drugs_hash_map[$value]
+                    ];
+                }
             }
 
             // If answer will set a management, we add it to the managements to display
@@ -592,14 +594,14 @@ class Algorithm extends Component
                             }
                         }
 
-                        $this->df_to_display[$df] = [
-                            'id' => $final_diagnoses[$df]['id'],
-                            'label' => $final_diagnoses[$df]['label']['en'] ?? '',
-                            'description' => $final_diagnoses[$df]['description']['en'] ?? '',
-                            'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
-                            'drugs' => $drugs
-                        ];
-
+                        // $this->df_to_display[$df] = [
+                        //     'id' => $final_diagnoses[$df]['id'],
+                        //     'label' => $final_diagnoses[$df]['label']['en'] ?? '',
+                        //     'description' => $final_diagnoses[$df]['description']['en'] ?? '',
+                        //     'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
+                        //     'drugs' => $drugs
+                        // ];
+                        $this->df_to_display[$df]=$drugs;
                         foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
                             $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
                             if (empty($conditions)) {
@@ -617,7 +619,12 @@ class Algorithm extends Component
 
 
         // Reorder DF and managements upon level_of_urgency
-        uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
+        // uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
+
+        uksort($this->df_to_display, function ($a, $b) use ($final_diagnoses) {
+            return $final_diagnoses[$b]['level_of_urgency'] <=> $final_diagnoses[$a]['level_of_urgency'];
+        });
+
         uksort($this->managements_to_display, function ($a, $b) use ($health_cares) {
             return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];
         });
@@ -829,30 +836,37 @@ class Algorithm extends Component
         $this->goToStep($step);
         $this->current_sub_step = $substep;
 
+        // medicines
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
-            foreach ($common_agreed_diag_key as $diag_id => $value) {
-                foreach ($this->df_to_display[$diag_id]['drugs'] as $drug_id => $drug) {
-                    //todo this is not working as intended
-                    if (empty($this->drugs_formulation[$drug_id])) {
-                        if ((count($health_cares[$drug_id]['formulations']) > 1)) {
-                            $formulation = $health_cares[$drug_id]['formulations'][0];
-                            $this->drugs_formulation[$drug_id] = $formulation['id'];
+            $common_agreed_df = array_intersect_key( $this->df_to_display,$agreed_diagnoses);
+            $drugs_needed=[];
+            foreach($this->drugs_to_display as $index=>$drug_id){
+                foreach($common_agreed_df as $diagnosis_id=>$drugs){
+                    if(array_key_exists($drug_id,$drugs)){
+                        if (empty($this->drugs_formulation[$drug_id])) {
+                            if ((count($health_cares[$drug_id]['formulations']) <= 1)) {
+                                $formulation = $health_cares[$drug_id]['formulations'][0];
+                                $this->drugs_formulation[$drug_id] = $formulation['id'];
+                            }
                         }
+                        $drugs_needed[$drug_id]=$drug_id;
                     }
                 }
             }
+            $this->drugs_to_display=$drugs_needed;
+
         }
 
         // summary
         if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
-            $common_agreed_diag_key = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
+            $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
             // dd($common_agreed_diag_key['drugs']);
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
             // $weight = $this->current_nodes['first_look_assessment']['basic_measurement'][$cached_data['weight_question_id']];
-            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_diag_key, $this->cache_key, $weight = 10);
+            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight = 10);
             $this->formulations_to_display = $formulations->getFormulations();
             // give this to the service
             // dd($this->formulations_to_display);
