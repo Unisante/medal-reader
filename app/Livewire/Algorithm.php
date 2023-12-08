@@ -360,16 +360,6 @@ class Algorithm extends Component
 
     public function updatedCurrentNodes($value, $key)
     {
-        if ($this->algorithmService->isDate($value)) return;
-
-        // We force to int the value comming from
-        $intvalue = intval($value);
-        if ($intvalue == $value || intval($value) !== 0) {
-            Arr::set($this->current_nodes, $key, $intvalue);
-        }
-    }
-    public function updatingCurrentNodes($value, $key)
-    {
         $cached_data = Cache::get($this->cache_key);
 
         if ($this->algorithmService->isDate($value)) {
@@ -383,6 +373,17 @@ class Algorithm extends Component
             }
             return;
         }
+
+        // We force to int the value comming from
+        $intvalue = intval($value);
+        if ($intvalue == $value || intval($value) !== 0) {
+            Arr::set($this->current_nodes, $key, $intvalue);
+        }
+    }
+
+    public function updatingCurrentNodes($value, $key)
+    {
+        if ($this->algorithmService->isDate($value)) return;
 
         $node_id = Str::of($key)->explode('.')->last();
         $old_answer_id = Arr::get($this->current_nodes, $key);
@@ -575,6 +576,7 @@ class Algorithm extends Component
         if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
             $today = new DateTime('today');
             $dob = new DateTime($this->current_nodes['registration']['birth_date']);
+
             $interval = $today->diff($dob);
 
             if ($formula === "ToDay") {
@@ -693,11 +695,13 @@ class Algorithm extends Component
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
 
         if ($step === 'first_look_assessment') {
-            $this->current_nodes['first_look_assessment']['first_look_nodes_id'] =
-                $nodes_per_step['first_look_assessment']['first_look_nodes_id'];
+            if (!isset($this->current_nodes['first_look_assessment']['first_look_nodes_id'])) {
+                $this->current_nodes['first_look_assessment']['first_look_nodes_id'] =
+                    $nodes_per_step['first_look_assessment']['first_look_nodes_id'];
 
-            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
-                $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
+                    $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+            }
         }
 
         if ($step === 'consultation') {
@@ -716,24 +720,24 @@ class Algorithm extends Component
 
                     if (in_array($cc_id, $this->chosen_complaint_categories)) {
                         if ($this->is_dynamic_study) {
-                            $current_nodes[$system_name] = $system_data[$cc_id];
+                            $consultation_nodes[$system_name] = $system_data[$cc_id];
                         } else {
-                            $current_nodes[$cc_id] = $system_data[$cc_id];
+                            $consultation_nodes[$cc_id] = $system_data[$cc_id];
                         }
                         continue;
                     }
 
                     // We only add nodes that are not excluded by CC
                     if (isset($conditioned_nodes_hash_map[$cc_id])) {
-                        $current_nodes[$system_name] = array_diff(
-                            $current_nodes[$system_name] ?? [],
+                        $consultation_nodes[$system_name] = array_diff(
+                            $consultation_nodes[$system_name] ?? [],
                             $conditioned_nodes_hash_map[$cc_id]
                         );
                     }
                 }
             }
 
-            $this->current_nodes['consultation'] = $current_nodes;
+            $this->current_nodes['consultation'] = $consultation_nodes;
         } else {
             // For registration step we do not know the $age_key yet
             // $this->current_nodes = $cached_data['nodes_per_step'][$step];

@@ -46,7 +46,7 @@
             @case('Formula')
               <div>
                 <x-inputs.text step="consultation.{{ $title }}" :node_id="$node_id" :cache_key="$cache_key"
-                  :is_background_calc="truey" />
+                  :is_background_calc="true" />
 
               </div>
             @break
