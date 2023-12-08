@@ -275,14 +275,21 @@ class FormulationService
         return $fractionObject;
     }
 
-    public function fractionUnicode($numerator, $denominator) {
+    public function fractionUnicode($numerator, $denominator)
+    {
         // Define Unicode fraction characters for 1 to 9
         $unicodeFractions = ['¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
 
         // Convert numerator digits to Unicode
         $unicodeNumerator = '';
         foreach (str_split($numerator) as $digit) {
-            $unicodeNumerator .= $unicodeFractions[$digit - 1];
+            // $unicodeNumerator .= $unicodeFractions[$digit - 1];
+            if ($digit == 0) {
+                // Use a different character (e.g., '⁰') to represent zero
+                $unicodeNumerator .= '⁰';
+            } else {
+                $unicodeNumerator .= $unicodeFractions[$digit - 1];
+            }
         }
 
         // Get Unicode character for denominator
@@ -328,13 +335,16 @@ class FormulationService
                 $readableFraction['denominator']
             );
 
-            if ($readableFraction['denominator'] === 1) {
+            if($readableFraction['numerator'] == 0 || $readableFraction['denominator'] == 0){
+                $result .='';
+            }
+            elseif ($readableFraction['denominator'] == 1) {
                 $result .= $readableFraction['numerator'];
             } else {
                 $result .= $humanReadableFraction;
             }
-        }
 
+        }
         return ['fractionString' => $result, 'numberOfFullSolid' => $numberOfFullSolid];
     }
 
@@ -349,8 +359,8 @@ class FormulationService
             }
             return 'Give ' . floatval($this->current_formulation['unique_dose']) . ' ' . $medication_form;
         }
-        $numberOfFullSolid = $this->breakableFraction($drugDose)['fractionString'];
-        $fractionString = $this->breakableFraction($drugDose)['numberOfFullSolid'];
+        $fractionString = $this->breakableFraction($drugDose)['fractionString'];
+        $numberOfFullSolid = $this->breakableFraction($drugDose)['numberOfFullSolid'];
         $amount_give = $medication_form === 'capsule' ? $numberOfFullSolid : $fractionString;
         return 'Give ' . $amount_give . ' ' . $medication_form;
     }
@@ -388,16 +398,14 @@ class FormulationService
         foreach ($this->current_drug['formulations'] as $formulation) {
             if ($formulation['id'] === $formulation_id) {
                 $this->current_formulation = $formulation;
-                return
-                    [
-                        "drug_label" => $this->current_drug['label']['en'],
-                        "description" => $this->current_drug['description']['en'],
-                        "indication" => $this->getDiagnosisLabel($drug_id),
-                        "route" => $formulation['administration_route_name'],
-                        "amountGiven" => $this->getAmountGiven(),
-                        "duration"=>$this->drugs_duration[$drug_id],
-                    ];
-                break;
+                return [
+                    "drug_label" => $this->current_drug['label']['en'],
+                    "description" => $this->current_drug['description']['en'],
+                    "indication" => $this->getDiagnosisLabel($drug_id),
+                    "route" => $formulation['administration_route_name'],
+                    "amountGiven" => $this->getAmountGiven(),
+                    "duration" => $this->drugs_duration[$drug_id],
+                ];
             }
         }
     }
