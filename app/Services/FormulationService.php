@@ -35,8 +35,8 @@ class FormulationService
 
     public function calculateDrugDuration()
     {
-        foreach ($this->agreed_diagnoses as $diagnosis_id => $diagnosis) {
-            foreach ($diagnosis['drugs'] as $drug_id => $drug_id) {
+        foreach ($this->agreed_diagnoses as $diagnosis_id => $drugs) {
+            foreach ($drugs as $drug_id => $drug_id) {
                 $drug_instance = $this->cached_data['final_diagnoses'][$diagnosis_id]['drugs'][$drug_id];
                 if (boolval($drug_instance['is_pre_referral'])) {
                     $this->drugs_duration[$drug_id] = 'While arranging referral';
@@ -59,9 +59,10 @@ class FormulationService
 
     public function getDiagnosisLabel($drug_id)
     {
-        foreach ($this->agreed_diagnoses as $diag_id => $diagnosis) {
-            if (array_key_exists($drug_id, $diagnosis['drugs'])) {
-                return $diagnosis['label'];
+        foreach ($this->agreed_diagnoses as $diag_id => $drugs) {
+
+            if (array_key_exists($drug_id, $drugs)) {
+                return $this->cached_data['final_diagnoses'][$diag_id]['label']['en'];
             }
         }
     }
@@ -168,12 +169,11 @@ class FormulationService
         if ($this->current_formulation['unique_dose']) {
             return 'Give ' . floatval($this->current_formulation['unique_dose']) . 'ml';
         }
-        $administrationRouteName = strtolower($this->current_drug['administration_route_name']);
+        $administrationRouteName = strtolower($this->current_formulation['administration_route_name']);
         $substrings = ['im', 'iv', 'sc'];
         $medication_form = $this->current_formulation['medication_form'];
         foreach ($substrings as $substring) {
             if (strpos($administrationRouteName, $substring) !== false) {
-                // 'Give {{ doseResult }}ml of {{ liquidConcentration }}mg/{{ doseForm }}ml {{ medicationForm }}',
                 $drugDose = $this->makeDrugDose();
                 $liquid_concentration = $this->current_formulation['liquid_concentration'];
                 $dose_form = $this->current_formulation['dose_form'];
