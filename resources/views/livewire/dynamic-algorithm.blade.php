@@ -332,7 +332,7 @@
         @endforeach
         <div class="container">
           CCs chosen :
-          @foreach ($chosen_complaint_categories as $cc)
+          @foreach ($chosen_complaint_categories as $cc => $chosen)
             <div wire:key="{{ 'edit-cc-' . $cc }}">
               <p class="mb-0">{{ $cc }}</p>
             </div>
