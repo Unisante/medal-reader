@@ -296,6 +296,7 @@ class Algorithm extends Component
                             $node_id = $condition['node_id'];
 
                             //Todo remove no conditions nodes from this hashmap
+                            //use the no conditions nodes array ?
                             //Example with 43136 that will bring 42871 which is a registration node (type of consult)
                             $answers_hash_map[$step][$answer_id][] = $instance_id;
 
