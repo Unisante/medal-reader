@@ -231,7 +231,6 @@ class Algorithm extends Component
             ->pointer('/medal_r_json/nodes')
             ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency) {
                 foreach ($value as $node) {
-                    //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
                         continue;
                     }
