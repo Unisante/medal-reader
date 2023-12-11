@@ -287,7 +287,10 @@ class Algorithm extends Component
 
                         $system = $node['category'] !== 'background_calculation' ? $node['system'] : 'others';
                         $consultation_nodes[$age_key][$system][$step][$instance_id] = '';
-                    } else {
+                    }
+
+                    if (!empty($instance['conditions'])) {
+
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
