@@ -151,6 +151,7 @@ class Algorithm extends Component
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
+                'need_emergency' => [],
             ], $this->cache_expiration_time);
         }
 
@@ -225,13 +226,17 @@ class Algorithm extends Component
         $formula_hash_map = [];
         $nodes_to_update = [];
         $conditioned_nodes_hash_map = [];
+        $need_emergency = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency) {
                 foreach ($value as $node) {
                     //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
                         continue;
+                    }
+                    if ($node['emergency_status'] === 'emergency') {
+                        $need_emergency[$node['emergency_answer_id']] = $node['id'];
                     }
                     if ($node['display_format'] === "Input" || $node['display_format'] === "Formula") {
                         $this->nodes_to_save[$node['id']] = "";
@@ -327,6 +332,7 @@ class Algorithm extends Component
                 'dependency_map' => $dependency_map,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
+                'need_emergency' => $need_emergency,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
@@ -360,8 +366,17 @@ class Algorithm extends Component
 
     public function updatedCurrentNodes($value, $key)
     {
-        // We skip the life threatening checkbox
-        if (Str::of($key)->contains('first_look_nodes_id')) return;
+        $cached_data = Cache::get($this->cache_key);
+        $need_emergency = $cached_data['need_emergency'];
+
+        // We skip the life threatening checkbox but before
+        // If the answer trigger the emergency modal
+        if (Str::of($key)->contains('first_look_nodes_id')) {
+            if ($value) {
+                $this->dispatch('openEmergencyModal');
+            }
+            return;
+        };
 
         if ($this->algorithmService->isDate($value)) {
             if ($value !== "") {
@@ -382,6 +397,11 @@ class Algorithm extends Component
 
         if ($intvalue == $value || intval($value) !== 0) {
             Arr::set($this->current_nodes, $key, $intvalue);
+        }
+
+        // If the answer trigger the emergency modal
+        if (array_key_exists($value, $need_emergency)) {
+            $this->dispatch('openEmergencyModal');
         }
     }
 
@@ -454,11 +474,11 @@ class Algorithm extends Component
                                     $this->current_nodes[$modified_cc_id] = $system_data[$modified_cc_id];
                                 }
                             }
+                            // We add nodes that were exculded by old no answer
                         }
                     }
                 }
             }
-            dump($this->current_nodes['consultation']);
         }
     }
 
@@ -800,7 +820,7 @@ class Algorithm extends Component
             foreach ($current_nodes_per_step as $system_name => $system_data) {
                 foreach ($system_data as $cc_id => $nodes) {
 
-                    if (isset($cc_id, $this->chosen_complaint_categories)) {
+                    if (isset($this->chosen_complaint_categories[$cc_id])) {
                         if ($this->is_dynamic_study) {
                             $consultation_nodes[$system_name] = $system_data[$cc_id];
                         } else {
@@ -830,6 +850,9 @@ class Algorithm extends Component
         if (!empty($this->steps[$this->current_step])) {
             $this->current_sub_step = $this->steps[$this->current_step][0];
         }
+
+        //todo uncomment it when in prod
+        // $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void
