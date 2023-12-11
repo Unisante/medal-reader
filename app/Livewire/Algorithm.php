@@ -360,10 +360,13 @@ class Algorithm extends Component
 
     public function updatedCurrentNodes($value, $key)
     {
-        $cached_data = Cache::get($this->cache_key);
+        // We skip the life threatening checkbox
+        if (Str::of($key)->contains('first_look_nodes_id')) return;
 
         if ($this->algorithmService->isDate($value)) {
             if ($value !== "") {
+
+                $cached_data = Cache::get($this->cache_key);
                 //todo optimize this function. As it take 1,3s for 35 nodes
                 $this->updateLinkedNodesOfDob($value);
 
@@ -376,6 +379,7 @@ class Algorithm extends Component
 
         // We force to int the value comming from
         $intvalue = intval($value);
+
         if ($intvalue == $value || intval($value) !== 0) {
             Arr::set($this->current_nodes, $key, $intvalue);
         }
@@ -601,7 +605,7 @@ class Algorithm extends Component
                         //     'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
                         //     'drugs' => $drugs
                         // ];
-                        $this->df_to_display[$df]=$drugs;
+                        $this->df_to_display[$df] = $drugs;
                         foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
                             $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
                             if (empty($conditions)) {
@@ -840,23 +844,22 @@ class Algorithm extends Component
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
-            $common_agreed_df = array_intersect_key( $this->df_to_display,$agreed_diagnoses);
-            $drugs_needed=[];
-            foreach($this->drugs_to_display as $index=>$drug_id){
-                foreach($common_agreed_df as $diagnosis_id=>$drugs){
-                    if(array_key_exists($drug_id,$drugs)){
+            $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
+            $drugs_needed = [];
+            foreach ($this->drugs_to_display as $index => $drug_id) {
+                foreach ($common_agreed_df as $diagnosis_id => $drugs) {
+                    if (array_key_exists($drug_id, $drugs)) {
                         if (empty($this->drugs_formulation[$drug_id])) {
                             if ((count($health_cares[$drug_id]['formulations']) <= 1)) {
                                 $formulation = $health_cares[$drug_id]['formulations'][0];
                                 $this->drugs_formulation[$drug_id] = $formulation['id'];
                             }
                         }
-                        $drugs_needed[$drug_id]=$drug_id;
+                        $drugs_needed[$drug_id] = $drug_id;
                     }
                 }
             }
-            $this->drugs_to_display=$drugs_needed;
-
+            $this->drugs_to_display = $drugs_needed;
         }
 
         // summary
