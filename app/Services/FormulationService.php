@@ -21,6 +21,7 @@ class FormulationService
     public array $current_drug;
     public array $current_formulation;
     public float $patient_weight;
+    public array $drug_indications;
 
 
     public function __construct(array $drugs_formulation, array $agreed_diagnoses, string $cache_key, float $weight)
@@ -30,6 +31,7 @@ class FormulationService
         $this->cached_data = Cache::get($cache_key);
         $this->patient_weight = $weight;
         $this->calculateDrugDuration();
+        $this->getDiagnosisLabel($agreed_diagnoses);
     }
 
 
@@ -57,12 +59,18 @@ class FormulationService
         }
     }
 
-    public function getDiagnosisLabel($drug_id)
+    public function getDiagnosisLabel($agreed_diagnoses)
     {
-        foreach ($this->agreed_diagnoses as $diag_id => $drugs) {
-
-            if (array_key_exists($drug_id, $drugs)) {
-                return $this->cached_data['final_diagnoses'][$diag_id]['label']['en'];
+        foreach ($agreed_diagnoses as $diag_id => $drugs) {
+            if (!empty($drugs)) {
+                foreach ($drugs as $drug_id => $drug_id) {
+                    $indication = $this->cached_data['final_diagnoses'][$diag_id]['label']['en'];
+                    if (!isset($this->drug_indications[$drug_id])) {
+                        $this->drug_indications[$drug_id] = $indication;
+                        continue;
+                    }
+                    $this->drug_indications[$drug_id] = $this->drug_indications[$drug_id] . ' | ' . $indication;
+                }
             }
         }
     }
@@ -70,6 +78,60 @@ class FormulationService
     private function roundSup($n)
     {
         return round($n * 10) / 10;
+    }
+
+    public function doseCalculationString(string $keyString, $args = [])
+    {
+        $unit = 'ml';
+        $value = floatval($this->current_formulation['unique_dose']) . $unit;
+        if (isset($args) && array_key_exists('medication_form', $args)) {
+            $unit = $this->current_formulation['medication_form'];
+            $value = floatval($this->current_formulation['unique_dose']) . ' ' . $unit;
+        }
+        $string_0 = "Fixed dose " . $value . " " . $unit . "  per administration";
+        $string_1 = "Fixed dose $value application per administration";
+
+        $callStrings = [
+            "fixed_dose_indication_administration" => $string_0,
+            "fixed_dose_indication_application" => $string_1,
+            "dose_indication" => !empty($args) ? "Dose range " . $args['dosage'] . " mg/kg X " . $args['patient_weight'] . " kg = " . $args['total'] . " mg" : null,
+        ];
+        return $callStrings[$keyString];
+    }
+    public function doseCalculation($drug_dose)
+    {
+        return match ($this->current_formulation['medication_form']) {
+            'solution', 'suspension', 'syrup', 'powder_for_injection' => call_user_func(function () use ($drug_dose) {
+                if ($drug_dose['uniqDose']) {
+                    return $this->doseCalculationString("fixed_dose_indication_administration");
+                }
+                $dosage = number_format(($drug_dose['doseResultMg'] / $this->patient_weight), 1, '.', '');
+                $total = number_format($drug_dose['doseResultMg'], 1, '.', '');
+                $args = ['dosage' => $dosage, 'patient_weight' => $this->patient_weight, 'total' => $total];
+                return $this->doseCalculationString("dose_indication", $args);
+            }),
+            'gel', 'ointment', 'cream', 'lotion', 'patch' => $this->doseCalculationString("fixed_dose_indication_application"),
+            'drops', 'spray', 'suppository', 'pessary', 'inhaler' => $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']),
+            'capsule', 'tablet', 'dispersible_tablet' => call_user_func(function () use ($drug_dose) {
+                if ($drug_dose['unique']) {
+                    return $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']);
+                }
+                if ($this->current_formulation['medication_form'] == 'capsule') {
+                    $currentDosage = $this->roundSup(
+                        ($drug_dose['doseResultNotRounded'] * $drug_dose . ['dose_form']) / $this->patient_weight,
+                    );
+                } else {
+                    $currentDosage = $this->roundSup(
+                        ($drug_dose['doseResultNotRounded'] * ($this->current_formulation['dose_form'] / $this->current_formulation['breakable'])) /
+                            $this->patient_weight,
+                    );
+                }
+                $args = ['dosage' => $currentDosage, 'patient_weight' => $this->patient_weight, 'total' => $currentDosage * $this->patient_weight];
+                return $this->doseCalculationString("dose_indication", $args);
+            }),
+
+            default => 'Please select a formulation'
+        };
     }
 
     public function makeDrugDose()
@@ -335,15 +397,13 @@ class FormulationService
                 $readableFraction['denominator']
             );
 
-            if($readableFraction['numerator'] == 0 || $readableFraction['denominator'] == 0){
-                $result .='';
-            }
-            elseif ($readableFraction['denominator'] == 1) {
+            if ($readableFraction['numerator'] == 0 || $readableFraction['denominator'] == 0) {
+                $result .= '';
+            } elseif ($readableFraction['denominator'] == 1) {
                 $result .= $readableFraction['numerator'];
             } else {
                 $result .= $humanReadableFraction;
             }
-
         }
         return ['fractionString' => $result, 'numberOfFullSolid' => $numberOfFullSolid];
     }
@@ -398,13 +458,19 @@ class FormulationService
         foreach ($this->current_drug['formulations'] as $formulation) {
             if ($formulation['id'] === $formulation_id) {
                 $this->current_formulation = $formulation;
+                $drug_dose = $this->makeDrugDose();
                 return [
                     "drug_label" => $this->current_drug['label']['en'],
                     "description" => $this->current_drug['description']['en'],
-                    "indication" => $this->getDiagnosisLabel($drug_id),
+                    "indication" => $this->drug_indications[$drug_id],
                     "route" => $formulation['administration_route_name'],
                     "amountGiven" => $this->getAmountGiven(),
                     "duration" => $this->drugs_duration[$drug_id],
+                    "doses_per_day" => $this->current_formulation["doses_per_day"],
+                    "dose_calculation" => $this->doseCalculation($drug_dose),
+                    "injection_instructions"=>$this->current_formulation["injection_instructions"]['en'],
+                    "dispensing_description"=>$this->current_formulation["dispensing_description"]['en'],
+                    "recurrence"=>$drug_dose["recurrence"]
                 ];
             }
         }
