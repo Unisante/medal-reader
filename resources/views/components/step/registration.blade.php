@@ -27,27 +27,19 @@
     @else
       @switch($full_nodes[$node_id]['display_format'])
         @case('RadioButton')
-          <div>
             <x-inputs.radio step="registration" :node_id="$node_id" :cache_key="$cache_key" />
-          </div>
         @break
 
         @case('DropDownList')
-          <div>
             <x-inputs.select step="registration" :node_id="$node_id" :cache_key="$cache_key" />
-          </div>
         @break
 
         @case('Input')
-          <div>
             <x-inputs.numeric step="registration" :node_id="$node_id" :cache_key="$cache_key" />
-          </div>
         @break
 
         @case('String')
-          <div>
             <x-inputs.text step="registration" :node_id="$node_id" :cache_key="$cache_key" :is_background_calc="false" />
-          </div>
         @break
 
         @case('Autocomplete')

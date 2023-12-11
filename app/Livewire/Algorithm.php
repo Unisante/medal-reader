@@ -151,6 +151,7 @@ class Algorithm extends Component
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
+                'need_emergency' => [],
             ], $this->cache_expiration_time);
         }
 
@@ -225,13 +226,17 @@ class Algorithm extends Component
         $formula_hash_map = [];
         $nodes_to_update = [];
         $conditioned_nodes_hash_map = [];
+        $need_emergency = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use ($cached_data, &$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency) {
                 foreach ($value as $node) {
                     //todo work with QuestionsSequence
                     if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
                         continue;
+                    }
+                    if ($node['emergency_status'] === 'emergency') {
+                        $need_emergency[$node['emergency_answer_id']] = $node['id'];
                     }
                     if ($node['display_format'] === "Input" || $node['display_format'] === "Formula") {
                         $this->nodes_to_save[$node['id']] = "";
@@ -282,7 +287,10 @@ class Algorithm extends Component
 
                         $system = $node['category'] !== 'background_calculation' ? $node['system'] : 'others';
                         $consultation_nodes[$age_key][$system][$step][$instance_id] = '';
-                    } else {
+                    }
+
+                    if (!empty($instance['conditions'])) {
+
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
@@ -291,12 +299,26 @@ class Algorithm extends Component
                             //Example with 43136 that will bring 42871 which is a registration node (type of consult)
                             $answers_hash_map[$step][$answer_id][] = $instance_id;
 
-                            $this->algorithmService->breadthFirstSearch($diag, $node_id, $answer_id, $dependency_map);
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map);
+
+                            $node = $cached_data['full_nodes'][$node_id];
+
+                            if ($node['type'] === 'QuestionsSequence') {
+                                foreach ($node['instances'] as $qs_instance) {
+                                    if (!empty($qs_instance['conditions'])) {
+                                        foreach ($qs_instance['conditions'] as $qs_condition) {
+                                            $answers_hash_map[$step][$qs_condition['answer_id']][] = $qs_instance['id'];
+                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
 
         foreach ($consultation_nodes as &$nodes) {
             //Sort the nodes inside the older or neonat keys
@@ -327,6 +349,7 @@ class Algorithm extends Component
                 'dependency_map' => $dependency_map,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
+                'need_emergency' => $need_emergency,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
@@ -346,13 +369,13 @@ class Algorithm extends Component
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
-        dump($this->current_nodes);
+        // dump($this->current_nodes);
         // dump($cached_data['full_order']);
         // dump($cached_data['df_hash_map']);
         dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
@@ -361,9 +384,21 @@ class Algorithm extends Component
     public function updatedCurrentNodes($value, $key)
     {
         $cached_data = Cache::get($this->cache_key);
+        $need_emergency = $cached_data['need_emergency'];
+
+        // We skip the life threatening checkbox but before
+        // If the answer trigger the emergency modal
+        if (Str::of($key)->contains('first_look_nodes_id')) {
+            if ($value) {
+                $this->dispatch('openEmergencyModal');
+            }
+            return;
+        };
 
         if ($this->algorithmService->isDate($value)) {
             if ($value !== "") {
+
+                $cached_data = Cache::get($this->cache_key);
                 //todo optimize this function. As it take 1,3s for 35 nodes
                 $this->updateLinkedNodesOfDob($value);
 
@@ -376,8 +411,14 @@ class Algorithm extends Component
 
         // We force to int the value comming from
         $intvalue = intval($value);
+
         if ($intvalue == $value || intval($value) !== 0) {
             Arr::set($this->current_nodes, $key, $intvalue);
+        }
+
+        // If the answer trigger the emergency modal
+        if (array_key_exists($value, $need_emergency)) {
+            $this->dispatch('openEmergencyModal');
         }
     }
 
@@ -450,11 +491,11 @@ class Algorithm extends Component
                                     $this->current_nodes[$modified_cc_id] = $system_data[$modified_cc_id];
                                 }
                             }
+                            // We add nodes that were exculded by old no answer
                         }
                     }
                 }
             }
-            dump($this->current_nodes['consultation']);
         }
     }
 
@@ -601,7 +642,7 @@ class Algorithm extends Component
                         //     'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
                         //     'drugs' => $drugs
                         // ];
-                        $this->df_to_display[$df]=$drugs;
+                        $this->df_to_display[$df] = $drugs;
                         foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
                             $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
                             if (empty($conditions)) {
@@ -796,7 +837,7 @@ class Algorithm extends Component
             foreach ($current_nodes_per_step as $system_name => $system_data) {
                 foreach ($system_data as $cc_id => $nodes) {
 
-                    if (isset($cc_id, $this->chosen_complaint_categories)) {
+                    if (isset($this->chosen_complaint_categories[$cc_id])) {
                         if ($this->is_dynamic_study) {
                             $consultation_nodes[$system_name] = $system_data[$cc_id];
                         } else {
@@ -826,6 +867,9 @@ class Algorithm extends Component
         if (!empty($this->steps[$this->current_step])) {
             $this->current_sub_step = $this->steps[$this->current_step][0];
         }
+
+        //todo uncomment it when in prod
+        // $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void
@@ -840,23 +884,22 @@ class Algorithm extends Component
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
-            $common_agreed_df = array_intersect_key( $this->df_to_display,$agreed_diagnoses);
-            $drugs_needed=[];
-            foreach($this->drugs_to_display as $index=>$drug_id){
-                foreach($common_agreed_df as $diagnosis_id=>$drugs){
-                    if(array_key_exists($drug_id,$drugs)){
+            $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
+            $drugs_needed = [];
+            foreach ($this->drugs_to_display as $index => $drug_id) {
+                foreach ($common_agreed_df as $diagnosis_id => $drugs) {
+                    if (array_key_exists($drug_id, $drugs)) {
                         if (empty($this->drugs_formulation[$drug_id])) {
                             if ((count($health_cares[$drug_id]['formulations']) <= 1)) {
                                 $formulation = $health_cares[$drug_id]['formulations'][0];
                                 $this->drugs_formulation[$drug_id] = $formulation['id'];
                             }
                         }
-                        $drugs_needed[$drug_id]=$drug_id;
+                        $drugs_needed[$drug_id] = $drug_id;
                     }
                 }
             }
-            $this->drugs_to_display=$drugs_needed;
-
+            $this->drugs_to_display = $drugs_needed;
         }
 
         // summary
