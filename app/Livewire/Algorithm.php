@@ -296,12 +296,26 @@ class Algorithm extends Component
                             //Example with 43136 that will bring 42871 which is a registration node (type of consult)
                             $answers_hash_map[$step][$answer_id][] = $instance_id;
 
-                            $this->algorithmService->breadthFirstSearch($diag, $node_id, $answer_id, $dependency_map);
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map);
+
+                            $node = $cached_data['full_nodes'][$node_id];
+
+                            if ($node['type'] === 'QuestionsSequence') {
+                                foreach ($node['instances'] as $qs_instance) {
+                                    if (!empty($qs_instance['conditions'])) {
+                                        foreach ($qs_instance['conditions'] as $qs_condition) {
+                                            $answers_hash_map[$step][$qs_condition['answer_id']][] = $qs_instance['id'];
+                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+
 
         foreach ($consultation_nodes as &$nodes) {
             //Sort the nodes inside the older or neonat keys
@@ -352,13 +366,13 @@ class Algorithm extends Component
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
-        dump($this->current_nodes);
+        // dump($this->current_nodes);
         // dump($cached_data['full_order']);
         // dump($cached_data['df_hash_map']);
         dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
