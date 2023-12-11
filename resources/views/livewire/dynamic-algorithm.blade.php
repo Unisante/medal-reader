@@ -138,17 +138,17 @@
                     <tbody>
                       @foreach ($diagnoses_status as $diagnosis_id => $agreed)
                         <tr>
-                          <td><b>{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</b> description Icon to be here
+                          <td><b>{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</b>
                             @if ($final_diagnoses[$diagnosis_id]['description']['en'])
-                                <div x-data="{ open: false }">
-                                  <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                                    <i class="bi bi-info-circle"> Description</i>
-                                  </button>
-                                  <div x-show="open">
-                                    <p>{{ $final_diagnoses[$diagnosis_id]['description']['en'] }}</p>
-                                  </div>
+                              <div x-data="{ open: false }">
+                                <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                                  <i class="bi bi-info-circle"> Description</i>
+                                </button>
+                                <div x-show="open">
+                                  <p>{{ $final_diagnoses[$diagnosis_id]['description']['en'] }}</p>
                                 </div>
-                              @endif
+                              </div>
+                            @endif
                           </td>
                         </tr>
                       @endforeach
@@ -163,7 +163,53 @@
                     <tbody>
                       @foreach ($formulations_to_display as $drug_id => $formulation)
                         <tr>
-                          <td><b>{{ $formulation['drug_label'] }}</b> Button for more information</td>
+                          <td class="d-flex justify-content-between">
+                            <div>
+                              <b>{{ $formulation['drug_label'] }}</b> <br>
+                              <p>
+                                <span>{{ $formulation['amountGiven'] }}</span> |
+                                <span>{{ $formulation['doses_per_day'] }} time per day</span> |
+                                @if (intval($formulation['duration']))
+                                  <span> {{ $formulation['duration'] }}
+                                    {{ intval($formulation['duration']) > 1 ? 'days' : 'day' }}
+                                  </span>
+                                @else
+                                  <span>{{ $formulation['duration'] }}</span>
+                                @endif
+                              </p>
+                              <div x-data="{ open: false }" @toggle.window="open = ! open">
+                                <div x-show="open">
+                                  <span><b>Indication:</b> {{ $formulation['indication'] }}</span><br>
+                                  <span><b>Dose calculation:</b> {{ $formulation['dose_calculation'] }}</span> <br>
+                                  <span><b>Route:</b> {{ $formulation['route'] }}</span> <br>
+                                  <span><b>Amount to be given :</b> {{ $formulation['amountGiven'] }}</span> <br>
+                                  @if ($formulation['injection_instructions'])
+                                    <span>
+                                      <b>Preparation instructions :</b>{{ $formulation['injection_instructions'] }}
+                                    </span> <br>
+                                  @endif
+                                  <span>
+                                    <b>Frequency :</b> {{ $formulation['doses_per_day'] }} time per day (or
+                                    every{{ $formulation['recurrence'] }} hours)
+                                  </span> <br>
+                                  <span>
+                                    <b>Duration :</b>
+                                    {{ $formulation['duration'] }}{{ intval($formulation['duration']) > 1 ? 'days' : 'day' }}
+                                  </span> <br>
+                                  @if ($formulation['dispensing_description'])
+                                    <span>
+                                      <b>Administration instructions :</b> {{ $formulation['dispensing_description'] }}
+                                    </span><br>
+                                  @endif
+                                </div>
+                              </div>
+                            </div>
+                            <div x-data>
+                              <button class="btn btn-sm btn-outline-secondary m-1" @click="$dispatch('toggle')">
+                                <i class="bi bi-info-circle"> More</i>
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       @endforeach
                     </tbody>
@@ -200,108 +246,7 @@
                   </table>
                 @endif
               @endif
-              {{-- @php
-                  $steps[$current_step][] = 'managements';
-                  $steps[$current_step] = array_unique($steps[$current_step]);
-                @endphp
-                <div class="accordion" id="accordionExample">
-                  @foreach ($steps[$current_step] as $index => $substep)
-                    @if ($substep === 'managements')
-                      <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ $index }}">
-                          <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
-                            aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
-                            aria-controls="collapse{{ $index }}">
-                            {{ ucwords(str_replace('_', ' ', $substep)) }}
-                          </button>
-                        </h2>
-                        <div id="collapse{{ $index }}"
-                          class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
-                          aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
-                          <div class="accordion-body">
-                            <table class="table">
-                              <thead class="table-dark">
-                                <tr>
-                                  <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                                  @if (isset($diagnoses_status[$diagnosis_id]))
-                                    <tr wire:key="{{ 'management-' . $management_key }}">
-                                      <td>
-                                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br>
-                                        <b>Indication:</b>
-                                        {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                                        @if ($health_cares[$management_key]['description']['en'])
-                                          <div x-data="{ open: false }">
-                                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                                              <i class="bi bi-info-circle"> Description</i>
-                                            </button>
-                                            <div x-show="open">
-                                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                                            </div>
-                                          </div>
-                                        @endif
-                                      </td>
-                                    </tr>
-                                  @endif
-                                @endforeach
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    @endif --}}
-              {{-- @if ($substep === 'medicines')
-                      <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ $index }}">
-                          <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
-                            aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
-                            aria-controls="collapse{{ $index }}">
-                            {{ ucwords(str_replace('_', ' ', $substep)) }}
-                          </button>
-                        </h2>
-                        <div id="collapse{{ $index }}"
-                          class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
-                          aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
-                          <div class="accordion-body">
-                            <table class="table">
-                              <thead>
-                                <tr>
-                                  <th scope="col">Treatments</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                @foreach ($formulations_to_display as $drug_id => $formulation)
-                                  <tr>
-                                    <td>
-                                      <b>{{ $formulation['drug_label'] }}</b><br>
-                                      <b>{{ $formulation['description'] }}</b><br>
-                                      <b>Indication:</b> {{ $formulation['indication'] }}<br>
-                                      <b>Route:</b> {{ $formulation['route'] }}<br> --}}
 
-              {{-- @foreach ($health_cares[$drug_id]['formulations'] as $formulation)
-                                        @if ($formulation['id'] == $drugs_formulation[$drug_id])
-                                        <b>Dose calculation:</b><br>
-                                        <b>Route:</b> {{ $formulation['administration_route_name'] }} <br>
-                                        <b>Formulation:</b> {{ $formulation['description']['en'] }} <br>
-                                        @endif
-                                      @endforeach --}}
-              {{-- </td>
-                                  </tr>
-                                @endforeach
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    @endif
-                  @endforeach
-                </div>
-              @endif --}}
               @if ($current_sub_step === 'referral')
                 <h1>Still in progress</h1>
               @endif
