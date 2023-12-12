@@ -279,7 +279,9 @@
           CCs chosen :
           @foreach ($chosen_complaint_categories as $cc => $chosen)
             <div wire:key="{{ 'edit-cc-' . $cc }}">
-              <p class="mb-0">{{ $cc }}</p>
+              @if ($chosen)
+                <p class="mb-0">{{ $cc }}</p>
+              @endif
             </div>
           @endforeach
         </div>
@@ -288,7 +290,8 @@
   </div>
 
   <!-- Modal -->
-  <div class="modal fade" id="emergencyModal" tabindex="-1" aria-labelledby="emergencyModalLabel" aria-hidden="true">
+  <div class="modal fade" id="emergencyModal" tabindex="-1" aria-labelledby="emergencyModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header border-0 d-flex justify-content-between">

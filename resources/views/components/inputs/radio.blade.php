@@ -6,6 +6,7 @@
     $full_nodes = $cache_data['full_nodes'];
     $villages = $cache_data['villages'];
   @endphp
+
   <label class="form-label" for="{{ $node_id }}">
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])
@@ -20,15 +21,14 @@
     @endif
   </label>
   @foreach ($full_nodes[$node_id]['answers'] as $answer)
-    <div class="form-check">
+    <div wire:key="{{ 'answer-' . $answer['id'] }}" class="form-check">
       <input class="form-check-input" type="radio" wire:model.live='{{ "current_nodes.$step.$node_id" }}'
-        value={{ intval($answer['id']) }} name="{{ $node_id }}" id="{{ $answer['id'] }}"
-        wire:key="{{ $answer['id'] }}">
+        value={{ $answer['id'] }} name="{{ $node_id }}" id="{{ $answer['id'] }}">
       <label class="form-check-label" for="{{ $answer['id'] }}">
         {{ $answer['label']['en'] }}
       </label>
       @if ($loop->last)
-        @error("{{ 'current_nodes.registration.' . $node_id }}")
+        @error('{{ "current_nodes.$step.$node_id" }}')
           <div class="invalid-feedback" role="alert">{{ $message }}</div>
         @enderror
       @endif

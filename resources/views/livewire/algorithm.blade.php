@@ -5,176 +5,45 @@
   </div>
   <div class="row g-3">
     <div class="col-8">
-      {{-- @dump(Cache::get($cache_key)["final_diagnoses"]) --}}
       @php
         $cache = Cache::get($cache_key);
         $full_nodes = $cache['full_nodes'];
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
       @endphp
+      @dump($current_nodes)
       {{-- Registration --}}
       @if ($current_step === 'registration')
-        {{-- //todo do not send anything more than ID to any nested component ! --}}
-        <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" :cache_key="$cache_key" />
-        <button class="btn btn-sm btn-outline-primary m-1"
-          wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
+        <x-step.registration :nodes="$current_nodes['registration']" :cache_key="$cache_key" />
       @endif
+
+      {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-
-        {{-- Vitals --}}
-        @foreach ($current_nodes['first_look_nodes_id'] ?? [] as $node_id)
-          <div class="m-0" wire:key="{{ 'first-look-' . $node_id }}">
-            <label class="form-check-label" for="{{ $node_id }}">{{ $full_nodes[$node_id]['label']['en'] }}</label>
-            <label class="custom-control teleport-switch">
-              <span class="teleport-switch-control-description">No</span>
-              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node_id }}"
-                id="{{ $node_id }}" value="{{ $node_id }}" wire:model.live="chosen_complaint_categories">
-              <span class="teleport-switch-control-indicator"></span>
-              <span class="teleport-switch-control-description">Yes</span>
-            </label>
+        @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
+          <div wire:key="{{ 'cc-' . $node_id }}">
+            <x-inputs.checkbox step="complaint_categories_nodes_id" :node_id="$node_id" :cache_key="$cache_key" />
           </div>
         @endforeach
-
-        {{-- Complaint categories --}}
-        @foreach ($current_nodes['complaint_categories_nodes_id'][$age_key] as $node_id)
-          <div class="m-0" wire:key="{{ 'cc-' . $node_id }}">
-            <label class="form-check-label"
-              for="{{ $node_id }}">{{ $full_nodes[$node_id]['label']['en'] }}</label>
-            <label class="custom-control teleport-switch">
-              <span class="teleport-switch-control-description">No</span>
-              <input type="checkbox" class="teleport-switch-control-input" name="{{ $node_id }}"
-                id="{{ $node_id }}" value="{{ $node_id }}" wire:model.live="chosen_complaint_categories">
-              <span class="teleport-switch-control-indicator"></span>
-              <span class="teleport-switch-control-description">Yes</span>
-            </label>
-          </div>
-        @endforeach
-
-        {{-- Basic measurement --}}
-        @foreach ($current_nodes['basic_measurements_nodes_id'] ?? [] as $node_id)
-          <div class="m-0" wire:key="{{ 'cc-' . $node_id }}">
-            @switch($full_nodes[$node_id]['display_format'])
-              @case('RadioButton')
-                <div>
-                  <livewire:components.inputs.radio wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('String')
-                <div>
-                  <livewire:components.inputs.text wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('DropDownList')
-                <div>
-                  <livewire:components.inputs.select wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @case('Input')
-                <div>
-                  <livewire:components.inputs.numeric wire:key="{{ 'basic-measurement-' . $node_id }}" :node_id="$node_id"
-                    :cache_key="$cache_key" />
-                </div>
-              @break
-
-              @case('Formula')
-                <div>
-                  <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}" :node_id="$node_id" />
-                </div>
-              @break
-
-              @default
-            @endswitch
-          </div>
-        @endforeach
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('consultation')">consultation</button>
-        {{-- <button class="btn btn-sm btn-outline-secondary m-1" wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
       @endif
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        @foreach ($chosen_complaint_categories as $cc)
-          @if ($current_cc === $cc)
-            <div wire:key="{{ 'chosen-cc-' . $cc }}">
-              @foreach ($current_nodes[$cc] as $node_id)
-                <div wire:key="{{ 'nodes-' . $node_id }}">
-                  @switch($full_nodes[$node_id]['display_format'])
-                    @case('RadioButton')
-                      <div>
-                        <livewire:components.inputs.radio wire:key="{{ 'radio-' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('String')
-                      <div>
-                        <livewire:components.inputs.text wire:key="{{ 'text' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('DropDownList')
-                      <div>
-                        <livewire:components.inputs.select wire:key="{{ 'select' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Input')
-                      <div>
-                        <livewire:components.inputs.numeric wire:key="{{ 'numeric' . $node_id }}" :node_id="$node_id"
-                          :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Formula')
-                      <div>
-                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ 'text' . $node_id }}"
-                          :node_id="$node_id" :cache_key="$cache_key" />
-                      </div>
-                    @break
-
-                    @case('Reference')
-                      <div>
-                        <livewire:components.inputs.text :value="$nodes_to_save[$node_id]" wire:key="{{ $cc . $node_id }}"
-                          :node_id="$node_id" />
-                      </div>
-                    @break
-
-                    @default
-                  @endswitch
-                </div>
-              @endforeach
-            </div>
-            @if (!$loop->first)
-              <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToPreviousCc()">Previous CC</button>
-            @endif
-            @if (!$loop->last)
-              <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToNextCc()">Next CC</button>
-            @endif
-            @if ($loop->last)
-              <button class="btn btn-sm btn-outline-primary m-1"
-                wire:click="goToStep('diagnoses')">Recommendation</button>
-            @endif
-          @endif
-        @endforeach
+        <x-step.recommendations :nodes="$current_nodes['consultation']" :current_cc="$current_cc" :cache_key="$cache_key" />
       @endif
 
       {{-- Tests --}}
       @if ($current_step === 'tests')
       @endif
+
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
         <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
         <ul class="nav nav-tabs" id="myTab" role="tablist">
           @foreach ($steps[$current_step] as $index => $title)
             <li class="nav-item" role="presentation">
-              <button class="nav-link @if ($current_sub_step === $title) active @endif"
-                id="{{ Str::slug($title) }}-tab" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}"
-                type="button" role="tab" aria-controls="{{ Str::slug($title) }}"
-                aria-selected="{{ $current_sub_step === $index }}"
+              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
                 wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
               </button>
             </li>
@@ -194,16 +63,17 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @foreach ($df_to_display as $df)
-                      <tr wire:key="{{ 'df-' . $df['id'] }}">
+                    @foreach ($df_to_display as $diagnosis_id => $drugs)
+                      <tr wire:key="{{ 'df-' . $diagnosis_id }}">
                         <td>
-                          <label class="form-check-label" for="{{ $df['id'] }}">{{ $df['label'] }}</label>
+                          <label class="form-check-label"
+                            for="{{ $diagnosis_id }}">{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</label>
                         </td>
                         <td><label class="custom-control teleport-switch">
                             <span class="teleport-switch-control-description">Disagree</span>
-                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $df['id'] }}"
-                              id="{{ $df['id'] }}" value="{{ $df['id'] }}"
-                              wire:model.live="diagnoses_status.{{ $df['id'] }}">
+                            <input type="checkbox" class="teleport-switch-control-input" name="{{ $diagnosis_id }}"
+                              id="{{ $diagnosis_id }}" value="{{ $diagnosis_id }}"
+                              wire:model.live="diagnoses_status.{{ $diagnosis_id }}">
                             <span class="teleport-switch-control-indicator"></span>
                             <span class="teleport-switch-control-description">Agree</span>
                           </label></td>
@@ -216,117 +86,171 @@
                 <h1>Still in progress</h1>
               @endif
               @if ($current_sub_step === 'medicines')
+                @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th scope="col">Proposed Medicines</th>
+                        <th scope="col">Formulations</th>
+                        <th scope="col">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($drugs_to_display as $drug_id => $drug_id)
+                        <tr wire:key="{{ 'drug-' . $drug_id }}">
+                          @php $cache_drug=$health_cares[$drug_id] @endphp
+                          <td><label class="form-check-label"
+                              for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
+                            </label>
+                          </td>
+                          <td>
+                            <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                              wire:model.live="drugs_formulation.{{ $drug_id }}"
+                              id="formultaion-{{ $drug_id }}">
+                              <option selected>Please Select a formulation</option>
+                              @foreach ($cache_drug['formulations'] as $formulation)
+                                <option value="{{ $formulation['id'] }}">
+                                  {{ $formulation['description']['en'] }}
+                                </option>
+                              @endforeach
+                            </select>
+                          </td>
+                          <td>
+                            <label class="custom-control teleport-switch">
+                              <span class="teleport-switch-control-description">Disagree</span>
+                              <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
+                                id="{{ $drug_id }}" value="{{ $drug_id }}"
+                                wire:model.live="drugs_status.{{ $drug_id }}">
+                              <span class="teleport-switch-control-indicator"></span>
+                              <span class="teleport-switch-control-description">Agree</span>
+                            </label>
+                          </td>
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                @endif
               @endif
               @if ($current_sub_step === 'summary')
-                {{-- referral and treatment questions are no needed --}}
-                @php
-                  $steps[$current_step][] = 'managements';
-                  $steps[$current_step] = array_unique($steps[$current_step]);
-                @endphp
-                <div class="accordion" id="accordionExample">
-                  @foreach ($steps[$current_step] as $index => $substep)
-                    {{-- @if (!in_array($substep, ['treatment_questions', 'referral', $current_sub_step])) --}}
-                    @if ($substep === 'managements')
-                      <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ $index }}">
-                          <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
-                            aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
-                            aria-controls="collapse{{ $index }}">
-                            {{-- {{ $substep }} --}}
-                            {{ ucwords(str_replace('_', ' ', $substep)) }}
-                          </button>
-                        </h2>
-                        <div id="collapse{{ $index }}"
-                          class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
-                          aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
-                          <div class="accordion-body">
-                            {{-- {!! $substep !!} --}}
-                            <table class="table">
-                              <thead class="table-dark">
-                                <tr>
-                                  <th scope="col">{{ ucwords(str_replace('_', ' ', $substep)) }}</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                                  @if (isset($diagnoses_status[$diagnosis_id]))
-                                    <tr wire:key="{{ 'management-' . $management_key }}">
-                                      <td>
-                                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br>
-                                        <b>Indication:</b>
-                                        {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                                        @if ($health_cares[$management_key]['description']['en'])
-                                          <div x-data="{ open: false }">
-                                            <button class="btn btn-sm btn-outline-secondary m-1"
-                                              @click="open = ! open">
-                                              <i class="bi bi-info-circle"> Description</i>
-                                            </button>
-                                            <div x-show="open">
-                                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
-                                            </div>
-                                          </div>
-                                        @endif
-                                      </td>
-                                    </tr>
+                @if (array_filter($diagnoses_status))
+                  <table class="table table-striped">
+                    <thead class="table-dark">
+                      <tr>
+                        <th scope="col">Final Diagnoses</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($diagnoses_status as $diagnosis_id => $agreed)
+                        <tr>
+                          <td><b>{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</b>
+                            @if ($final_diagnoses[$diagnosis_id]['description']['en'])
+                              <div x-data="{ open: false }">
+                                <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                                  <i class="bi bi-info-circle"> Description</i>
+                                </button>
+                                <div x-show="open">
+                                  <p>{{ $final_diagnoses[$diagnosis_id]['description']['en'] }}</p>
+                                </div>
+                              </div>
+                            @endif
+                          </td>
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                  <table class="table table-striped">
+                    <thead class="table-dark">
+                      <tr>
+                        <th scope="col">Treatments</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($formulations_to_display as $drug_id => $formulation)
+                        <tr>
+                          <td class="d-flex justify-content-between">
+                            <div>
+                              <b>{{ $formulation['drug_label'] }}</b> <br>
+                              <p>
+                                <span>{{ $formulation['amountGiven'] }}</span> |
+                                <span>{{ $formulation['doses_per_day'] }} time per day</span> |
+                                @if (intval($formulation['duration']))
+                                  <span> {{ $formulation['duration'] }}
+                                    {{ intval($formulation['duration']) > 1 ? 'days' : 'day' }}
+                                  </span>
+                                @else
+                                  <span>{{ $formulation['duration'] }}</span>
+                                @endif
+                              </p>
+                              <div x-data="{ open: false }" @toggle.window="open = ! open">
+                                <div x-show="open">
+                                  <span><b>Indication:</b> {{ $formulation['indication'] }}</span><br>
+                                  <span><b>Dose calculation:</b> {{ $formulation['dose_calculation'] }}</span> <br>
+                                  <span><b>Route:</b> {{ $formulation['route'] }}</span> <br>
+                                  <span><b>Amount to be given :</b> {{ $formulation['amountGiven'] }}</span> <br>
+                                  @if ($formulation['injection_instructions'])
+                                    <span>
+                                      <b>Preparation instructions :</b>{{ $formulation['injection_instructions'] }}
+                                    </span> <br>
                                   @endif
-                                @endforeach
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    @endif
-                    @if ($substep === 'medicines')
-                      <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ $index }}">
-                          <button class="accordion-button {{ $index === 0 ? '' : 'collapsed' }}" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapse{{ $index }}"
-                            aria-expanded="{{ $index === 0 ? 'true' : 'false' }}"
-                            aria-controls="collapse{{ $index }}">
-                            {{-- {{ $substep }} --}}
-                            {{ ucwords(str_replace('_', ' ', $substep)) }}
-                          </button>
-                        </h2>
-                        <div id="collapse{{ $index }}"
-                          class="accordion-collapse collapse {{ $index === 0 ? 'show' : '' }}"
-                          aria-labelledby="heading{{ $index }}" data-bs-parent="#accordionExample">
-                          <div class="accordion-body">
-                            {!! $substep !!} will come here
-                            <table class="table">
-                              <thead>
-                                <tr>
-                                  <th scope="col">Treatments</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                @foreach ($formulations_to_display as $drug_id => $formulation)
-                                  <tr>
-                                    <td>
-                                      <b>{{ $formulation['drug_label'] }}</b><br>
-                                      <b>{{ $formulation['description'] }}</b><br>
-                                      <b>Indication:</b> {{ $formulation['indication'] }}<br>
-                                      <b>Route:</b> {{ $formulation['route'] }}<br>
-
-                                      {{-- @foreach ($health_cares[$drug_id]['formulations'] as $formulation)
-                                        @if ($formulation['id'] == $drugs_formulation[$drug_id])
-                                        <b>Dose calculation:</b><br>
-                                        <b>Route:</b> {{ $formulation['administration_route_name'] }} <br>
-                                        <b>Formulation:</b> {{ $formulation['description']['en'] }} <br>
-                                        @endif
-                                      @endforeach --}}
-                                    </td>
-                                  </tr>
-                                @endforeach
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    @endif
-                  @endforeach
-                </div>
+                                  <span>
+                                    <b>Frequency :</b> {{ $formulation['doses_per_day'] }} time per day (or
+                                    every{{ $formulation['recurrence'] }} hours)
+                                  </span> <br>
+                                  <span>
+                                    <b>Duration :</b>
+                                    {{ $formulation['duration'] }}{{ intval($formulation['duration']) > 1 ? 'days' : 'day' }}
+                                  </span> <br>
+                                  @if ($formulation['dispensing_description'])
+                                    <span>
+                                      <b>Administration instructions :</b> {{ $formulation['dispensing_description'] }}
+                                    </span><br>
+                                  @endif
+                                </div>
+                              </div>
+                            </div>
+                            <div x-data>
+                              <button class="btn btn-sm btn-outline-secondary m-1" @click="$dispatch('toggle')">
+                                <i class="bi bi-info-circle"> More</i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                  <table class="table">
+                    <thead class="table-dark">
+                      <tr>
+                        <th scope="col">Managements</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($managements_to_display as $management_key => $diagnosis_id)
+                        @if (isset($diagnoses_status[$diagnosis_id]))
+                          <tr wire:key="{{ 'management-' . $management_key }}">
+                            <td>
+                              <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br>
+                              <b>Indication:</b>
+                              {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+                              @if ($health_cares[$management_key]['description']['en'])
+                                <div x-data="{ open: false }">
+                                  <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                                    <i class="bi bi-info-circle"> Description</i>
+                                  </button>
+                                  <div x-show="open">
+                                    <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
+                                  </div>
+                                </div>
+                              @endif
+                            </td>
+                          </tr>
+                        @endif
+                      @endforeach
+                    </tbody>
+                  </table>
+                @endif
               @endif
+
               @if ($current_sub_step === 'referral')
                 <h1>Still in progress</h1>
               @endif
@@ -342,8 +266,8 @@
           <div wire:key="{{ 'go-step-' . $key }}">
             <button class="btn btn-outline-primary m-1"
               wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split"
-              data-bs-toggle="dropdown" aria-expanded="false"></button>
+            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+              aria-expanded="false"></button>
             <ul class="dropdown-menu">
               @foreach ($substeps as $substep)
                 <div wire:key="{{ 'go-sub-step-' . $substep }}">
@@ -357,12 +281,56 @@
         @endforeach
         <div class="container">
           CCs chosen :
-          @foreach ($chosen_complaint_categories as $cc)
+          @foreach ($chosen_complaint_categories as $cc => $chosen)
             <div wire:key="{{ 'edit-cc-' . $cc }}">
-              <p class="mb-0">{{ $cc }}</p>
+              @if ($chosen)
+                <p class="mb-0">{{ $cc }}</p>
+              @endif
             </div>
           @endforeach
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="emergencyModal" tabindex="-1" aria-labelledby="emergencyModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0 d-flex justify-content-between">
+          <div></div>
+          <div>
+            <h5 class="modal-title text-danger" id="emergencyModalLabel">EMERGENCY ASSISTANCE</h5>
+          </div>
+          <div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body border-0 mx-auto">
+          The patient is presenting a severe/emergency symptom or sign. Click on the emergency button if the child needs
+          emergency care now.
+        </div>
+        <div class="modal-footer border-0 mx-auto">
+          <button type="button" class="btn btn-danger">GO TO EMERGENCY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @push('scripts')
+    <script type="text/javascript">
+      document.addEventListener('livewire:init', () => {
+        const emergencyModal = document.getElementById('emergencyModal');
+
+        Livewire.on('openEmergencyModal', () => {
+          var bootstrapEmergencyModal = new bootstrap.Modal(emergencyModal)
+          bootstrapEmergencyModal.show()
+        });
+
+        Livewire.on("scrollTop", () => {
+          window.scrollTo(0, 0);
+        });
+      });
+    </script>
+  @endpush
