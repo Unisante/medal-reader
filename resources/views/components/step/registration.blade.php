@@ -1,4 +1,4 @@
-@props(['nodes', 'cache_key'])
+@props(['nodes', 'cache_key', 'nodes_to_save'])
 
 @php
   $cache_data = Cache::get($cache_key);
@@ -27,23 +27,27 @@
     @else
       @switch($full_nodes[$node_id]['display_format'])
         @case('RadioButton')
-            <x-inputs.radio step="registration" :node_id="$node_id" :cache_key="$cache_key" />
+          <x-inputs.radio step="registration" :node_id="$node_id" :cache_key="$cache_key" />
         @break
 
         @case('DropDownList')
-            <x-inputs.select step="registration" :node_id="$node_id" :cache_key="$cache_key" />
+          <x-inputs.select step="registration" :node_id="$node_id" :cache_key="$cache_key" />
         @break
 
         @case('Input')
-            <x-inputs.numeric step="registration" :node_id="$node_id" :cache_key="$cache_key" />
+          <x-inputs.numeric step="registration" :node_id="$node_id" :cache_key="$cache_key" />
         @break
 
         @case('String')
-            <x-inputs.text step="registration" :node_id="$node_id" :cache_key="$cache_key" :is_background_calc="false" />
+          <x-inputs.text step="registration" :node_id="$node_id" :cache_key="$cache_key" :is_background_calc="false" />
         @break
 
         @case('Autocomplete')
           <x-inputs.datalist step="registration" :node_id="$node_id" :villages="$villages" :cache_key="$cache_key" />
+        @break
+
+        @case('Formula')
+          <x-inputs.text step="registration" :node_id="$node_id" :cache_key="$cache_key" :is_background_calc="true" />
         @break
 
         @default

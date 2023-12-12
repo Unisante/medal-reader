@@ -14,7 +14,8 @@
       @dump($current_nodes)
       {{-- Registration --}}
       @if ($current_step === 'registration')
-        <x-step.registration :nodes="$current_nodes['registration']" :cache_key="$cache_key" />
+        <x-step.registration :nodes="$current_nodes['registration'] +
+            $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
       @endif
 
       {{-- first_look_assessment --}}
@@ -28,7 +29,7 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.recommendations :nodes="$current_nodes['consultation']" :current_cc="$current_cc" :cache_key="$cache_key" />
+        <x-step.recommendations :nodes="$current_nodes['consultation']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
       @endif
 
       {{-- Tests --}}

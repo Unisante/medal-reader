@@ -113,7 +113,7 @@ class FormulationService
             'gel', 'ointment', 'cream', 'lotion', 'patch' => $this->doseCalculationString("fixed_dose_indication_application"),
             'drops', 'spray', 'suppository', 'pessary', 'inhaler' => $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']),
             'capsule', 'tablet', 'dispersible_tablet' => call_user_func(function () use ($drug_dose) {
-                if ($drug_dose['unique']) {
+                if ($this->current_formulation['unique']) {
                     return $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']);
                 }
                 if ($this->current_formulation['medication_form'] == 'capsule') {

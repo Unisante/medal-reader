@@ -360,6 +360,7 @@ class Algorithm extends Component
         $this->current_nodes['registration'] = $registration_nodes;
 
         //todo remove these when in prod
+        //START TO REMOVE
         if ($this->is_dynamic_study) {
             $this->current_cc = $this->age_key === "older"
                 ? $cached_data['general_cc_id']
@@ -367,8 +368,12 @@ class Algorithm extends Component
             $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
         }
 
+        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
+            $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+
         $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
             $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
+        //END TO REMOVE
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
@@ -549,8 +554,15 @@ class Algorithm extends Component
 
             // If node is linked to some bc, we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
+                $answer_id = $this->handleAnswers($node_id, $value);
+                if ($this->current_step === 'registration') {
+                    $this->current_nodes['registration'][$node_id] = $value;
+                }
+                if ($this->current_step === 'consultation') {
+                    $this->current_nodes['consultation'][$this->current_cc][$node_id] = $value;
+                }
                 foreach ($nodes_to_update[$node_id] as $node_id) {
-                    $this->saveNode($node_id, null, null, null);
+                    $this->saveNode($node_id, $answer_id, null, null);
                 }
             }
         }
@@ -770,6 +782,28 @@ class Algorithm extends Component
         }
 
         return null;
+    }
+    public function handleAnswers($node_id, $value)
+    {
+        $answers = Cache::get($this->cache_key)['full_nodes'][$node_id]["answers"];
+        foreach ($answers as $answer) {
+            $result = intval($value);
+            $answer_value = $answer['value'];
+            $answer_values = explode(',', $answer_value);
+            $minValue = intval($answer_values[0]);
+            $maxValue = intval($answer_values[1] ?? $minValue);
+
+            $answer_id = match ($answer['operator']) {
+                'more_or_equal' => $result >= $minValue ? $answer['id'] : null,
+                'less' => $result < $minValue ? $answer['id'] : null,
+                'between' => ($result >= $minValue && $result < $maxValue) ? $answer['id'] : null,
+                default => null,
+            };
+            if ($answer_id) {
+                return $answer_id;
+            }
+        }
+        return;
     }
 
     public function updateLinkedNodesOfDob($value)
