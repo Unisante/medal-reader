@@ -4,8 +4,8 @@
   $full_nodes = Cache::get($cache_key)['full_nodes'];
 @endphp
 
-@dump($nodes['first_look_nodes_id'])
-@dump($nodes['basic_measurements_nodes_id'])
+{{-- @dump($nodes['first_look_nodes_id']) --}}
+{{-- @dump($nodes['basic_measurements_nodes_id']) --}}
 
 {{-- Vitals --}}
 {{-- todo fix that not being checked if changing step --}}

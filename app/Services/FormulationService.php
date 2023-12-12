@@ -113,7 +113,7 @@ class FormulationService
             'gel', 'ointment', 'cream', 'lotion', 'patch' => $this->doseCalculationString("fixed_dose_indication_application"),
             'drops', 'spray', 'suppository', 'pessary', 'inhaler' => $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']),
             'capsule', 'tablet', 'dispersible_tablet' => call_user_func(function () use ($drug_dose) {
-                if ($this->current_formulation['unique']) {
+                if ($drug_dose['unique']) {
                     return $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']);
                 }
                 if ($this->current_formulation['medication_form'] == 'capsule') {
@@ -468,9 +468,9 @@ class FormulationService
                     "duration" => $this->drugs_duration[$drug_id],
                     "doses_per_day" => $this->current_formulation["doses_per_day"],
                     "dose_calculation" => $this->doseCalculation($drug_dose),
-                    "injection_instructions"=>$this->current_formulation["injection_instructions"]['en'],
-                    "dispensing_description"=>$this->current_formulation["dispensing_description"]['en'],
-                    "recurrence"=>$drug_dose["recurrence"]
+                    "injection_instructions" => $this->current_formulation["injection_instructions"]['en'],
+                    "dispensing_description" => $this->current_formulation["dispensing_description"]['en'],
+                    "recurrence" => $drug_dose["recurrence"]
                 ];
             }
         }

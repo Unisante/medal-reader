@@ -5,8 +5,8 @@
   $full_nodes = $cache['full_nodes'];
 @endphp
 
-@dump($nodes['priority_sign'])
-@dump($nodes['general'])
+{{-- @dump($nodes['priority_sign']) --}}
+{{-- @dump($nodes['general']) --}}
 
 @foreach ($nodes as $title => $system)
   {{-- System container --}}

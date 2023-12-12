@@ -6,7 +6,7 @@
   $villages = $cache_data['villages'];
 @endphp
 
-@dump($nodes)
+{{-- @dump($nodes) --}}
 
 @foreach ($nodes as $node_id => $answer_id)
   <div wire:key="{{ 'registration-' . $node_id }}" class="mb-2">

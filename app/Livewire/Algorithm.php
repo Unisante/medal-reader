@@ -382,11 +382,11 @@ class Algorithm extends Component
         // dump($this->current_nodes);
         // dump($cached_data['full_order']);
         // dump($cached_data['df_hash_map']);
-        dump($cached_data['nodes_per_step']);
+        // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);

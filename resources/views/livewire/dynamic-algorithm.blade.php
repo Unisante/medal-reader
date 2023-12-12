@@ -11,7 +11,7 @@
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
       @endphp
-      @dump($current_nodes)
+      {{-- @dump($current_nodes) --}}
       {{-- Registration --}}
       @if ($current_step === 'registration')
         <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
