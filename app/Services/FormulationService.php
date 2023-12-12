@@ -98,6 +98,7 @@ class FormulationService
         ];
         return $callStrings[$keyString];
     }
+
     public function doseCalculation($drug_dose)
     {
         return match ($this->current_formulation['medication_form']) {

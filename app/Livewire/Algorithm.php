@@ -386,6 +386,7 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['answers_hash_map']);
+        dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -662,13 +663,6 @@ class Algorithm extends Component
                             }
                         }
 
-                        // $this->df_to_display[$df] = [
-                        //     'id' => $final_diagnoses[$df]['id'],
-                        //     'label' => $final_diagnoses[$df]['label']['en'] ?? '',
-                        //     'description' => $final_diagnoses[$df]['description']['en'] ?? '',
-                        //     'level_of_urgency' => $final_diagnoses[$df]['level_of_urgency'],
-                        //     'drugs' => $drugs
-                        // ];
                         $this->df_to_display[$df] = $drugs;
                         foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
                             $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
@@ -687,8 +681,6 @@ class Algorithm extends Component
 
 
         // Reorder DF and managements upon level_of_urgency
-        // uasort($this->df_to_display, fn ($a, $b) => $b['level_of_urgency'] <=> $a['level_of_urgency']);
-
         uksort($this->df_to_display, function ($a, $b) use ($final_diagnoses) {
             return $final_diagnoses[$b]['level_of_urgency'] <=> $final_diagnoses[$a]['level_of_urgency'];
         });
@@ -943,6 +935,9 @@ class Algorithm extends Component
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
             $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
+            //todo fix the behavior when agreed df doesn't have any drugs assosiated
+            //Then it will reset the drugs_to_display array forever ever ever
+            //Set a private variable ?
             $drugs_needed = [];
             foreach ($this->drugs_to_display as $index => $drug_id) {
                 foreach ($common_agreed_df as $diagnosis_id => $drugs) {
@@ -959,15 +954,14 @@ class Algorithm extends Component
             }
             $this->drugs_to_display = $drugs_needed;
         }
-
         // summary
         if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
             $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
             // dd($common_agreed_diag_key['drugs']);
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
-            // $weight = $this->current_nodes['first_look_assessment']['basic_measurement'][$cached_data['weight_question_id']];
-            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight = 10);
+            $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$cached_data['weight_question_id']];
+            $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight);
             $this->formulations_to_display = $formulations->getFormulations();
             // give this to the service
             // dd($this->formulations_to_display);
