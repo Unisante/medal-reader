@@ -100,7 +100,7 @@
                             </label>
                           </td>
                           <td>
-                            <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                            <select class="form-select form-select-sm" aria-label=".form-select-sm"
                               wire:model.live="drugs_formulation.{{ $drug_id }}"
                               id="formultaion-{{ $drug_id }}">
                               <option selected>Please Select a formulation</option>
