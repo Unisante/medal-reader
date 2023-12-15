@@ -43,6 +43,7 @@ class Algorithm extends Component
     public array $formulations_to_display;
 
     private $algorithmService;
+    public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
 
@@ -815,11 +816,16 @@ class Algorithm extends Component
 
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
-            $system = isset($node['system']) ? $node['system'] : 'others';
             //We don't sort non dynamic study for now
             if ($this->is_dynamic_study) {
-                $this->current_nodes[$this->current_step][$system][$next_node_id] = '';
-                $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
+                if($node['category']==='treatment_question'){
+                    // $this->treatment_questions[$node["id"]]=false;
+                    $this->current_nodes['diagnoses']['treatment_questions'][$node["id"]]=false;
+                }else{
+                    $system = isset($node['system']) ? $node['system'] : 'others';
+                    $this->current_nodes[$this->current_step][$system][$next_node_id] = '';
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
+                }
             } else {
                 $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
             }
@@ -924,13 +930,14 @@ class Algorithm extends Component
     public function goToSubStep(string $step, string $substep): void
     {
         $cached_data = Cache::get($this->cache_key);
-        $health_cares = $cached_data['health_cares'];
+
 
         $this->goToStep($step);
         $this->current_sub_step = $substep;
 
         // medicines
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
+            $health_cares = $cached_data['health_cares'];
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
 

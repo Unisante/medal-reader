@@ -79,7 +79,43 @@
                 </table>
               @endif
               @if ($current_sub_step === 'treatment_questions')
-                <h1>Still in progress</h1>
+                @php
+                  $treatment_questions = isset($current_nodes['diagnoses']['treatment_questions']) ? $current_nodes['diagnoses']['treatment_questions'] : null;
+                @endphp
+                @if (isset($treatment_questions))
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th scope="col">Treatment Question</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($treatment_questions as $node_id => $answer)
+                        <tr wire:key="{{ 'treatment-question-' . $node_id }}">
+
+                          @switch($full_nodes[$node_id]['display_format'])
+                            @case('RadioButton')
+                              <td>
+                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
+                              </td>
+                            @break
+
+                            @case('DropDownList')
+                              <td>
+                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id"
+                                  :cache_key="$cache_key" />
+                              </td>
+                            @break
+
+                            @default
+                          @endswitch
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                @else
+                  <h1>There are no Questions</h1>
+                @endif
               @endif
               @if ($current_sub_step === 'medicines')
                 @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
