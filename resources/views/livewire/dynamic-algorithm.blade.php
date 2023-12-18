@@ -79,7 +79,43 @@
                 </table>
               @endif
               @if ($current_sub_step === 'treatment_questions')
-                <h1>Still in progress</h1>
+                @php
+                  $treatment_questions = isset($current_nodes['diagnoses']['treatment_questions']) ? $current_nodes['diagnoses']['treatment_questions'] : null;
+                @endphp
+                @if (isset($treatment_questions))
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th scope="col">Treatment Question</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @foreach ($treatment_questions as $node_id => $answer)
+                        <tr wire:key="{{ 'treatment-question-' . $node_id }}">
+
+                          @switch($full_nodes[$node_id]['display_format'])
+                            @case('RadioButton')
+                              <td>
+                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
+                              </td>
+                            @break
+
+                            @case('DropDownList')
+                              <td>
+                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id"
+                                  :cache_key="$cache_key" />
+                              </td>
+                            @break
+
+                            @default
+                          @endswitch
+                        </tr>
+                      @endforeach
+                    </tbody>
+                  </table>
+                @else
+                  <h1>There are no Questions</h1>
+                @endif
               @endif
               @if ($current_sub_step === 'medicines')
                 @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
@@ -92,36 +128,38 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @foreach ($drugs_to_display as $drug_id => $drug_id)
-                        <tr wire:key="{{ 'drug-' . $drug_id }}">
-                          @php $cache_drug=$health_cares[$drug_id] @endphp
-                          <td><label class="form-check-label"
-                              for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
-                            </label>
-                          </td>
-                          <td>
-                            <select class="form-select form-select-sm" aria-label=".form-select-sm"
-                              wire:model.live="drugs_formulation.{{ $drug_id }}"
-                              id="formultaion-{{ $drug_id }}">
-                              <option selected>Please Select a formulation</option>
-                              @foreach ($cache_drug['formulations'] as $formulation)
-                                <option value="{{ $formulation['id'] }}">
-                                  {{ $formulation['description']['en'] }}
-                                </option>
-                              @endforeach
-                            </select>
-                          </td>
-                          <td>
-                            <label class="custom-control teleport-switch">
-                              <span class="teleport-switch-control-description">Disagree</span>
-                              <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
-                                id="{{ $drug_id }}" value="{{ $drug_id }}"
-                                wire:model.live="drugs_status.{{ $drug_id }}">
-                              <span class="teleport-switch-control-indicator"></span>
-                              <span class="teleport-switch-control-description">Agree</span>
-                            </label>
-                          </td>
-                        </tr>
+                      @foreach ($drugs_to_display as $drug_id => $is_displayed)
+                        @if ($is_displayed)
+                          <tr wire:key="{{ 'drug-' . $drug_id }}">
+                            @php $cache_drug=$health_cares[$drug_id] @endphp
+                            <td><label class="form-check-label"
+                                for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
+                              </label>
+                            </td>
+                            <td>
+                              <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                                wire:model.live="drugs_formulation.{{ $drug_id }}"
+                                id="formultaion-{{ $drug_id }}">
+                                <option selected>Please Select a formulation</option>
+                                @foreach ($cache_drug['formulations'] as $formulation)
+                                  <option value="{{ $formulation['id'] }}">
+                                    {{ $formulation['description']['en'] }}
+                                  </option>
+                                @endforeach
+                              </select>
+                            </td>
+                            <td>
+                              <label class="custom-control teleport-switch">
+                                <span class="teleport-switch-control-description">Disagree</span>
+                                <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
+                                  id="{{ $drug_id }}" value="{{ $drug_id }}"
+                                  wire:model.live="drugs_status.{{ $drug_id }}">
+                                <span class="teleport-switch-control-indicator"></span>
+                                <span class="teleport-switch-control-description">Agree</span>
+                              </label>
+                            </td>
+                          </tr>
+                        @endif
                       @endforeach
                     </tbody>
                   </table>

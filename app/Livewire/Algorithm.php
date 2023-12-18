@@ -44,6 +44,7 @@ class Algorithm extends Component
     public array $formulations_to_display;
 
     private $algorithmService;
+    public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
 
@@ -543,11 +544,10 @@ class Algorithm extends Component
 
             // If answer will set a drug, we add it to the drugs to display
             if (array_key_exists($value, $drugs_hash_map)) {
-                if (!in_array($value, $this->drugs_to_display)) {
-                    $this->drugs_to_display = [
-                        ...$this->drugs_to_display,
-                        ...$drugs_hash_map[$value]
-                    ];
+                foreach ($drugs_hash_map[$value] as $drug_id) {
+                    if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                        $this->drugs_to_display[$drug_id] = false;
+                    }
                 }
             }
 
@@ -668,7 +668,7 @@ class Algorithm extends Component
                             if (empty($conditions)) {
                                 $drugs[$drug_id] = $drug_id;
                             } else {
-                                if (in_array($drug['id'], $this->drugs_to_display)) {
+                                if (array_key_exists($drug['id'], $this->drugs_to_display)) {
                                     $drugs[$drug_id] = $drug_id;
                                 }
                             }
@@ -829,11 +829,16 @@ class Algorithm extends Component
 
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
-            $system = isset($node['system']) ? $node['system'] : 'others';
             //We don't sort non dynamic study for now
             if ($this->is_dynamic_study) {
-                $this->current_nodes[$this->current_step][$system][$next_node_id] = '';
-                $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
+                if($node['category']==='treatment_question'){
+                    // $this->treatment_questions[$node["id"]]=false;
+                    $this->current_nodes['diagnoses']['treatment_questions'][$node["id"]]=false;
+                }else{
+                    $system = isset($node['system']) ? $node['system'] : 'others';
+                    $this->current_nodes[$this->current_step][$system][$next_node_id] = '';
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
+                }
             } else {
                 $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
             }
@@ -938,21 +943,19 @@ class Algorithm extends Component
     public function goToSubStep(string $step, string $substep): void
     {
         $cached_data = Cache::get($this->cache_key);
-        $health_cares = $cached_data['health_cares'];
+
 
         $this->goToStep($step);
         $this->current_sub_step = $substep;
 
         // medicines
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {
+            $health_cares = $cached_data['health_cares'];
             $agreed_diagnoses = array_filter($this->diagnoses_status);
-            $common_agreed_diag_key = array_intersect_key($agreed_diagnoses, $this->df_to_display);
             $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
-            //todo fix the behavior when agreed df doesn't have any drugs assosiated
-            //Then it will reset the drugs_to_display array forever ever ever
-            //Set a private variable ?
-            $drugs_needed = [];
-            foreach ($this->drugs_to_display as $index => $drug_id) {
+
+            foreach ($this->drugs_to_display as $drug_id => $is_displayed) {
+                $this->drugs_to_display[$drug_id] = false;
                 foreach ($common_agreed_df as $diagnosis_id => $drugs) {
                     if (array_key_exists($drug_id, $drugs)) {
                         if (empty($this->drugs_formulation[$drug_id])) {
@@ -961,24 +964,19 @@ class Algorithm extends Component
                                 $this->drugs_formulation[$drug_id] = $formulation['id'];
                             }
                         }
-                        $drugs_needed[$drug_id] = $drug_id;
+                        $this->drugs_to_display[$drug_id] = true;
                     }
                 }
             }
-            $this->drugs_to_display = $drugs_needed;
         }
         // summary
         if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
             $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
-            // dd($common_agreed_diag_key['drugs']);
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
             $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$cached_data['weight_question_id']];
             $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight);
             $this->formulations_to_display = $formulations->getFormulations();
-            // give this to the service
-            // dd($this->formulations_to_display);
-
         }
     }
 
