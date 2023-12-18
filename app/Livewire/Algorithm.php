@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Livewire\Component;
 use App\Services\FormulationService;
+use Barryvdh\Debugbar\Facades\Debugbar;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use Exception;
@@ -523,11 +524,16 @@ class Algorithm extends Component
     #[On('nodeToSave')]
     public function saveNode($node_id, $value, $answer_id, $old_answer_id)
     {
+        Debugbar::startMeasure("saveNode");
+        Debugbar::startMeasure("saveNodecache");
+
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
+
+        Debugbar::stopMeasure("saveNodecache");
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             if (array_key_exists($node_id, $formula_hash_map)) {
@@ -567,6 +573,7 @@ class Algorithm extends Component
                 }
             }
         }
+        Debugbar::stopMeasure("saveNode");
 
         return $this->displayNextNode($node_id, $answer_id, $old_answer_id);
     }
@@ -574,6 +581,8 @@ class Algorithm extends Component
     #[On('nodeUpdated')]
     public function displayNextNode($node_id, $value, $old_value)
     {
+        Debugbar::startMeasure("displayNextNode");
+        Debugbar::startMeasure("displayNextNodeCache");
         $cached_data = Cache::get($this->cache_key);
         $dependency_map = $cached_data['dependency_map'];
         $formula_hash_map = $cached_data['formula_hash_map'];
@@ -581,6 +590,8 @@ class Algorithm extends Component
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
         $nodes_per_step = $cached_data['nodes_per_step'];
+
+        Debugbar::stopMeasure("displayNextNodeCache");
 
         // Modification behavior
         if ($old_value) {
@@ -694,6 +705,8 @@ class Algorithm extends Component
                 $this->setNextNode($node);
             }
         }
+
+        Debugbar::stopMeasure("displayNextNode");
     }
 
     public function handleFormula($node_id)

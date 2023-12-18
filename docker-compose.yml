@@ -1,0 +1,40 @@
+version: "3"
+
+services:
+    # PHP Service
+    app:
+        build:
+            args:
+                user: ubuntu
+                uid: 1000
+            context: .
+            dockerfile: Dockerfile
+        image: medal-reader
+        container_name: app
+        restart: unless-stopped
+        tty: true
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+            - ./storage:/var/www/storage
+        networks:
+            - app-network
+
+    # Nginx Service
+    webserver:
+        image: nginx:alpine
+        container_name: webserver
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "8081:80"
+        volumes:
+            - ./:/var/www/html
+            - ./nginx:/etc/nginx/conf.d
+        networks:
+            - app-network
+
+# Networks Configuration
+networks:
+    app-network:
+        driver: bridge
