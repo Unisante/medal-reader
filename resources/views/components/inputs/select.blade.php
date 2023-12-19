@@ -1,6 +1,5 @@
-@props(['step', 'node_id', 'cache_key'])
+@props(['step', 'node_id','full_nodes'])
 @php
-  $full_nodes = Cache::get($cache_key)['full_nodes'];
   $answers = collect($full_nodes[$node_id]['answers'])
       ->filter(function ($answer) {
           return $answer['value'] !== 'not_available';

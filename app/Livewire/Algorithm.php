@@ -426,10 +426,16 @@ class Algorithm extends Component
         // We force to int the value comming from
         $intvalue = intval($value);
 
+        // dd(
+        //     Arr::get($this->current_nodes, $key),
+        //     // Arr::set($this->current_nodes, $key, $intvalue),
+        //     Arr::get($this->current_nodes, $key)
+        // );
+
         if ($intvalue == $value || intval($value) !== 0) {
             Arr::set($this->current_nodes, $key, $intvalue);
         }
-
+        // dd(Arr::get($this->current_nodes, $key));
         // If the answer trigger the emergency modal
         if (array_key_exists($value, $need_emergency)) {
             $this->dispatch('openEmergencyModal');
@@ -439,7 +445,6 @@ class Algorithm extends Component
     public function updatingCurrentNodes($value, $key)
     {
         if ($this->algorithmService->isDate($value)) return;
-
         $node_id = Str::of($key)->explode('.')->last();
         $old_answer_id = Arr::get($this->current_nodes, $key);
 
@@ -830,14 +835,23 @@ class Algorithm extends Component
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
             //We don't sort non dynamic study for now
+            // sort physical_exam, observed_physical_sign as one group
+            // symptom, predefined_syndrome,background_calculation,exposure as one group
+            // assessment test goes somewhere else.
             if ($this->is_dynamic_study) {
-                if($node['category']==='treatment_question'){
-                    // $this->treatment_questions[$node["id"]]=false;
-                    $this->current_nodes['diagnoses']['treatment_questions'][$node["id"]]=false;
-                }else{
-                    $system = isset($node['system']) ? $node['system'] : 'others';
-                    $this->current_nodes[$this->current_step][$system][$next_node_id] = '';
-                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation'], $this->cache_key);
+                $system = isset($node['system']) ? $node['system'] : 'others';
+                match ($node['category']){
+                    'physical_exam','observed_physical_sign' =>$this->current_nodes['consultation']['physical_exam'][$system][$node["id"]]='',
+                   'symptom','predefined_syndrome','background_calculation','exposure'=>$this->current_nodes['consultation']['medical_history'][$system][$node["id"]]='',
+                   'assessment_test'=>$this->current_nodes['tests'][$node["id"]]='',
+                   'treatment_question'=>$this->current_nodes['diagnoses']['treatment_questions'][$node["id"]]=false,
+                    default=>null,
+                };
+                if (isset($this->current_nodes['consultation']['physical_exam'])){
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], $this->cache_key);
+                }
+                if(isset($this->current_nodes['consultation']['medical_history'])){
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], $this->cache_key);
                 }
             } else {
                 $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
@@ -920,7 +934,7 @@ class Algorithm extends Component
                     }
                 }
 
-                $this->current_nodes['consultation'] = $consultation_nodes;
+                $this->current_nodes['consultation']['medical_history'] = $consultation_nodes;
             }
             $this->current_cc = key(array_filter($this->chosen_complaint_categories));
 

@@ -1,11 +1,6 @@
-@props(['step', 'node_id', 'cache_key', 'is_background_calc'])
+@props(['step', 'node_id', 'cache_key', 'is_background_calc','full_nodes'])
 
 <div class="mb-2">
-
-  @php
-    $full_nodes = Cache::get($cache_key)['full_nodes'];
-  @endphp
-
   <label class="form-label" for="{{ $node_id }}">
     @if ($is_background_calc)
       {{ $node_id }}:

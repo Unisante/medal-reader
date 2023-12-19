@@ -1,7 +1,6 @@
-@props(['step', 'node_id', 'cache_key'])
+@props(['step', 'node_id', 'full_nodes'])
 
 <div class="mb-2">
-  @php $full_nodes=Cache::get($cache_key)["full_nodes"] @endphp
   <label class="form-label" for="{{ $node_id }}">
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])

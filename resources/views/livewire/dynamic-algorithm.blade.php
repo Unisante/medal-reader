@@ -10,25 +10,68 @@
         $full_nodes = $cache['full_nodes'];
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
+        $villages = $cache['villages'];
       @endphp
       {{-- @dump($current_nodes) --}}
       {{-- Registration --}}
+
+      {{-- @dump($current_nodes["registration"]) --}}
+      {{-- @dump($current_nodes["first_look_assessment"]) --}}
+      {{-- @dump($current_nodes["consultation"]) --}}
+      {{-- @dump($current_nodes["registration"]["others"]) --}}
+
       @if ($current_step === 'registration')
-        <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+        <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :cache_key="$cache_key" />
+        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :full_nodes="$full_nodes" />
       @endif
+      {{-- @dd($full_nodes) --}}
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.consultation :nodes="$current_nodes['consultation']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+        {{-- {{ dd($current_nodes['consultation']) }} --}}
+        <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+          @foreach ($steps[$current_step] as $index => $title)
+            <li class="nav-item" role="presentation">
+              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
+                wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
+              </button>
+            </li>
+          @endforeach
+        </ul>
+        <div class="tab-content" id="myTabContent">
+          @foreach ($steps[$current_step] as $index => $title)
+            <div wire:key="{{ 'consultation-' . $title }}" class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
+              id="{{ Str::slug($title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($title) }}-tab">
+              @if ($current_sub_step === 'medical_history')
+              {{-- @dd($current_nodes['consultation']['medical_history']) --}}
+              
+                <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+                  :villages="$villages" />
+              @else
+                @if (isset($current_nodes['consultation']['physical_exams']))
+                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exams']" :substep="'physical_exams'" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+                    :villages="$villages" />
+                @endif
+              @endif
+            </div>
+          @endforeach
+        </div>
       @endif
 
       {{-- Tests --}}
       @if ($current_step === 'tests')
+        @if (isset($this->current_nodes['tests']))
+          <x-step.tests :nodes="$current_nodes['tests']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
+        @else
+          <h1>There are no tests</h1>
+        @endif
       @endif
 
       {{-- Diagnoses --}}
@@ -37,9 +80,10 @@
         <ul class="nav nav-tabs" id="myTab" role="tablist">
           @foreach ($steps[$current_step] as $index => $title)
             <li class="nav-item" role="presentation">
-              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
-                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
-                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
+              <button class="nav-link @if ($current_sub_step === $title) active @endif"
+                id="{{ Str::slug($title) }}-tab" data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}"
+                type="button" role="tab" aria-controls="{{ Str::slug($title) }}"
+                aria-selected="{{ $current_sub_step === $index }}"
                 wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
               </button>
             </li>
@@ -96,7 +140,8 @@
                           @switch($full_nodes[$node_id]['display_format'])
                             @case('RadioButton')
                               <td>
-                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
+                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id"
+                                  :cache_key="$cache_key" />
                               </td>
                             @break
 
@@ -300,8 +345,8 @@
           <div wire:key="{{ 'go-step-' . $key }}">
             <button class="btn btn-outline-primary m-1"
               wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-              aria-expanded="false"></button>
+            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split"
+              data-bs-toggle="dropdown" aria-expanded="false"></button>
             <ul class="dropdown-menu">
               @foreach ($substeps as $substep)
                 <div wire:key="{{ 'go-sub-step-' . $substep }}">

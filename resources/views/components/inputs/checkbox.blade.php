@@ -1,7 +1,6 @@
-@props(['step', 'node_id', 'cache_key'])
+@props(['step', 'node_id', 'full_nodes'])
 
 @php
-  $full_nodes = Cache::get($cache_key)['full_nodes'];
   $model = str_contains($step, 'first_look_assessment') ? "current_nodes.$step.$node_id" : "chosen_complaint_categories.$node_id";
 @endphp
 
