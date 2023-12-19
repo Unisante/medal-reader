@@ -46,17 +46,21 @@
           @endforeach
         </ul>
         <div class="tab-content" id="myTabContent">
-          @foreach ($steps[$current_step] as $index => $title)
-            <div wire:key="{{ 'consultation-' . $title }}" class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
-              id="{{ Str::slug($title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($title) }}-tab">
-              @if ($current_sub_step === 'medical_history')
-              {{-- @dd($current_nodes['consultation']['medical_history']) --}}
-              
+          @dump($current_nodes['consultation']['medical_history'])
+          {{-- @dump($current_nodes['consultation']['physical_exams']) --}}
+
+          @foreach ($steps[$current_step] as $index => $substep_title)
+            <div wire:key="{{ 'consultation-' . $substep_title }}"
+              class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
+              id="{{ Str::slug($substep_title) }}" role="tabpanel"
+              aria-labelledby="{{ Str::slug($substep_title) }}-tab">
+              @if ($substep_title === 'medical_history')
                 <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
                   :villages="$villages" />
-              @else
+              @endif
+              @if ($current_sub_step === 'physical_exams')
                 @if (isset($current_nodes['consultation']['physical_exams']))
-                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exams']" :substep="'physical_exams'" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exams']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
                     :villages="$villages" />
                 @endif
               @endif
