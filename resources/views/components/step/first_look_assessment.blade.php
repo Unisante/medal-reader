@@ -20,7 +20,7 @@
   <div class="m-0" wire:key="{{ 'basic-measurements-' . $node_id }}">
     @switch($full_nodes[$node_id]['display_format'])
       @case('RadioButton')
-        <x-inputs.radio step="first_look_assessment.basic_measurements_nodes_id" :node_id="$node_id" :full_nodes="$full_nodes" :villages="$villages" />
+        <x-inputs.radio step="first_look_assessment.basic_measurements_nodes_id" :node_id="$node_id" :full_nodes="$full_nodes" />
       @break
 
       @case('String')

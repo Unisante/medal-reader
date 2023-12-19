@@ -19,7 +19,7 @@
     @else
       @switch($full_nodes[$node_id]['display_format'])
         @case('RadioButton')
-          <x-inputs.radio step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :villages="$villages" />
+          <x-inputs.radio step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
         @break
 
         @case('DropDownList')
@@ -35,7 +35,7 @@
         @break
 
         @case('Autocomplete')
-        @php $node_label=$full_nodes[$node_id]['label']['en'] @endphp
+          @php $node_label=$full_nodes[$node_id]['label']['en'] @endphp
           <x-inputs.datalist step="registration" :node_id="$node_id" :villages="$villages" :label="$node_label" />
         @break
 

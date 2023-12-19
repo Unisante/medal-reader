@@ -1,13 +1,12 @@
 @props(['nodes', 'nodes_to_save', 'full_nodes'])
 
-
 @foreach ($nodes as $node_id => $value)
   <P>{{ $node_id }}</P>
   <div wire:key="{{ 'nodes-' . $node_id }}">
     @if (isset($full_nodes[$node_id]['display_format']))
       @switch($full_nodes[$node_id]['display_format'])
         @case('RadioButton')
-          <x-inputs.radio step="tests.{{ $node_id }}" :node_id="$node_id" :full_nodes="$full_nodes" :villages="$villages" />
+          <x-inputs.radio step="tests.{{ $node_id }}" :node_id="$node_id" :full_nodes="$full_nodes" />
         @break
 
         @case('DropDownList')

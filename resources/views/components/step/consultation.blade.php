@@ -11,7 +11,7 @@
             @switch($full_nodes[$node_id]['display_format'])
               @case('RadioButton')
                 <x-inputs.radio step='{{"consultation.$substep.$title"}}' :node_id="$node_id"
-                  :full_nodes="$full_nodes" :villages="$villages" />
+                  :full_nodes="$full_nodes"/>
               @break
 
               @case('String')

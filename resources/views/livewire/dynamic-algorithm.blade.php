@@ -47,7 +47,7 @@
         </ul>
         <div class="tab-content" id="myTabContent">
           @dump($current_nodes['consultation']['medical_history'])
-          {{-- @dump($current_nodes['consultation']['physical_exams']) --}}
+          @dump($steps[$current_step])
 
           @foreach ($steps[$current_step] as $index => $substep_title)
             <div wire:key="{{ 'consultation-' . $substep_title }}"
@@ -58,9 +58,9 @@
                 <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
                   :villages="$villages" />
               @endif
-              @if ($current_sub_step === 'physical_exams')
-                @if (isset($current_nodes['consultation']['physical_exams']))
-                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exams']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+              @if ($substep_title === 'physical_exams')
+                @if (isset($current_nodes['consultation']['physical_exam']))
+                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
                     :villages="$villages" />
                 @endif
               @endif
@@ -72,7 +72,7 @@
       {{-- Tests --}}
       @if ($current_step === 'tests')
         @if (isset($this->current_nodes['tests']))
-          <x-step.tests :nodes="$current_nodes['tests']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
+          <x-step.tests :nodes="$current_nodes['tests']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" />
         @else
           <h1>There are no tests</h1>
         @endif
