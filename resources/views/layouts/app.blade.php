@@ -11,12 +11,14 @@
       @include('includes.navbar')
     </header>
     <div id="app">
-      @if (session('status'))
-        <div class="m-3 alert alert-success" role="alert">
-          {{ session('status') }}
-        </div>
-      @endif
-      @yield('content')
+      <div id="content">
+        @if (session('status'))
+          <div class="m-3 alert alert-success" role="alert">
+            {{ session('status') }}
+          </div>
+        @endif
+        @yield('content')
+      </div>
     </div>
   </div>
   @include('includes.footer')

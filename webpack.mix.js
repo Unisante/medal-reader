@@ -13,13 +13,10 @@ const mix = require("laravel-mix");
 
 mix.js("resources/js/app.js", "public/js/")
     .sass("resources/sass/app.scss", "public/css/")
-    // .copy("resources/css/heebo.css", "public/css")
-    // .copy("resources/css/poppins.css", "public/css")
+    .copy("resources/css/heebo.css", "public/css")
+    .copy("resources/css/poppins.css", "public/css")
     .copyDirectory("resources/images", "public/images")
-    // .copyDirectory("resources/fonts", "public/fonts")
-    // .copyDirectory("resources/icons/fonts", "public/fonts")
-    // .copyDirectory("resources/doc", "public/doc")
-    // .copyDirectory("resources/videos", "public/videos")
+    .copyDirectory("resources/fonts", "public/fonts")
     .options({
         clearConsole: false,
     })

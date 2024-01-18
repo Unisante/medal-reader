@@ -1,7 +1,6 @@
 <div class="mb-5">
   <div>
-    <h1>Title: {{ $title }}</h1>
-    <h1>id: {{ $id }}</h1>
+    <h2 class="fw-normal">{{ $title }}</h2>
   </div>
   <div class="row g-3">
     <div class="col-8">
@@ -13,9 +12,11 @@
       @endphp
 
       {{-- Registration --}}
-      @if ($current_step === 'registration')
-        <x-step.registration :nodes="$current_nodes['registration'] +
-            $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+      @if (array_key_exists('first_look_assessment', $current_nodes))
+        @if ($current_step === 'registration')
+          <x-step.registration :nodes="$current_nodes['registration'] +
+              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+        @endif
       @endif
 
       {{-- first_look_assessment --}}
@@ -29,7 +30,7 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.recommendations :nodes="$current_nodes['consultation']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
+        <x-step.recommendations :nodes="$current_nodes['consultation']['medical_history']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
       @endif
 
       {{-- Tests --}}

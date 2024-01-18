@@ -1,7 +1,6 @@
 <div class="mb-5">
   <div>
-    <h1>Title: {{ $title }}</h1>
-    <h1>id: {{ $id }}</h1>
+    <h2 class="fw-normal">{{ $title }}</h2>
   </div>
   <div class="row g-3">
     <div class="col-8">
@@ -20,7 +19,41 @@
       {{-- @dump($current_nodes["consultation"]) --}}
       {{-- @dump($current_nodes["registration"]["others"]) --}}
 
+      <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
+      <ul class="nav nav-tabs" id="myTab" role="tablist">
+        @foreach ($steps[$current_step] as $index => $title)
+          <li class="nav-item" role="presentation">
+            <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+              data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+              aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
+              wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
+            </button>
+          </li>
+        @endforeach
+      </ul>
+      <div class="tab-content" id="myTabContent">
+
+        @foreach ($steps[$current_step] as $index => $substep_title)
+          <div wire:key="{{ 'consultation-' . $substep_title }}"
+            class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
+            id="{{ Str::slug($substep_title) }}" role="tabpanel"
+            aria-labelledby="{{ Str::slug($substep_title) }}-tab">
+            @if ($substep_title === 'medical_history')
+              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+                :villages="$villages" />
+            @endif
+            @if ($substep_title === 'physical_exams')
+              @if (isset($current_nodes['consultation']['physical_exam']))
+                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
+                  :villages="$villages" />
+              @endif
+            @endif
+          </div>
+        @endforeach
+      </div>
+
       @if ($current_step === 'registration')
+        {{-- @dump($current_nodes['registration']) --}}
         <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
       @endif
 
@@ -31,43 +64,7 @@
       {{-- @dd($full_nodes) --}}
 
       {{-- Consultation --}}
-      @if ($current_step === 'consultation')
-        {{-- {{ dd($current_nodes['consultation']) }} --}}
-        <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-          @foreach ($steps[$current_step] as $index => $title)
-            <li class="nav-item" role="presentation">
-              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
-                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
-                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
-                wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
-              </button>
-            </li>
-          @endforeach
-        </ul>
-        <div class="tab-content" id="myTabContent">
-          @dump($current_nodes['consultation']['medical_history'])
-          @dump($steps[$current_step])
-
-          @foreach ($steps[$current_step] as $index => $substep_title)
-            <div wire:key="{{ 'consultation-' . $substep_title }}"
-              class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
-              id="{{ Str::slug($substep_title) }}" role="tabpanel"
-              aria-labelledby="{{ Str::slug($substep_title) }}-tab">
-              @if ($substep_title === 'medical_history')
-                <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                  :villages="$villages" />
-              @endif
-              @if ($substep_title === 'physical_exams')
-                @if (isset($current_nodes['consultation']['physical_exam']))
-                  <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                    :villages="$villages" />
-                @endif
-              @endif
-            </div>
-          @endforeach
-        </div>
-      @endif
+      {{-- @dump($current_nodes['consultation']) --}}
 
       {{-- Tests --}}
       @if ($current_step === 'tests')

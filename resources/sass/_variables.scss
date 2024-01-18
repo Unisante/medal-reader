@@ -1,7 +1,42 @@
 // Body
-$body-bg: #f8fafc;
+$body-bg: #fff;
 
 // Typography
-$font-family-sans-serif: 'Nunito', sans-serif;
+$font-family-sans-serif: 'Heebo-var', 'Heebo', sans-serif;
+$headings-font-family: 'Poppins-var', 'Poppins', sans-serif;
 $font-size-base: 0.9rem;
 $line-height-base: 1.6;
+
+// Colors
+$min-contrast-ratio: 3 !default;
+
+$color-white: #fff;
+$color-white-dark: #fdfffe;
+
+$color-grey-dark: #666;
+$color-grey: #acacac;
+$color-grey-light: #efefef;
+$color-grey-extra-light: #f9fafc;
+
+$color-black: #333;
+
+$color-green: #20c374;
+
+
+$color-red: #d20f2c;
+
+$color-light-blue: #4490df;
+$color-marker: #4b8def;
+$color-bg : #ebfbf5;
+
+// Spacing
+$spacer: 1rem;
+$spacing-section: 1.8rem;
+$spacing-section-sm: 0.7rem;
+
+// Tooltips
+$tooltip-padding-y: $spacer * .75;
+$tooltip-padding-x: $spacer * 1;
+
+$input-group-addon-bg: $color-white;
+$navbar-padding-y: 0;

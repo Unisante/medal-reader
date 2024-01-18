@@ -21,8 +21,9 @@ class AlgorithmController extends Controller
     {
         $directory = Config::get('medal.storage.json_extract_dir');
         $files = Storage::files($directory);
+        $urls = explode(',', Config::get('medal.urls.creator_algorithm_url'));
 
-        return view('home', ['files' => $files]);
+        return view('home', compact('files', 'urls'));
     }
 
     /**
@@ -48,11 +49,12 @@ class AlgorithmController extends Controller
         Storage::makeDirectory($extract_dir);
         Validator::make($request->all(), [
             'id' => 'required|integer|max:500',
+            'url' => 'required|string|max:500',
         ])->validate();
 
         try {
             $data = Http::acceptJson()
-                ->get(Config::get('medal.urls.creator_algorithm_url') . $request->id)
+                ->get($request->url . $request->id)
                 ->throw();
         } catch (Exception $e) {
             $error['error'] = $e->getMessage();

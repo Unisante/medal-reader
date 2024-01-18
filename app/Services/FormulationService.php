@@ -47,7 +47,6 @@ class FormulationService
                 $duration = $drug_instance['duration']['en'];
                 $this->drugs_duration[$drug_id] =  0;
                 $parsedInteger = intval($duration, 10);
-                $parsedInteger = intval($duration, 10);
                 if (is_string($this->drugs_duration[$drug_id])) {
                     $this->drugs_duration[$drug_id] = $parsedInteger;
                     continue;
