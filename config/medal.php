@@ -5,30 +5,13 @@ return [
 
     'projects' => [
         'dynamic' => [
-            1,
-            5,
-            6,
-            7,
-            8,
-            26,
-            27,
-            29,
-            30,
-            40,
-            41,
-            42,
-            45,
-            46,
-            47,
-            48,
-            49,
-            56,
-            57,
+            'ePOCT',
+            'Dynamic',
+            'TIMCI',
         ],
         'eviprev' => [
-            50
+            'EviPrev'
         ],
-        'others' => [],
     ],
 
     'authentication' => [
