@@ -9,7 +9,7 @@ return [
             'Dynamic',
             'TIMCI',
         ],
-        'eviprev' => [
+        'prevention' => [
             'EviPrev'
         ],
     ],

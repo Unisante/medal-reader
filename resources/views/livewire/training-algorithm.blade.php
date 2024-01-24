@@ -9,74 +9,49 @@
         $full_nodes = $cache['full_nodes'];
         $final_diagnoses = $cache['final_diagnoses'];
         $health_cares = $cache['health_cares'];
-        $villages = $cache['villages'];
       @endphp
-      {{-- @dump($current_nodes) --}}
+
       {{-- Registration --}}
-
-      {{-- @dump($current_nodes["registration"]) --}}
-      {{-- @dump($current_nodes["first_look_assessment"]) --}}
-      {{-- @dump($current_nodes["consultation"]) --}}
-      {{-- @dump($current_nodes["registration"]["others"]) --}}
-
-      <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
-      <ul class="nav nav-tabs" id="myTab" role="tablist">
-        @foreach ($steps[$current_step] as $index => $title)
-          <li class="nav-item" role="presentation">
-            <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
-              data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
-              aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
-              wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
-            </button>
-          </li>
-        @endforeach
-      </ul>
-      <div class="tab-content" id="myTabContent">
-
-        @foreach ($steps[$current_step] as $index => $substep_title)
-          <div wire:key="{{ 'consultation-' . $substep_title }}"
-            class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
-            id="{{ Str::slug($substep_title) }}" role="tabpanel"
-            aria-labelledby="{{ Str::slug($substep_title) }}-tab">
-            @if ($substep_title === 'medical_history')
-              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                :villages="$villages" />
-            @endif
-            @if ($substep_title === 'physical_exams')
-              @if (isset($current_nodes['consultation']['physical_exam']))
-                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                  :villages="$villages" />
-              @endif
-            @endif
-          </div>
-        @endforeach
-      </div>
-
-      @if ($current_step === 'registration')
-        {{-- @dump($current_nodes['registration']) --}}
-        <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
+      @if (array_key_exists('first_look_assessment', $current_nodes))
+        @if ($current_step === 'registration')
+          <x-step.registration :nodes="$current_nodes['registration'] +
+              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+        @endif
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :full_nodes="$full_nodes" />
+        @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
+          <div wire:key="{{ 'cc-' . $node_id }}">
+            <x-inputs.checkbox step="complaint_categories_nodes_id" :node_id="$node_id" :cache_key="$cache_key" />
+          </div>
+        @endforeach
       @endif
-      {{-- @dd($full_nodes) --}}
 
       {{-- Consultation --}}
-      {{-- @dump($current_nodes['consultation']) --}}
+      @if ($current_step === 'consultation')
+        <x-step.recommendations :nodes="$current_nodes['consultation']['medical_history']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
+      @endif
 
       {{-- Tests --}}
       @if ($current_step === 'tests')
-        @if (isset($this->current_nodes['tests']))
-          <x-step.tests :nodes="$current_nodes['tests']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" />
-        @else
-          <h1>There are no tests</h1>
-        @endif
       @endif
 
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
+        <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+          @foreach ($steps[$current_step] as $index => $title)
+            <li class="nav-item" role="presentation">
+              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
+                wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
+              </button>
+            </li>
+          @endforeach
+        </ul>
+
         <div class="tab-content" id="myTabContent">
           @foreach ($steps[$current_step] as $index => $title)
             <div class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
@@ -110,44 +85,7 @@
                 </table>
               @endif
               @if ($current_sub_step === 'treatment_questions')
-                @php
-                  $treatment_questions = isset($current_nodes['diagnoses']['treatment_questions']) ? $current_nodes['diagnoses']['treatment_questions'] : null;
-                @endphp
-                @if (isset($treatment_questions))
-                  <table class="table table-striped">
-                    <thead>
-                      <tr>
-                        <th scope="col">Treatment Question</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @foreach ($treatment_questions as $node_id => $answer)
-                        <tr wire:key="{{ 'treatment-question-' . $node_id }}">
-
-                          @switch($full_nodes[$node_id]['display_format'])
-                            @case('RadioButton')
-                              <td>
-                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id"
-                                  :cache_key="$cache_key" />
-                              </td>
-                            @break
-
-                            @case('DropDownList')
-                              <td>
-                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id"
-                                  :cache_key="$cache_key" />
-                              </td>
-                            @break
-
-                            @default
-                          @endswitch
-                        </tr>
-                      @endforeach
-                    </tbody>
-                  </table>
-                @else
-                  <h1>There are no Questions</h1>
-                @endif
+                <h1>Still in progress</h1>
               @endif
               @if ($current_sub_step === 'medicines')
                 @if (isset($diagnoses_status) && count(array_filter($diagnoses_status)))
@@ -160,38 +98,36 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @foreach ($drugs_to_display as $drug_id => $is_displayed)
-                        @if ($is_displayed)
-                          <tr wire:key="{{ 'drug-' . $drug_id }}">
-                            @php $cache_drug=$health_cares[$drug_id] @endphp
-                            <td><label class="form-check-label"
-                                for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
-                              </label>
-                            </td>
-                            <td>
-                              <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                                wire:model.live="drugs_formulation.{{ $drug_id }}"
-                                id="formultaion-{{ $drug_id }}">
-                                <option selected>Please Select a formulation</option>
-                                @foreach ($cache_drug['formulations'] as $formulation)
-                                  <option value="{{ $formulation['id'] }}">
-                                    {{ $formulation['description']['en'] }}
-                                  </option>
-                                @endforeach
-                              </select>
-                            </td>
-                            <td>
-                              <label class="custom-control teleport-switch">
-                                <span class="teleport-switch-control-description">Disagree</span>
-                                <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
-                                  id="{{ $drug_id }}" value="{{ $drug_id }}"
-                                  wire:model.live="drugs_status.{{ $drug_id }}">
-                                <span class="teleport-switch-control-indicator"></span>
-                                <span class="teleport-switch-control-description">Agree</span>
-                              </label>
-                            </td>
-                          </tr>
-                        @endif
+                      @foreach ($drugs_to_display as $drug_id => $drug_id)
+                        <tr wire:key="{{ 'drug-' . $drug_id }}">
+                          @php $cache_drug=$health_cares[$drug_id] @endphp
+                          <td><label class="form-check-label"
+                              for="{{ $drug_id }}">{{ $cache_drug['label']['en'] }}
+                            </label>
+                          </td>
+                          <td>
+                            <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                              wire:model.live="drugs_formulation.{{ $drug_id }}"
+                              id="formultaion-{{ $drug_id }}">
+                              <option selected>Please Select a formulation</option>
+                              @foreach ($cache_drug['formulations'] as $formulation)
+                                <option value="{{ $formulation['id'] }}">
+                                  {{ $formulation['description']['en'] }}
+                                </option>
+                              @endforeach
+                            </select>
+                          </td>
+                          <td>
+                            <label class="custom-control teleport-switch">
+                              <span class="teleport-switch-control-description">Disagree</span>
+                              <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug_id }}"
+                                id="{{ $drug_id }}" value="{{ $drug_id }}"
+                                wire:model.live="drugs_status.{{ $drug_id }}">
+                              <span class="teleport-switch-control-indicator"></span>
+                              <span class="teleport-switch-control-description">Agree</span>
+                            </label>
+                          </td>
+                        </tr>
                       @endforeach
                     </tbody>
                   </table>
@@ -332,8 +268,8 @@
           <div wire:key="{{ 'go-step-' . $key }}">
             <button class="btn btn-outline-primary m-1"
               wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split"
-              data-bs-toggle="dropdown" aria-expanded="false"></button>
+            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
+              aria-expanded="false"></button>
             <ul class="dropdown-menu">
               @foreach ($substeps as $substep)
                 <div wire:key="{{ 'go-sub-step-' . $substep }}">

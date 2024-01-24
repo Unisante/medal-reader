@@ -86,18 +86,15 @@ class Algorithm extends Component
         $this->title = $json['name'];
         $json_version = $json['medal_r_json_version'];
         $project_name = $json['algorithm_name'] ?? $json['medal_r_json']['algorithm_name'];
-
         $matching_projects = array_filter(config('medal.projects'), function ($project) use ($project_name) {
             return Str::contains($project_name, $project);
         });
 
-        $matchingkeys = array_keys($matching_projects);
+        // I%hxofYV15
+        // xE3FGtrlfI6c
+        // 2020.ihi
 
-        // Set $this->algorithm_type based on the first matching key, or use a default if none found
-        $this->algorithm_type = count($matchingkeys) > 0 ? $matchingkeys[0] : 'default';
-
-        $medical_history_step = $json['medal_r_json']['config']['full_order']['medical_history_step'] ?? $json['medal_r_json']['config']['full_order']['medical_history__step'];
-
+        $this->algorithm_type = $matching_projects ? key($matching_projects) : 'training';
         $this->cache_key = "json_data_{$this->id}_$json_version";
         //todo set the update cache behovior on json update and set it indefinitely
         $this->cache_expiration_time = 86400; // 24 hours
@@ -115,7 +112,7 @@ class Algorithm extends Component
                 'final_diagnoses' => $json['medal_r_json']['final_diagnoses'],
                 'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
-                'full_order_medical_history' => $medical_history_step[0]['data'],
+                'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
                 'registration_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['registration_step'],
                     ...$json['medal_r_json']['patient_level_questions'],
@@ -131,8 +128,8 @@ class Algorithm extends Component
 
                 'consultation_nodes' => [
                     ...array_combine(
-                        array_column($medical_history_step, 'title'),
-                        array_values($medical_history_step)
+                        array_column($json['medal_r_json']['config']['full_order']['medical_history_step'], 'title'),
+                        array_values($json['medal_r_json']['config']['full_order']['medical_history_step'])
                     ),
                     ...['others' => ['title' => 'others', 'data' => []]]
                 ],
@@ -209,7 +206,7 @@ class Algorithm extends Component
 
 
         // First Look Assessment nodes
-        if ($this->algorithm_type) {
+        if ($this->algorithm_type === 'dynamic') {
             foreach ($cached_data['first_look_assessment_nodes_id'] as $substep_name => $substep) {
                 foreach ($substep as $node_id) {
                     if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
@@ -381,7 +378,7 @@ class Algorithm extends Component
             : $cached_data['yi_general_cc_id'];
         $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
 
-        if ($this->algorithm_type) {
+        if ($this->algorithm_type === 'dynamic') {
             $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
                 $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
 
@@ -401,7 +398,7 @@ class Algorithm extends Component
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['consultation_nodes']);
@@ -476,7 +473,7 @@ class Algorithm extends Component
 
         // We only do this modification behavior if the consultation step has already been calculated
         if (isset($this->current_nodes['consultation'])) {
-            if (!$this->algorithm_type) {
+            if ($this->algorithm_type !== 'dynamic') {
                 if ($old_value) {
                     unset($this->current_nodes['consultation'][$modified_cc_id]);
                 } else {
@@ -522,7 +519,7 @@ class Algorithm extends Component
 
                                 // We add the nodes linked to that newly chosen cc
                                 if ($modified_cc_id === $cc_id) {
-                                    if ($this->algorithm_type) {
+                                    if ($this->algorithm_type === 'dynamic') {
                                         $this->current_nodes['consultation']['medical_history'][$system_name] = array_unique(
                                             [
                                                 ...$this->current_nodes['consultation']['medical_history'][$system_name],
@@ -759,7 +756,7 @@ class Algorithm extends Component
                 //But no other way as the Age in days node id is not saved anywhere
                 if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
                     if ($days <= 59) {
-                        if ($this->algorithm_type) {
+                        if ($this->algorithm_type === 'dynamic') {
                             $this->age_key = 'neonat';
                             $this->current_cc = $yi_general_cc_id;
                             $this->chosen_complaint_categories[$yi_general_cc_id] = true;
@@ -769,7 +766,7 @@ class Algorithm extends Component
                         }
                     } else {
                         $this->age_key = 'older';
-                        if ($this->algorithm_type) {
+                        if ($this->algorithm_type === 'dynamic') {
                             $this->current_cc = $general_cc_id;
                             $this->chosen_complaint_categories[$general_cc_id] = true;
                             if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
@@ -861,7 +858,7 @@ class Algorithm extends Component
             // sort physical_exam, observed_physical_sign as one group
             // symptom, predefined_syndrome,background_calculation,exposure as one group
             // assessment test goes somewhere else.
-            if ($this->algorithm_type) {
+            if ($this->algorithm_type === 'dynamic') {
                 $system = isset($node['system']) ? $node['system'] : 'others';
                 match ($node['category']) {
                     'physical_exam' => $this->current_nodes['consultation']['physical_exam'][$system][$node["id"]] = '',
@@ -877,7 +874,7 @@ class Algorithm extends Component
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], $this->cache_key);
                 }
             } else {
-                $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
+                $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id] = '';
             }
         }
     }
@@ -910,7 +907,7 @@ class Algorithm extends Component
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
 
-        if ($this->algorithm_type) {
+        if ($this->algorithm_type === 'dynamic') {
             if ($step === 'first_look_assessment') {
                 if (!isset($this->current_nodes['first_look_assessment']['first_look_nodes_id'])) {
                     $this->current_nodes['first_look_assessment']['first_look_nodes_id'] =
@@ -927,7 +924,7 @@ class Algorithm extends Component
                 $cc_order = array_flip($cached_data['complaint_categories_steps']);
 
                 // Respect the order in the complaint_categories_step key
-                if (!$this->algorithm_type) {
+                if (!$this->algorithm_type !== 'dynamic') {
                     uksort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
                         return $cc_order[$a] <=> $cc_order[$b];
                     });
@@ -939,7 +936,7 @@ class Algorithm extends Component
                 foreach ($current_nodes_per_step as $system_name => $system_data) {
                     foreach ($system_data as $cc_id => $nodes) {
                         if (isset($this->chosen_complaint_categories[$cc_id])) {
-                            if ($this->algorithm_type) {
+                            if ($this->algorithm_type === 'dynamic') {
                                 $consultation_nodes[$system_name] = $system_data[$cc_id];
                             } else {
                                 $consultation_nodes[$cc_id] = $system_data[$cc_id];
@@ -1049,10 +1046,12 @@ class Algorithm extends Component
 
     public function render()
     {
-        if ($this->algorithm_type) {
-            return view('livewire.dynamic-algorithm');
-        }
+        $view = match ($this->algorithm_type) {
+            'dynamic' => 'livewire.dynamic-algorithm',
+            'prevention' => 'livewire.prevention-algorithm',
+            'training' => 'livewire.training-algorithm'
+        };
 
-        return view('livewire.algorithm');
+        return view($view);
     }
 }
