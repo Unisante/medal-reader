@@ -15,7 +15,7 @@
       <div class="row g-3">
         <div class="col-2">
           <input autofocus class="form-control form-control @error('id') is-invalid @enderror" id="id"
-            name="id" type="text" placeholder="version id" aria-label="version id">
+            name="id" type="text" placeholder="algorithm id" aria-label="algorithm id">
           @error('id')
             <div class="invalid-feedback" role="alert">{{ $message }}</div>
           @enderror

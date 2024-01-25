@@ -1,4 +1,4 @@
-@props(['step', 'node_id',  'full_nodes'])
+@props(['step', 'node_id', 'full_nodes'])
 
 <div class="mb-2">
   {{-- @php
@@ -6,7 +6,7 @@
     $full_nodes = $cache_data['full_nodes'];
     $villages = $cache_data['villages'];
   @endphp --}}
-    {{-- @dd(
+  {{-- @dd(
 $node_id,$full_nodes,$step
     ) --}}
   <label class="form-label" for="{{ $node_id }}">

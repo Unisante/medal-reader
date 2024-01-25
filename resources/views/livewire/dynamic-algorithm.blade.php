@@ -20,7 +20,7 @@
       {{-- @dump($current_nodes["registration"]["others"]) --}}
 
       <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
-      <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
         @foreach ($steps[$current_step] as $index => $title)
           <li class="nav-item" role="presentation">
             <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"

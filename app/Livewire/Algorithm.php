@@ -398,7 +398,7 @@ class Algorithm extends Component
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        dump($cached_data['answers_hash_map']);
+        // dump($cached_data['answers_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['consultation_nodes']);
