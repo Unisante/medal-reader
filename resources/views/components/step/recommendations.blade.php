@@ -46,13 +46,19 @@
         </div>
       @endforeach
       @if (!$loop->first)
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToPreviousCc()">Previous CC</button>
+        <div class="d-flex justify-content-end">
+          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous CC</button>
+        </div>
       @endif
       @if (!$loop->last)
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToNextCc()">Next CC</button>
+        <div class="d-flex justify-content-end">
+          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next CC</button>
+        </div>
       @endif
       @if ($loop->last)
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('diagnoses')">diagnoses</button>
+        <div class="d-flex justify-content-end">
+          <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Résultats</button>
+        </div>
       @endif
     @endif
   </div>

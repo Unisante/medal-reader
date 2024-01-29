@@ -14057,6 +14057,10 @@ textarea.form-control-lg {
     display: none !important;
   }
 }
+.input-container {
+  box-shadow: 0px 0px 15px -1px rgba(0, 0, 0, 0.1);
+}
+
 .custom-control.teleport-switch {
   --color: #4cd964;
   padding-left: 0;
@@ -14176,6 +14180,18 @@ textarea.form-control-lg {
   .logo_unisante {
     display: none;
   }
+}
+
+.input-container {
+  width: 100%;
+  padding: 1.3rem;
+  border-radius: 10px;
+  background-color: #fff;
+  border: 1px solid #efefef;
+  position: relative;
+}
+.input-container > input {
+  width: 50%;
 }
 
 .button-unisante {

@@ -10,6 +10,9 @@
 //bootstrap icons
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
+//extender
+@import "extender";
+
 .custom-control.teleport-switch {
     --color: #4cd964;
     padding-left: 0;
@@ -133,6 +136,20 @@
     content: url("../images/logo-unisante-header.svg");
     @include media-breakpoint-down(sm) {
         display: none;
+    }
+}
+
+.input-container {
+    width: 100%;
+    padding: 1.3rem;
+    @extend %box-shadow-light;
+    border-radius: 10px;
+    background-color: $color-white;
+    border: 1px solid $color-grey-light;
+    position: relative;
+
+    >input {
+        width: 50%;
     }
 }
 

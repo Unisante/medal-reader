@@ -385,8 +385,13 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
         }
-
         //END TO REMOVE
+
+        // If we are in training mode then we go directly to consultation step
+        if ($this->algorithm_type === 'training') {
+            $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
+            $this->goToStep('consultation');
+        }
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
@@ -394,13 +399,13 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        // dump($cached_data['df_hash_map']);
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
-        // dump($cached_data['answers_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['answers_hash_map']);
+        dump($cached_data['dependency_map']);
+        dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
@@ -614,7 +619,7 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
-        $nodes_per_step = $cached_data['nodes_per_step'];
+        $answers_hash_map = $cached_data['answers_hash_map'];
 
         Debugbar::stopMeasure("displayNextNodeCache");
 
@@ -623,22 +628,22 @@ class Algorithm extends Component
             // Remove every old answer nodes dependency
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $node_id) {
+                    // Remove every linked nodes
                     foreach ($this->current_nodes['consultation']['medical_history'] as $system_name => $nodes_per_system) {
                         if (isset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id])) {
+                            // Remove every df and managements dependency
+                            if (array_key_exists($this->current_nodes['consultation']['medical_history'][$system_name][$node_id], $df_hash_map)) {
+                                foreach ($df_hash_map[$this->current_nodes['consultation']['medical_history'][$system_name][$node_id]] as $df) {
+                                    if (array_key_exists($df, $this->df_to_display)) {
+                                        if (isset($final_diagnoses[$df]['managements'])) {
+                                            unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                                        }
+                                        unset($this->df_to_display[$df]);
+                                    }
+                                }
+                            }
                             unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id]);
                         }
-                    }
-                }
-            }
-
-            // Remove every df and managements dependency
-            if (isset($df_hash_map[$old_value])) {
-                foreach ($df_hash_map[$old_value] as $df) {
-                    if (array_key_exists($df, $this->df_to_display)) {
-                        if (isset($final_diagnoses[$df]['managements'])) {
-                            unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
-                        }
-                        unset($this->df_to_display[$df]);
                     }
                 }
             }

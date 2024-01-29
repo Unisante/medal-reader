@@ -1,0 +1,22 @@
+%box-shadow {
+  -webkit-box-shadow: 0px 0px 15px -1px rgba(0,0,0,0.22);
+  box-shadow: 0px 0px 15px -1px rgba(0,0,0,0.22);
+}
+
+%box-shadow-light {
+  -webkit-box-shadow: 0px 0px 15px -1px rgba(0,0,0,0.10);
+  box-shadow: 0px 0px 15px -1px rgba(0,0,0,0.10);
+}
+
+%box-content {
+  display: flex;
+  border-radius: 10px;
+  background-color: $color-white;
+  border: 1px solid $color-grey-light;
+}
+
+%step {
+  @extend %box-content;
+  border: none;
+  background-color: $color-white-dark;
+}
