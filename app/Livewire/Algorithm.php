@@ -28,6 +28,7 @@ class Algorithm extends Component
     //todo remove definition when in prod
     public string $age_key = 'older';
     public string $current_step = 'registration';
+    public int $saved_step = 1;
     public int $current_cc;
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
@@ -68,6 +69,12 @@ class Algorithm extends Component
             'referral',
         ],
     ];
+
+    public array $completion_per_step = [
+        0 => 30,
+        1 => 0,
+    ];
+
     public string $current_sub_step = '';
 
     public function boot(AlgorithmService $algorithmService)
@@ -89,10 +96,6 @@ class Algorithm extends Component
         $matching_projects = array_filter(config('medal.projects'), function ($project) use ($project_name) {
             return Str::contains($project_name, $project);
         });
-
-        // I%hxofYV15
-        // xE3FGtrlfI6c
-        // 2020.ihi
 
         $this->algorithm_type = $matching_projects ? key($matching_projects) : 'training';
         $this->cache_key = "json_data_{$this->id}_$json_version";
@@ -403,9 +406,9 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
-        dump($cached_data['df_hash_map']);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
+        // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
@@ -441,7 +444,6 @@ class Algorithm extends Component
 
         // We force to int the value comming from
         $intvalue = floatval($value);
-
         // dd(
         //     Arr::get($this->current_nodes, $key),
         //     // Arr::set($this->current_nodes, $key, $intvalue),
@@ -967,6 +969,15 @@ class Algorithm extends Component
             // For registration step we do not know the $age_key yet
             // $this->current_nodes = $cached_data['nodes_per_step'][$step];
         }
+
+        //quick and dirty fix for training mode
+        //todo actually calculate it and change from int to string and
+        //search for the index in the array
+        if ($step === 'diagnoses') {
+            $this->saved_step = 2;
+            $this->completion_per_step[1] = 100;
+        }
+
         $this->current_step = $step;
 
         //We set the first substep

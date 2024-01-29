@@ -1,15 +1,19 @@
+@php
+  $cache = Cache::get($cache_key);
+  $full_nodes = $cache['full_nodes'];
+  $final_diagnoses = $cache['final_diagnoses'];
+  $health_cares = $cache['health_cares'];
+@endphp
+
 <div class="mb-5">
   <div>
     <h2 class="fw-normal">{{ $title }}</h2>
   </div>
-  <div class="row g-3">
+
+  <x-navigation.training-navstep :current_step="$current_step" :saved_step="$saved_step" :completion_per_step="$completion_per_step" />
+
+  <div class="row g-3 mt-3">
     <div class="col-8">
-      @php
-        $cache = Cache::get($cache_key);
-        $full_nodes = $cache['full_nodes'];
-        $final_diagnoses = $cache['final_diagnoses'];
-        $health_cares = $cache['health_cares'];
-      @endphp
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
@@ -24,39 +28,6 @@
       @if ($current_step === 'diagnoses')
         <x-step.training-results :df_to_display="$df_to_display" :final_diagnoses="$final_diagnoses" :cache_key="$cache_key" />
       @endif
-    </div>
-
-    <div class="col-4">
-      <div class="container">
-        Steps
-        @foreach ($steps as $key => $substeps)
-          <div wire:key="{{ 'go-step-' . $key }}">
-            <button class="btn btn-outline-primary m-1"
-              wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-              aria-expanded="false"></button>
-            <ul class="dropdown-menu">
-              @foreach ($substeps as $substep)
-                <div wire:key="{{ 'go-sub-step-' . $substep }}">
-                  <li><a class="dropdown-item"
-                      wire:click="goToSubStep('{{ $key }}','{{ $substep }}')">{{ ucwords(str_replace('_', ' ', $substep)) }}</a>
-                  </li>
-                </div>
-              @endforeach
-            </ul>
-          </div>
-        @endforeach
-        <div class="container">
-          CCs chosen :
-          @foreach ($chosen_complaint_categories as $cc => $chosen)
-            <div wire:key="{{ 'edit-cc-' . $cc }}">
-              @if ($chosen)
-                <p class="mb-0">{{ $cc }}</p>
-              @endif
-            </div>
-          @endforeach
-        </div>
-      </div>
     </div>
   </div>
 
