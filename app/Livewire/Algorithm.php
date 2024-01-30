@@ -628,13 +628,23 @@ class Algorithm extends Component
 
         // Modification behavior
         if ($old_value) {
-            // Remove every old answer nodes dependency
+            // Remove linked diag and management
+            if (isset($df_hash_map[$old_value])) {
+                foreach ($df_hash_map[$old_value] as $df) {
+                    if (array_key_exists($df, $this->df_to_display)) {
+                        if (isset($final_diagnoses[$df]['managements'])) {
+                            unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                        }
+                        unset($this->df_to_display[$df]);
+                    }
+                }
+            }
+            // Remove every linked nodes to old answer
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $node_id) {
-                    // Remove every linked nodes
                     foreach ($this->current_nodes['consultation']['medical_history'] as $system_name => $nodes_per_system) {
                         if (isset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id])) {
-                            // Remove every df and managements dependency
+                            // Remove every df and managements dependency of linked nodes
                             if (array_key_exists($this->current_nodes['consultation']['medical_history'][$system_name][$node_id], $df_hash_map)) {
                                 foreach ($df_hash_map[$this->current_nodes['consultation']['medical_history'][$system_name][$node_id]] as $df) {
                                     if (array_key_exists($df, $this->df_to_display)) {
