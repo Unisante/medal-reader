@@ -103,10 +103,11 @@ class Algorithm extends Component
         $this->cache_expiration_time = 86400; // 24 hours
 
         //todo set that up in redis when in prod
-        //tdo also remove the cache forget x)
-        Cache::forget($this->cache_key);
-        $cache_found = Cache::has($this->cache_key);
+        if (config('app.debug')) {
+            Cache::forget($this->cache_key);
+        }
 
+        $cache_found = Cache::has($this->cache_key);
         if (!$cache_found) {
             Cache::put($this->cache_key, [
                 'full_nodes' => collect($json['medal_r_json']['nodes'])->keyBy('id')->all(),
