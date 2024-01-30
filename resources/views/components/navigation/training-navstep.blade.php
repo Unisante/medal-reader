@@ -26,7 +26,7 @@
       </div>
 
       <div class="content">
-        <span class="step-name">Étape 1</span>
+        <span class="step-name">Step 1</span>
         <span class="step-category">Questionnaire</span>
       </div>
     </div>
@@ -59,8 +59,8 @@
       </svg>
     </div>
     <div class="content">
-      <span class="step-name">Étape 2</span>
-      <span class="step-category">Résultats</span>
+      <span class="step-name">Step 2</span>
+      <span class="step-category">Results</span>
     </div>
   </div>
 </section>

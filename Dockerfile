@@ -21,7 +21,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chown -R www-data:www-data /var/www/html
 
 RUN chmod -R 755 /var/www/html/storage
-RUN chmod -R 755 /var/www/html/public/
+RUN chmod -R 755 /var/www/html/public
 
 # Install Laravel dependencies
 RUN composer install

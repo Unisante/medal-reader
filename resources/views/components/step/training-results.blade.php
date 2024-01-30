@@ -1,7 +1,7 @@
 @props(['df_to_display', 'final_diagnoses', 'cache_key'])
 
 <div>
-  <h2 class="fw-normal">Résultats</h2>
+  <h2 class="fw-normal">Results</h2>
   @forelse ($df_to_display as $diagnosis_id => $drugs)
     <div wire:key="{{ 'df-' . $diagnosis_id }}">
       <div class="input-container m-3 w-50">
@@ -11,11 +11,11 @@
       </div>
     </div>
   @empty
-    <p>Aucun résultat</p>
+    <p>No results</p>
   @endforelse
   <div>
     <div class="d-flex justify-content-end">
-      <button class="btn button-unisante m-1" onclick="window.location.href = window.location.href;">Recommencer</button>
+      <button class="btn button-unisante m-1" onclick="window.location.href = window.location.href;">Restart</button>
     </div>
   </div>
 </div>
