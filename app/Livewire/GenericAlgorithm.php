@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
-class Algorithm extends Component
+class GenericAlgorithm extends Component
 {
     public int $id;
     public string $cache_key;

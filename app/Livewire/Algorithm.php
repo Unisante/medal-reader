@@ -622,7 +622,6 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
-        $answers_hash_map = $cached_data['answers_hash_map'];
 
         Debugbar::stopMeasure("displayNextNodeCache");
 
