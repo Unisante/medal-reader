@@ -784,6 +784,7 @@ class Algorithm extends Component
             $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
 
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
+            $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$cached_data['weight_question_id']];
             $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight);
             $this->formulations_to_display = $formulations->getFormulations();
             // give this to the service
