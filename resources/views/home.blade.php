@@ -51,9 +51,10 @@
                 </p>
               </div>
               <div class="d-flex justify-content-end align-content-end mb-2 me-2">
-                <a href="{{ route('home.process', Storage::json($file)['id']) }}" class="btn button-unisante">
+                <button class="btn button-unisante" type="button" data-bs-toggle="modal" data-bs-target="#start"
+                  data-bs-algorithm_id="{{ Storage::json($file)['id'] }}">
                   Start
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -63,4 +64,22 @@
       </div>
     </section>
   </div>
+
+  {{-- New consultation modal --}}
+  <x-modals.new-consultation />
+
+  {{-- Patients table modal --}}
+  <livewire:components.tables.patients />
 @endsection
+
+@push('scripts')
+  <script>
+    var start = document.getElementById('start')
+    start.addEventListener('show.bs.modal', function(event) {
+      var button = event.relatedTarget
+      var algorithm_id = button.getAttribute('data-bs-algorithm_id')
+      var url = "{{ route('home.process', '') }}" + "/" + algorithm_id;
+      document.getElementById("start_consultation").href = url;
+    })
+  </script>
+@endpush

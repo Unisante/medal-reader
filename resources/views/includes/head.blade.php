@@ -16,3 +16,8 @@
 <link rel="preload" href="{{ asset('fonts/heebo-v21-latin-500.woff2') }}" as="font" type="font/woff" crossorigin>
 <link href="{{ mix('css/app.css') }}" rel="stylesheet">
 <link rel="icon" href="{{ mix('images/favicon.png') }}">
+<style>
+  [x-cloak] {
+    display: none !important;
+  }
+</style>

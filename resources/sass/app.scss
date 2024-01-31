@@ -16,6 +16,9 @@
 //extender
 @import "extender";
 
+// Datatables BS5
+// @import "~datatables.net-bs5/css/dataTables.bootstrap5.css";
+
 .custom-control.teleport-switch {
     --color: #4cd964;
     padding-left: 0;
@@ -439,3 +442,18 @@ label.required::after {
         transform: scale(0);
     }
 }
+
+  .patients-grid {
+      display: grid;
+      grid-template-columns: 0.3fr 0.4fr 1.6fr 1.6fr 2fr 0.1fr;
+      border-bottom: 1px solid lightgray;
+      align-items: center;
+      cursor: pointer;
+  }
+
+  .patients-grid:hover {
+      background-color: rgba(230, 230, 230, 0.5);
+      transition-duration: 75ms;
+      transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
+      transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+  }

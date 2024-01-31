@@ -21,6 +21,7 @@ use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 class Algorithm extends Component
 {
     public int $id;
+    public $patient_id;
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
@@ -82,9 +83,10 @@ class Algorithm extends Component
         $this->algorithmService = $algorithmService;
     }
 
-    public function mount($id = null)
+    public function mount($id = null, $patient_id = null)
     {
         $this->id = $id;
+
         $extract_dir = Config::get('medal.storage.json_extract_dir');
         $json = json_decode(Storage::get("$extract_dir/{$this->id}.json"), true);
         if (!$json) {

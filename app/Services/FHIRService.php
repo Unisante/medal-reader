@@ -8,6 +8,7 @@ use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRBundle;
 use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use Exception;
+use Illuminate\Support\Facades\Http;
 
 class FHIRService
 {
@@ -28,122 +29,28 @@ class FHIRService
         //     $headers[] = $authorization;
         // }
 
-        return implode("\r\n", $headers);
+        return $headers;
     }
 
-    function sendToRemoteFHIRServer($resource)
+    function getPatientsFromRemoteFHIRServer()
+    {
+        return $this->getDataFromRemoteFHIRServer('Patient');
+    }
+
+    function getDataFromRemoteFHIRServer($resource)
     {
 
-        $type = 'collection';
-
-        $bundle = $this->createResource('Patient', [
-            'type' => $type,
-        ]);
-        dump($bundle);
-
-        // $patient = $this->createResource('Patient', $patientObj);
-        $resource['resourceType'] = 'Patient';
-
-        // $bundle = new FHIRPatient([
-        //     'timestamp' => $this->formatFHIRDateTime(time()),
-        //     'type' => [
-        //         'value' => 'document'
-        //     ],
-        //     // 'meta' => self::createMeta('Determination'),
-        // ]);
-
-        // $bundle->addEntry(new FHIRBundleEntry([
-        //     // force Patient for now
-        //     'resource' => 'Patient'
-        // ]));
-
         // Use preg_replace() to prevent vulernabilities per Psalm.
-        $resourceType = preg_replace('/[^A-Za-z]/', '', $resource['resourceType']);
-
+        $resource = preg_replace('/[^A-Za-z]/', '', $resource);
         $url = rtrim($this->getRemoteFHIRServerUrl(), '/');
 
-        $response = file_get_contents("$url/Patient", false, stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => $this->getHeaders(),
-                'content' => $this->jsonSerialize($bundle),
-                'ignore_errors' => true
-            ]
-        ]));
+        $response = Http::withHeaders($this->getHeaders())->get("$url/$resource", [
+            '_count' => 1000,
+            '_pretty' => true,
+        ]);
+        $response->throw();
 
-        $o = $this->parse($response);
-        dump($o);
-
-        // $input = file_get_contents('php://input');
-        // $o = $this->parse($input);
-        // $type = $o->_getFHIRTypeName();
-
-        dd($response);
-
-        $handleError = function ($errorToWrap = null) use ($resourceType, $response) {
-            $parsedResponse = json_decode($response, true);
-            $issues = $parsedResponse['issue'] ?? null;
-            if ($issues && $errorToWrap === null) {
-                $message = "The request failed with the following errors:\n";
-                foreach ($issues as $issue) {
-                    $phrase = 'invalid JSON: ';
-                    $parts = explode($phrase, $issue['diagnostics']);
-                    $parts = array_map(function (&$part) {
-                        return trim($part);
-                    }, $parts);
-
-                    $message .= "- " . implode($phrase, $parts);
-
-                    $expression = implode(', ', $issue['expression'] ?? []);
-                    if (!empty($expression)) {
-                        $message .= " for $expression";
-                    }
-
-                    $message .= "\n";
-                }
-            } else {
-                $message = "A $resourceType response was expected, but ";
-
-                if (empty($response)) {
-                    $message .= "an empty response with an unsuccessful HTTP response status code was received.";
-                } else {
-                    $message .= "the following was received instead: $response";
-                }
-
-                if ($errorToWrap) {
-                    $message .= "\n\nThe following Exception occurred while processing this response: " . $errorToWrap->__toString();
-                }
-            }
-
-            throw new \Exception($message);
-        };
-
-        if (empty($response)) {
-            // parse for response HTTP status code
-            $http_response_line = $http_response_header[0];
-            // look for "HTTP/1.1 [[STATUS_CODE]] OK"
-            if (preg_match("/\s([0-9]+)\s/", $http_response_line, $match)) {
-                $http_response_status_code = intval($match[0]);
-                if ($http_response_status_code >= 200 && $http_response_status_code < 300) {
-                    // got empty response but status code indicate success
-                    // -> no further validation
-                    return null;
-                }
-            }
-        }
-
-        try {
-            $responseResource = $this->parse($response);
-            $responseResourceType = $responseResource->_getFHIRTypeName();
-        } catch (\Throwable $t) {
-            $handleError($t);
-        }
-
-        if ($responseResourceType === $resourceType) {
-            return $responseResource;
-        } else {
-            $handleError();
-        }
+        return $response->json();
     }
 
     function getRemoteFHIRServerUrl()
@@ -216,12 +123,5 @@ class FHIRService
             // Assume this is already a DateTime object.
             return $mixed;
         }
-    }
-
-    private function createResource($type, $args)
-    {
-        return array_merge([
-            'resourceType' => $type,
-        ], $args);
     }
 }

@@ -18,4 +18,4 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AlgorithmController::class, 'index'])->name('home.index');
 Route::post('/', [AlgorithmController::class, 'store'])->name('home.store');
-Route::get('/algorithm/{id}', [AlgorithmController::class, 'process'])->name('home.process');
+Route::get('/algorithm/{id}/{patient_id?}', [AlgorithmController::class, 'process'])->name('home.process');
