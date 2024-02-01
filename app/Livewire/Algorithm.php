@@ -159,6 +159,7 @@ class Algorithm extends Component
                 'yi_general_cc_id' => $json['medal_r_json']['config']['basic_questions']['yi_general_cc_id'],
                 'gender_question_id' => $json['medal_r_json']['config']['basic_questions']['gender_question_id'],
                 'weight_question_id' => $json['medal_r_json']['config']['basic_questions']['weight_question_id'],
+                'village_question_id' => $json['medal_r_json']['config']['optional_basic_questions']['village_question_id'],
                 'villages' => array_merge(...$json['medal_r_json']['village_json'] ?? []), // No village for non dynamic study;
 
                 // All logics that will be calulated
@@ -323,11 +324,13 @@ class Algorithm extends Component
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
+                            if (!isset($answers_hash_map[$step][$answer_id])) {
+                                $answers_hash_map[$step][$answer_id] = [];
+                            }
 
-                            //Todo remove no conditions nodes from this hashmap
-                            //use the no conditions nodes array ?
-                            //Example with 43136 that will bring 42871 which is a registration node (type of consult)
-                            $answers_hash_map[$step][$answer_id][] = $instance_id;
+                            if (!in_array($instance_id, $answers_hash_map[$step][$answer_id])) {
+                                $answers_hash_map[$step][$answer_id][] = $instance_id;
+                            }
 
                             $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $this->cache_key);
 
@@ -436,12 +439,16 @@ class Algorithm extends Component
             $familyExtension = $familyName->getExtension()[0] ?? '';
             $gender = $patient_resource->getGender()->getValue()->getValue();
             $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
+            /** @var FHIRAddress $address */
+            $address = $patient_resource->getAddress()[0];
+            $city = $address->getCity()->__toString();
             $this->current_nodes['registration']['first_name'] = $givenName;
             $this->current_nodes['registration']['last_name'] = "$familyName $familyExtension";
             $this->current_nodes['registration']['birth_date'] = $date_of_birth;
             $this->current_nodes['registration'][$cached_data['gender_question_id']] = $gender === 'female' ?
                 $cached_data['female_gender_answer_id'] :
                 $cached_data['male_gender_answer_id'];
+            $this->current_nodes['registration'][$cached_data['village_question_id']] = $city;
             $this->updateLinkedNodesOfDob($date_of_birth);
         }
 
@@ -456,7 +463,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         dump($cached_data['answers_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -493,20 +500,15 @@ class Algorithm extends Component
 
         // We force to int the value comming from
         $intvalue = floatval($value);
-        // dd(
-        //     Arr::get($this->current_nodes, $key),
-        //     // Arr::set($this->current_nodes, $key, $intvalue),
-        //     Arr::get($this->current_nodes, $key)
-        // );
 
         if ($intvalue == $value || floatval($value) !== 0) {
             Arr::set($this->current_nodes, $key, $intvalue);
         }
-        // dd(Arr::get($this->current_nodes, $key));
         // If the answer trigger the emergency modal
-        if (array_key_exists($value, $need_emergency)) {
-            //todo uncomment when in prod
-            $this->dispatch('openEmergencyModal');
+        if ($this->algorithm_type === 'dynamic') {
+            if (array_key_exists($value, $need_emergency)) {
+                $this->dispatch('openEmergencyModal');
+            }
         }
     }
 
