@@ -606,6 +606,7 @@ class Algorithm extends Component
             $this->nodes_to_save[$node_id] = intval($value);
 
             if ($this->current_step === 'registration') {
+                Log::info("registration $node_id : $value");
                 $this->current_nodes['registration'][$node_id] = intval($value);
             }
 
@@ -637,6 +638,7 @@ class Algorithm extends Component
             // If node is linked to some bc, we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
                 $answer_id = $this->handleAnswers($node_id, $value);
+                Log::info("linked to some bc $node_id : $value");
                 if ($this->current_step === 'registration') {
                     $this->current_nodes['registration'][$node_id] = $value;
                 }
@@ -886,14 +888,14 @@ class Algorithm extends Component
             $minValue = intval($answer_values[0]);
             $maxValue = intval($answer_values[1] ?? $minValue);
 
-            $answer_id = match ($answer['operator']) {
-                'more_or_equal' => $result >= $minValue ? $answer['id'] : null,
-                'less' => $result < $minValue ? $answer['id'] : null,
-                'between' => ($result >= $minValue && $result < $maxValue) ? $answer['id'] : null,
+            $answer_label = match ($answer['operator']) {
+                'more_or_equal' => $result >= $minValue ? $answer['label']['en'] : null,
+                'less' => $result < $minValue ? $answer['label']['en'] : null,
+                'between' => ($result >= $minValue && $result < $maxValue) ? $answer['label']['en'] : null,
                 default => null,
             };
-            if ($answer_id) {
-                return $answer_id;
+            if ($answer_label) {
+                return $answer_label;
             }
         }
         return;
@@ -906,7 +908,15 @@ class Algorithm extends Component
 
         foreach ($birth_date_formulas as $node_id) {
             $this->nodes_to_save[$node_id] = null;
-            $this->saveNode($node_id, null, null, null);
+            $value = $this->handleFormula($node_id);
+            Log::info("updateLinkedNodesOfDob saveNode $node_id : $value");
+            // $this->saveNode($node_id, null, null, null);
+            // If node is linked to some bc, we calculate them directly
+            $answer_id = $this->handleAnswers($node_id, $value);
+            Log::info("handleAnswerse $node_id : $value -> $answer_id");
+            if ($this->current_step === 'registration') {
+                $this->current_nodes['registration'][$node_id] = $answer_id;
+            }
         }
     }
 
