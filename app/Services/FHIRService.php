@@ -41,9 +41,8 @@ class FHIRService
             '_id' => $patient_id,
             '_pretty' => true,
         ]);
-        $response->throw();
 
-        return $response->json();
+        return $response;
     }
 
     function getPatientsFromRemoteFHIRServer()
@@ -62,9 +61,10 @@ class FHIRService
             '_count' => 1000,
             '_pretty' => true,
         ]);
-        $response->throw();
+        // $response->throw()->json();
+        // dd($response);
 
-        return $response->json();
+        return $response;
     }
 
     function getRemoteFHIRServerUrl()

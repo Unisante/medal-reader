@@ -429,27 +429,29 @@ class Algorithm extends Component
         if ($patient_id) {
             $response = $this->fhirService->getPatientFromRemoteFHIRServer($patient_id);
             $parser = new PHPFHIRResponseParser();
-            /** @var FHIRBundle $patients_bundle */
-            $patients_bundle = $parser->parse($response);
-            /** @var FHIRPatient $patient_resource */
-            $patient_resource = $patients_bundle->getEntry()[0]->getResource();
-            $name = $patient_resource->getName()[0];
-            $givenName = $name->getGiven()[0]->__toString();
-            $familyName = $name->getFamily();
-            $familyExtension = $familyName->getExtension()[0] ?? '';
-            $gender = $patient_resource->getGender()->getValue()->getValue();
-            $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
-            /** @var FHIRAddress $address */
-            $address = $patient_resource->getAddress()[0];
-            $city = $address->getCity()->__toString();
-            $this->current_nodes['registration']['first_name'] = $givenName;
-            $this->current_nodes['registration']['last_name'] = "$familyName $familyExtension";
-            $this->current_nodes['registration']['birth_date'] = $date_of_birth;
-            $this->current_nodes['registration'][$cached_data['gender_question_id']] = $gender === 'female' ?
-                $cached_data['female_gender_answer_id'] :
-                $cached_data['male_gender_answer_id'];
-            $this->current_nodes['registration'][$cached_data['village_question_id']] = $city;
-            $this->updateLinkedNodesOfDob($date_of_birth);
+            if ($response->successful()) {
+                /** @var FHIRBundle $patients_bundle */
+                $patients_bundle = $parser->parse($response->json());
+                /** @var FHIRPatient $patient_resource */
+                $patient_resource = $patients_bundle->getEntry()[0]->getResource();
+                $name = $patient_resource->getName()[0];
+                $givenName = $name->getGiven()[0]->__toString();
+                $familyName = $name->getFamily();
+                $familyExtension = $familyName->getExtension()[0] ?? '';
+                $gender = $patient_resource->getGender()->getValue()->getValue();
+                $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
+                /** @var FHIRAddress $address */
+                $address = $patient_resource->getAddress()[0];
+                $city = $address->getCity()->__toString();
+                $this->current_nodes['registration']['first_name'] = $givenName;
+                $this->current_nodes['registration']['last_name'] = "$familyName $familyExtension";
+                $this->current_nodes['registration']['birth_date'] = $date_of_birth;
+                $this->current_nodes['registration'][$cached_data['gender_question_id']] = $gender === 'female' ?
+                    $cached_data['female_gender_answer_id'] :
+                    $cached_data['male_gender_answer_id'];
+                $this->current_nodes['registration'][$cached_data['village_question_id']] = $city;
+                $this->updateLinkedNodesOfDob($date_of_birth);
+            }
         }
 
         // dd($this->registration_nodes_id);

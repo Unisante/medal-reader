@@ -30,8 +30,8 @@ class Patients extends Component
     public bool $first_page = true;
     public bool $last_page = false;
     public bool $has_more_pages = false;
-    public int $last_item;
-    public int $first_item = 0;
+    public int|null $last_item;
+    public int|null  $first_item;
     public int $total = 0;
     public array $pagination_buttons;
     public string $class;
@@ -53,59 +53,64 @@ class Patients extends Component
         // $patients = new FHIRPatient;
         $response = $this->fhirService->getPatientsFromRemoteFHIRServer();
 
-        /** @var FHIRBundle $patients_bundle */
-        $patients_bundle = $parser->parse($response);
+        $patients = [];
+        $this->pagination_buttons = [0];
+        if ($response->successful()) {
+            /** @var FHIRBundle $patients_bundle */
+            $patients_bundle = $parser->parse($response->json());
 
-        foreach ($patients_bundle->getEntry() as $entry) {
-            /** @var FHIRPatient $patient_resource */
-            $patient_resource = $entry->getResource();
-            /** @var FHIRId $id */
-            $id = $patient_resource->getId()->getValue()->getValue();
-            $name = $patient_resource->getName()[0];
-            $givenName = $name->getGiven()[0];
-            $familyName = $name->getFamily();
-            $prefix = $name->getPrefix()[0] ?? '';
-            $familyExtension = $familyName->getExtension()[0] ?? '';
-            /** @var FHIRAttachment $photo */
-            $photo = $patient_resource->getPhoto();
-            $avatar = !empty($photo) ? $photo->getUrl()[0] :
-                Avatar::create("$givenName $familyName")->toBase64();
-            $gender = $patient_resource->getGender()->getValue()->getValue();
-            /** @var FHIRContactPoint $phone */
-            $phone = $patient_resource->getTelecom()[0]->getValue()->getValue()->__toString();
-            /** @var FHIRAddress $address */
-            $address = $patient_resource->getAddress()[0];
-            $line = $address->getLine()[0]->getValue()->getValue();
-            $postal = $address->getPostalCode();
-            $city = $address->getCity();
-            $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
-            $diff = date_diff(date_create($date_of_birth), date_create());
-            $age = $diff->format('%y');
-            $deceased = $patient_resource->getDeceasedBoolean();
-            $mrn = $patient_resource->getIdentifier()[0]->getValue()->getValue()->getValue();
+            foreach ($patients_bundle->getEntry() as $entry) {
+                /** @var FHIRPatient $patient_resource */
+                $patient_resource = $entry->getResource();
+                /** @var FHIRId $id */
+                $id = $patient_resource->getId()->getValue()->getValue();
+                $name = $patient_resource->getName()[0];
+                $givenName = $name->getGiven()[0];
+                $familyName = $name->getFamily();
+                $prefix = $name->getPrefix()[0] ?? '';
+                $familyExtension = $familyName->getExtension()[0] ?? '';
+                /** @var FHIRAttachment $photo */
+                $photo = $patient_resource->getPhoto();
+                $avatar = !empty($photo) ? $photo->getUrl()[0] :
+                    Avatar::create("$givenName $familyName")->toBase64();
+                $gender = $patient_resource->getGender()->getValue()->getValue();
+                /** @var FHIRContactPoint $phone */
+                $phone = $patient_resource->getTelecom()[0]->getValue()->getValue()->__toString();
+                /** @var FHIRAddress $address */
+                $address = $patient_resource->getAddress()[0];
+                $line = $address->getLine()[0]->getValue()->getValue();
+                $postal = $address->getPostalCode();
+                $city = $address->getCity();
+                $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
+                $diff = date_diff(date_create($date_of_birth), date_create());
+                $age = $diff->format('%y');
+                $deceased = $patient_resource->getDeceasedBoolean();
+                $mrn = $patient_resource->getIdentifier()[0]->getValue()->getValue()->getValue();
 
-            $patients[] = [
-                'id' => $id,
-                'name' => "$prefix $givenName $familyName $familyExtension",
-                'avatar' => $avatar,
-                'gender' => $gender,
-                'phone' => $phone,
-                'line' => $line,
-                'city' => "$postal $city",
-                'date_of_birth' => $date_of_birth,
-                'age' => $age,
-                'deceased' => $deceased ?? false,
-                'mrn' => $mrn,
-            ];
+                $patients[] = [
+                    'id' => $id,
+                    'name' => "$prefix $givenName $familyName $familyExtension",
+                    'avatar' => $avatar,
+                    'gender' => $gender,
+                    'phone' => $phone,
+                    'line' => $line,
+                    'city' => "$postal $city",
+                    'date_of_birth' => $date_of_birth,
+                    'age' => $age,
+                    'deceased' => $deceased ?? false,
+                    'mrn' => $mrn,
+                ];
+            }
+            $this->total = $patients_bundle->getTotal()->getValue()->getValue();
+            $this->pagination_buttons = [range(1, 10)];
         }
         $this->patients = collect($patients);
         $this->sliced_patients = $this->patients->slice(0, $this->per_page);
-        $this->total = $patients_bundle->getTotal()->getValue()->getValue();
+
         $this->last_page = max((int) ceil($this->total / $this->per_page), 1);
         $this->first_item = $this->total > 0 ? ($this->current_page - 1) * $this->per_page + 1 : null;
         $this->last_item = $this->total > 0 ? $this->first_item + $this->current_page * $this->per_page - 1 : null;
         $this->has_more_pages = $this->current_page < $this->last_page;
-        $this->pagination_buttons = [range(1, 10)];
     }
 
     public function render()
