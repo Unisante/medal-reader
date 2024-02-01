@@ -15,7 +15,7 @@
       @if (array_key_exists('first_look_assessment', $current_nodes))
         @if ($current_step === 'registration')
           <x-step.registration :nodes="$current_nodes['registration'] +
-              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :nodes_to_save="$nodes_to_save" :cache_key="$cache_key" />
+              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :$nodes_to_save :$full_nodes :$cache_key />
         @endif
       @endif
 
@@ -23,14 +23,14 @@
       @if ($current_step === 'first_look_assessment')
         @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
           <div wire:key="{{ 'cc-' . $node_id }}">
-            <x-inputs.checkbox step="complaint_categories_nodes_id" :node_id="$node_id" :cache_key="$cache_key" />
+            <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :node_id="$node_id" :$cache_key />
           </div>
         @endforeach
       @endif
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.recommendations :nodes="$current_nodes['consultation']['medical_history']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key />
       @endif
 
       {{-- Tests --}}

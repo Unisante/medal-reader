@@ -17,7 +17,7 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.recommendations :nodes="$current_nodes['consultation']['medical_history']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :nodes_to_save="$nodes_to_save" :current_cc="$current_cc" :cache_key="$cache_key" />
       @endif
 
       {{-- Tests --}}

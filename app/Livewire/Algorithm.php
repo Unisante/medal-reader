@@ -219,7 +219,7 @@ class Algorithm extends Component
 
 
         // First Look Assessment nodes
-        if ($this->algorithm_type === 'dynamic') {
+        if ($this->algorithm_type === 'dynamic' || $this->algorithm_type === 'prevention') {
             foreach ($cached_data['first_look_assessment_nodes_id'] as $substep_name => $substep) {
                 foreach ($substep as $node_id) {
                     if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
@@ -396,9 +396,19 @@ class Algorithm extends Component
         $this->current_cc = $this->age_key === "older"
             ? $cached_data['general_cc_id']
             : $cached_data['yi_general_cc_id'];
-        $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
+        if ($this->algorithm_type !== 'prevention') {
+            $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
+        }
 
         if ($this->algorithm_type === 'dynamic') {
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
+                $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+
+            $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
+                $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
+        }
+
+        if ($this->algorithm_type === 'prevention') {
             $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
                 $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
 
