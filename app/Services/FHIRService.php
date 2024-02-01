@@ -32,6 +32,20 @@ class FHIRService
         return $headers;
     }
 
+    function getPatientFromRemoteFHIRServer($patient_id)
+    {
+        // Use preg_replace() to prevent vulernabilities per Psalm.
+        $url = rtrim($this->getRemoteFHIRServerUrl(), '/');
+
+        $response = Http::withHeaders($this->getHeaders())->get("$url/Patient", [
+            '_id' => $patient_id,
+            '_pretty' => true,
+        ]);
+        $response->throw();
+
+        return $response->json();
+    }
+
     function getPatientsFromRemoteFHIRServer()
     {
         return $this->getDataFromRemoteFHIRServer('Patient');

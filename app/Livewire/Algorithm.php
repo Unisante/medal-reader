@@ -3,19 +3,21 @@
 namespace App\Livewire;
 
 use App\Services\AlgorithmService;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
-use Livewire\Component;
+use App\Services\FHIRService;
 use App\Services\FormulationService;
 use Barryvdh\Debugbar\Facades\Debugbar;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
+use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use Exception;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
+use Livewire\Component;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 class Algorithm extends Component
@@ -46,6 +48,7 @@ class Algorithm extends Component
     public array $formulations_to_display;
 
     private $algorithmService;
+    private $fhirService;
     public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
@@ -78,14 +81,16 @@ class Algorithm extends Component
 
     public string $current_sub_step = '';
 
-    public function boot(AlgorithmService $algorithmService)
+    public function boot(AlgorithmService $algorithmService, FHIRService $fhirService)
     {
         $this->algorithmService = $algorithmService;
+        $this->fhirService = $fhirService;
     }
 
     public function mount($id = null, $patient_id = null)
     {
         $this->id = $id;
+        $this->patient_id = $patient_id;
 
         $extract_dir = Config::get('medal.storage.json_extract_dir');
         $json = json_decode(Storage::get("$extract_dir/{$this->id}.json"), true);
@@ -399,6 +404,26 @@ class Algorithm extends Component
             $this->goToStep('consultation');
         }
 
+        if ($patient_id) {
+            $response = $this->fhirService->getPatientFromRemoteFHIRServer($patient_id);
+            $parser = new PHPFHIRResponseParser();
+            /** @var FHIRBundle $patients_bundle */
+            $patients_bundle = $parser->parse($response);
+            /** @var FHIRPatient $patient_resource */
+            $patient_resource = $patients_bundle->getEntry()[0]->getResource();
+            $name = $patient_resource->getName()[0];
+            $givenName = $name->getGiven()[0]->__toString();
+            $familyName = $name->getFamily();
+            $familyExtension = $familyName->getExtension()[0] ?? '';
+            $gender = $patient_resource->getGender()->getValue()->getValue();
+            $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
+            $this->current_nodes['registration']['first_name'] = $givenName;
+            $this->current_nodes['registration']['last_name'] = "$familyName $familyExtension";
+            $this->current_nodes['registration']['birth_date'] = "$date_of_birth";
+            $this->current_nodes['registration'][$cached_data['gender_question_id']] = "$gender";
+            $this->updateLinkedNodesOfDob($date_of_birth);
+        }
+
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
@@ -578,20 +603,24 @@ class Algorithm extends Component
             }
 
             // If answer will set a drug, we add it to the drugs to display
-            if (array_key_exists($value, $drugs_hash_map)) {
-                foreach ($drugs_hash_map[$value] as $drug_id) {
-                    if (!array_key_exists($drug_id, $this->drugs_to_display)) {
-                        $this->drugs_to_display[$drug_id] = false;
+            if (isset($this->drugs_to_display)) {
+                if (array_key_exists($value, $drugs_hash_map)) {
+                    foreach ($drugs_hash_map[$value] as $drug_id) {
+                        if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                            $this->drugs_to_display[$drug_id] = false;
+                        }
                     }
                 }
             }
 
             // If answer will set a management, we add it to the managements to display
-            if (array_key_exists($value, $managements_hash_map)) {
-                $this->all_managements_to_display = [
-                    ...$this->all_managements_to_display,
-                    ...$managements_hash_map[$value]
-                ];
+            if (isset($this->all_managements_to_display)) {
+                if (array_key_exists($value, $managements_hash_map)) {
+                    $this->all_managements_to_display = [
+                        ...$this->all_managements_to_display,
+                        ...$managements_hash_map[$value]
+                    ];
+                }
             }
 
             // If node is linked to some bc, we calculate them directly
@@ -736,13 +765,17 @@ class Algorithm extends Component
 
 
         // Reorder DF and managements upon level_of_urgency
-        uksort($this->df_to_display, function ($a, $b) use ($final_diagnoses) {
-            return $final_diagnoses[$b]['level_of_urgency'] <=> $final_diagnoses[$a]['level_of_urgency'];
-        });
+        if (isset($this->df_to_display)) {
+            uksort($this->df_to_display, function ($a, $b) use ($final_diagnoses) {
+                return $final_diagnoses[$b]['level_of_urgency'] <=> $final_diagnoses[$a]['level_of_urgency'];
+            });
+        }
 
-        uksort($this->managements_to_display, function ($a, $b) use ($health_cares) {
-            return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];
-        });
+        if (isset($this->managements_to_display)) {
+            uksort($this->managements_to_display, function ($a, $b) use ($health_cares) {
+                return $health_cares[$b]['level_of_urgency'] <=> $health_cares[$a]['level_of_urgency'];
+            });
+        }
 
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
