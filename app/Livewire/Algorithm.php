@@ -633,7 +633,6 @@ class Algorithm extends Component
 
             if ($this->current_step === 'consultation') {
                 if ($this->algorithm_type === 'dynamic') {
-                    Log::info("nodes_to_save $node_id : $value -> $answer_id");
                     $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $value;
                 } else {
                     $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $value;
@@ -641,12 +640,10 @@ class Algorithm extends Component
             }
 
             // If answer will set a drug, we add it to the drugs to display
-            if (isset($this->drugs_to_display)) {
-                if (array_key_exists($value, $drugs_hash_map)) {
-                    foreach ($drugs_hash_map[$value] as $drug_id) {
-                        if (!array_key_exists($drug_id, $this->drugs_to_display)) {
-                            $this->drugs_to_display[$drug_id] = false;
-                        }
+            if (array_key_exists($value, $drugs_hash_map)) {
+                foreach ($drugs_hash_map[$value] as $drug_id) {
+                    if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                        $this->drugs_to_display[$drug_id] = false;
                     }
                 }
             }
@@ -663,7 +660,6 @@ class Algorithm extends Component
 
             // If node is linked to some bc, we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
-
                 foreach ($nodes_to_update[$node_id] as $node_id) {
                     $value = $this->handleFormula($node_id);
                     $answer_id = $this->handleAnswers($node_id, $value);
@@ -676,7 +672,7 @@ class Algorithm extends Component
                     if ($this->current_step === 'consultation') {
                         $this->current_nodes['consultation']['medical_history']['others'][$node_id] = $answer_id;
                     }
-                    // $this->saveNode($node_id, $answer_id, null, null);
+                    $this->saveNode($node_id, $answer_id, null, null);
                 }
             }
         }
