@@ -36,7 +36,8 @@
       @break
 
       @case('Formula')
-        <x-inputs.text step="first_look_assessment.basic_measurements_nodes_id" :value="$nodes_to_save[$node_id]" :node_id="$node_id" />
+        <x-inputs.text step="first_look_assessment.basic_measurements_nodes_id" :node_id="$node_id" :full_nodes="$full_nodes"
+          :is_background_calc="true" />
       @break
 
       @default
