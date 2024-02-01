@@ -3,7 +3,7 @@
     <h2 class="fw-normal">{{ $title }}</h2>
   </div>
   <div class="row g-3">
-    <div class="col-8">
+    <div class="col-9">
       @php
         $cache = Cache::get($cache_key);
         $full_nodes = $cache['full_nodes'];
@@ -261,7 +261,7 @@
         </div>
       @endif
     </div>
-    <div class="col-4">
+    <div class="col-3">
       <div class="container">
         Steps
         @foreach ($steps as $key => $substeps)

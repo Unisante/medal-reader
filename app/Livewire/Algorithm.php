@@ -622,20 +622,20 @@ class Algorithm extends Component
                 $value = $this->handleFormula($node_id);
             }
             $this->nodes_to_save[$node_id] = intval($value);
-
+            $answer_id_and_label = $this->handleAnswers($node_id, $value);
             if ($this->current_step === 'registration') {
-                $this->current_nodes['registration'][$node_id] = intval($value);
+                $this->current_nodes['registration'][$node_id] = $answer_id_and_label;
             }
 
             if ($this->current_step === 'first_look_assessment') {
-                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_id] = $value;
+                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_id] = $answer_id_and_label;
             }
 
             if ($this->current_step === 'consultation') {
                 if ($this->algorithm_type === 'dynamic') {
-                    $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $value;
+                    $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $answer_id_and_label;
                 } else {
-                    $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $value;
+                    $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $answer_id_and_label;
                 }
             }
 
