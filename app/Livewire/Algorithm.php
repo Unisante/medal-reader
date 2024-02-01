@@ -173,6 +173,8 @@ class Algorithm extends Component
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
                 'need_emergency' => [],
+                'female_gender_answer_id' => '',
+                'male_gender_answer_id' => '',
             ], $this->cache_expiration_time);
         }
 
@@ -278,8 +280,11 @@ class Algorithm extends Component
         $answers_hash_map = [];
         $dependency_map = [];
         $consultation_nodes = [];
+        $female_gender_answer_id = '';
+        $male_gender_answer_id = '';
+
         foreach ($cached_data['complaint_categories_steps'] as $step) {
-            $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step) {
+            $diagnosesForStep = collect($cached_data['diagnoses'])->filter(function ($diag) use ($step, $female_gender_answer_id, $male_gender_answer_id) {
                 return $diag['complaint_category'] === $step;
             });
 
@@ -291,6 +296,8 @@ class Algorithm extends Component
                     }
 
                     if ($instance_id === $cached_data['gender_question_id']) {
+                        $female_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'female')->first()['id'];
+                        $male_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'male')->first()['id'];
                         continue;
                     }
 
@@ -377,6 +384,8 @@ class Algorithm extends Component
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
                 'need_emergency' => $need_emergency,
+                'female_gender_answer_id' => $female_gender_answer_id,
+                'male_gender_answer_id' => $male_gender_answer_id,
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
@@ -419,8 +428,10 @@ class Algorithm extends Component
             $date_of_birth = $patient_resource->getBirthDate()->getValue()->__toString();
             $this->current_nodes['registration']['first_name'] = $givenName;
             $this->current_nodes['registration']['last_name'] = "$familyName $familyExtension";
-            $this->current_nodes['registration']['birth_date'] = "$date_of_birth";
-            $this->current_nodes['registration'][$cached_data['gender_question_id']] = "$gender";
+            $this->current_nodes['registration']['birth_date'] = $date_of_birth;
+            $this->current_nodes['registration'][$cached_data['gender_question_id']] = $gender === 'female' ?
+                $cached_data['female_gender_answer_id'] :
+                $cached_data['male_gender_answer_id'];
             $this->updateLinkedNodesOfDob($date_of_birth);
         }
 

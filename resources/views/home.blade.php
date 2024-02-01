@@ -42,19 +42,26 @@
           <div class="col-6 col-lg-3 mb-2">
             <div class="card h-100 d-flex">
               <div class="card-body">
-                <h5 class="card-title">{{ Storage::json($file)['name'] }}</h5>
+                <h5 class="card-title">{{ $file['name'] }}</h5>
                 <h6 class="card-subtitle mb-2 text-body-secondary">
-                  {{ Storage::json($file)['medal_r_json']['algorithm_name'] }}
+                  {{ $file['project_name'] }}
                 </h6>
                 <p class="card-text">
-                  Last updated {{ date_create(Storage::json($file)['updated_at'])->format('d/m/Y h:i:s') }}
+                  Last updated {{ $file['updated_at'] }}
                 </p>
               </div>
               <div class="d-flex justify-content-end align-content-end mb-2 me-2">
-                <button class="btn button-unisante" type="button" data-bs-toggle="modal" data-bs-target="#start"
-                  data-bs-algorithm_id="{{ Storage::json($file)['id'] }}">
-                  Start
-                </button>
+                @if ($file['type'] === 'dynamic')
+                  <button class="btn button-unisante" type="button" data-bs-toggle="modal" data-bs-target="#start"
+                    data-bs-algorithm_id="{{ $file['id'] }}">
+                    Start
+                  </button>
+                @else
+                  <a href="{{ route('home.process', ['id' => $file['id']]) }}" class="btn button-unisante">
+                    Start
+                  </a>
+                @endif
+
               </div>
             </div>
           </div>
