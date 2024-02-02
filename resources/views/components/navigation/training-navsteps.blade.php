@@ -4,7 +4,7 @@
   <div class="steps">
     <div name="navstep" style="{{ $saved_step >= 1 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="{{ $saved_step >= 1 ? 'goToStep(\'consultation\')' : '' }}"
-      class="training-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step > 1 ? ' success' : '' }}">
+      class="step training-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step > 1 ? ' success' : '' }}">
       @if ($saved_step > 1)
         <div class="success-icon">
           <div>
@@ -34,10 +34,10 @@
     @if ($saved_step >= 2)
       <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
         wire:click="goToStep('diagnoses')"
-        class="training-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step[1] >= 101 && $saved_step >= 2 ? ' success' : '' }}">
+        class="step training-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step[1] >= 101 && $saved_step >= 2 ? ' success' : '' }}">
       @else
         <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
-          class="training-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step[1] >= 101 && $saved_step >= 2 ? ' success' : '' }}">
+          class="step training-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step[1] >= 101 && $saved_step >= 2 ? ' success' : '' }}">
     @endif
 
     @if ($saved_step >= 2)

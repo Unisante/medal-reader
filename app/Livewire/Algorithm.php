@@ -75,8 +75,11 @@ class Algorithm extends Component
     ];
 
     public array $completion_per_step = [
-        0 => 30,
+        0 => 90,
         1 => 0,
+        2 => 0,
+        3 => 0,
+        4 => 0,
     ];
 
     public string $current_sub_step = '';
@@ -268,6 +271,8 @@ class Algorithm extends Component
                     }
                     if ($node['category'] === "background_calculation" || $node['display_format'] === "Formula") {
                         $formula_hash_map[$node['id']] = $node['formula'];
+                        //Todo create the hashmap for every linked nodes not only the last one
+                        //Exemple with BMI : only height make it recalulate, not the weight!
                         $this->algorithmService->handleNodesToUpdate($node, $nodes_to_update);
                     }
                     if (!empty($node['conditioned_by_cc'])) {
@@ -464,8 +469,8 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -611,6 +616,7 @@ class Algorithm extends Component
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
         $full_nodes = $cached_data['full_nodes'];
+        $initial_value = $value;
 
         Debugbar::stopMeasure("saveNodecache");
 
@@ -621,8 +627,8 @@ class Algorithm extends Component
             if (array_key_exists($node_id, $formula_hash_map)) {
                 $value = $this->handleFormula($node_id);
             }
+            $answer_id_and_label = $this->handleAnswers($node_id, $initial_value);
             $this->nodes_to_save[$node_id] = intval($value);
-            $answer_id_and_label = $this->handleAnswers($node_id, $value);
             if ($this->current_step === 'registration') {
                 $this->current_nodes['registration'][$node_id] = $answer_id_and_label;
             }
@@ -657,12 +663,11 @@ class Algorithm extends Component
                     ];
                 }
             }
-
             // If node is linked to some bc, we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
                 foreach ($nodes_to_update[$node_id] as $node_id) {
                     $value = $this->handleFormula($node_id);
-                    $answer_id = $this->handleAnswers($node_id, $value);
+                    $answer_id = $this->handleAnswers($node_id, $initial_value);
                     if ($this->current_step === 'registration') {
                         $this->current_nodes['registration'][$node_id] = $answer_id;
                     }
@@ -672,7 +677,7 @@ class Algorithm extends Component
                     if ($this->current_step === 'consultation') {
                         $this->current_nodes['consultation']['medical_history']['others'][$node_id] = $answer_id;
                     }
-                    $this->saveNode($node_id, $answer_id, null, null);
+                    $this->saveNode($node_id, $initial_value, null, null);
                 }
             }
         }

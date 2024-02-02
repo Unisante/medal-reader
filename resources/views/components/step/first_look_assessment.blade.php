@@ -1,5 +1,7 @@
 @props(['nodes', 'full_nodes'])
 
+<h2 class="fw-normal pb-3">First Look Assessment</h2>
+
 {{-- Vitals --}}
 {{-- todo fix that not being checked if changing step --}}
 @foreach ($nodes['first_look_nodes_id'] ?? [] as $node_id => $node_value)
@@ -44,4 +46,4 @@
     @endswitch
   </div>
 @endforeach
-<button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('consultation')">consultation</button>
+<button class="btn button-unisante m-1" wire:click="goToStep('consultation')">consultation</button>

@@ -6,6 +6,18 @@
     margin: 0mm;
 }
 
+.training-step {
+    width: calc(100% / 3);
+}
+
+.prevention-step {
+    width: calc(100% / 4);
+}
+
+.dynamic-step {
+    width: calc(100% / 5);
+}
+
 .steps {
     width: 100%;
     display: flex;
@@ -13,9 +25,9 @@
     background-color: $color-grey-extra-light;
     justify-content: center;
 
-    .training-step {
+    .step {
         @extend %step;
-        width: calc(100% / 3);
+        // width: calc(100% / 3);
         min-width: 210px;
         background-color: $color-white-dark;
         font-size: 1.2rem;
@@ -70,7 +82,7 @@
                 align-items: center;
                 align-content: center;
                 border-radius: 100%;
-                background-color: $color-green;
+                background-color: $color-primary;
                 aspect-ratio: 1/1;
                 margin: auto;
 
@@ -147,7 +159,7 @@
 
             .content {
                 >.step-name {
-                    color: $color-green;
+                    color: $color-primary;
                 }
             }
 
@@ -171,7 +183,7 @@
         background-color: $color-marker;
 
         &.green {
-            background-color: #20c374
+            background-color: $color-primary
         }
     }
 }

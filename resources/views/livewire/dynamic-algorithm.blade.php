@@ -2,24 +2,25 @@
   <div>
     <h2 class="fw-normal">{{ $title }}</h2>
   </div>
+  @php
+    $cache = Cache::get($cache_key);
+    $full_nodes = $cache['full_nodes'];
+    $final_diagnoses = $cache['final_diagnoses'];
+    $health_cares = $cache['health_cares'];
+    $villages = $cache['villages'];
+  @endphp
+  {{-- @dump($current_nodes) --}}
+  {{-- Registration --}}
+
+  {{-- @dump($current_nodes["registration"]) --}}
+  {{-- @dump($current_nodes["first_look_assessment"]) --}}
+  {{-- @dump($current_nodes["consultation"]) --}}
+  {{-- @dump($current_nodes["registration"]["others"]) --}}
+
+  <x-navigation.dynamic-navsteps :$current_step :$saved_step :$completion_per_step />
+
   <div class="row g-3">
     <div class="col-9">
-      @php
-        $cache = Cache::get($cache_key);
-        $full_nodes = $cache['full_nodes'];
-        $final_diagnoses = $cache['final_diagnoses'];
-        $health_cares = $cache['health_cares'];
-        $villages = $cache['villages'];
-      @endphp
-      {{-- @dump($current_nodes) --}}
-      {{-- Registration --}}
-
-      {{-- @dump($current_nodes["registration"]) --}}
-      {{-- @dump($current_nodes["first_look_assessment"]) --}}
-      {{-- @dump($current_nodes["consultation"]) --}}
-      {{-- @dump($current_nodes["registration"]["others"]) --}}
-
-      <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
       <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
         @foreach ($steps[$current_step] as $index => $title)
           <li class="nav-item" role="presentation">
@@ -32,20 +33,18 @@
         @endforeach
       </ul>
       <div class="tab-content" id="myTabContent">
-
         @foreach ($steps[$current_step] as $index => $substep_title)
           <div wire:key="{{ 'consultation-' . $substep_title }}"
             class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
-            id="{{ Str::slug($substep_title) }}" role="tabpanel"
-            aria-labelledby="{{ Str::slug($substep_title) }}-tab">
+            id="{{ Str::slug($substep_title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($substep_title) }}-tab">
             @if ($substep_title === 'medical_history')
-              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                :villages="$villages" />
+              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes
+                :$villages />
             @endif
             @if ($substep_title === 'physical_exams')
               @if (isset($current_nodes['consultation']['physical_exam']))
-                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes"
-                  :villages="$villages" />
+                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :$nodes_to_save :$full_nodes
+                  :$villages />
               @endif
             @endif
           </div>
@@ -54,12 +53,12 @@
 
       @if ($current_step === 'registration')
         {{-- @dump($current_nodes['registration']) --}}
-        <x-step.registration :nodes="$current_nodes['registration']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" :villages="$villages" />
+        <x-step.registration :nodes="$current_nodes['registration']" :$nodes_to_save :$full_nodes :$villages :$algorithm_type />
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :full_nodes="$full_nodes" />
+        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :$full_nodes />
       @endif
       {{-- @dd($full_nodes) --}}
 
@@ -69,14 +68,16 @@
       {{-- Tests --}}
       @if ($current_step === 'tests')
         @if (isset($this->current_nodes['tests']))
-          <x-step.tests :nodes="$current_nodes['tests']" :nodes_to_save="$nodes_to_save" :full_nodes="$full_nodes" />
+          <x-step.tests :nodes="$current_nodes['tests']" :$nodes_to_save :$full_nodes />
         @else
-          <h1>There are no tests</h1>
+          <h2 class="fw-normal pb-3">Tests</h2>
+          <h3 class="fw-normal pb-3">There are no test</h3>
         @endif
       @endif
 
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
+        <h2 class="fw-normal pb-3">Diagnoses</h2>
         <div class="tab-content" id="myTabContent">
           @foreach ($steps[$current_step] as $index => $title)
             <div class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
@@ -127,15 +128,13 @@
                           @switch($full_nodes[$node_id]['display_format'])
                             @case('RadioButton')
                               <td>
-                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id"
-                                  :cache_key="$cache_key" />
+                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
                               </td>
                             @break
 
                             @case('DropDownList')
                               <td>
-                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id"
-                                  :cache_key="$cache_key" />
+                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
                               </td>
                             @break
 

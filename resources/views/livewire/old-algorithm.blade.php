@@ -16,7 +16,7 @@
       @if ($current_step === 'registration')
         {{-- //todo do not send anything more than ID to any nested component ! --}}
         <livewire:components.step.registration wire:key="registration" :nodes="$current_nodes" :cache_key="$cache_key" />
-        <button class="btn btn-sm btn-outline-primary m-1"
+        <button class="btn button-unisante m-1"
           wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
       @endif
       @if ($current_step === 'first_look_assessment')
@@ -89,7 +89,7 @@
             @endswitch
           </div>
         @endforeach
-        <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('consultation')">consultation</button>
+        <button class="btn button-unisante m-1" wire:click="goToStep('consultation')">consultation</button>
         {{-- <button class="btn btn-sm btn-outline-secondary m-1" wire:click="submitCC({{ reset($chosen_complaint_categories) }})">Next</button> --}}
       @endif
 
@@ -150,13 +150,13 @@
               @endforeach
             </div>
             @if (!$loop->first)
-              <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToPreviousCc()">Previous CC</button>
+              <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous CC</button>
             @endif
             @if (!$loop->last)
-              <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToNextCc()">Next CC</button>
+              <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next CC</button>
             @endif
             @if ($loop->last)
-              <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('tests')">tests</button>
+              <button class="btn button-unisante m-1" wire:click="goToStep('tests')">tests</button>
             @endif
           @endif
         @endforeach

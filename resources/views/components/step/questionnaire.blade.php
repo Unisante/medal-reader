@@ -4,11 +4,19 @@
   $cache = Cache::get($cache_key);
   $full_nodes = $cache['full_nodes'];
 @endphp
+
 @foreach ($nodes as $cc_id => $cc)
   <div wire:key="{{ 'chosen-cc-' . $cc_id }}">
+
     @if ($current_cc == $cc_id)
+      @if (array_key_exists($cc_id, $full_nodes))
+        <h2 class="fw-normal pb-3">{{ $full_nodes[$cc_id]['label']['en'] }}</h2>
+      @else
+        <h2 class="fw-normal pb-3">Questionnaire</h2>
+      @endif
       @foreach ($cc as $node_id => $answer_id)
         <div wire:key="{{ 'nodes-' . $node_id }}">
+
           @switch($full_nodes[$node_id]['display_format'])
             @case('RadioButton')
               <x-inputs.radio step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
@@ -45,21 +53,17 @@
 
         </div>
       @endforeach
-      @if (!$loop->first)
-        <div class="d-flex justify-content-end">
-          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous CC</button>
-        </div>
-      @endif
-      @if (!$loop->last)
-        <div class="d-flex justify-content-end">
-          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next CC</button>
-        </div>
-      @endif
-      @if ($loop->last)
-        <div class="d-flex justify-content-end">
+      <div class="d-flex justify-content-end">
+        @if (!$loop->first)
+          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Précédant</button>
+        @endif
+        @if (!$loop->last)
+          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Suivant</button>
+        @endif
+        @if ($loop->last)
           <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Results</button>
-        </div>
-      @endif
+        @endif
+      </div>
     @endif
   </div>
 @endforeach

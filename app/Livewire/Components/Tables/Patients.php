@@ -52,7 +52,6 @@ class Patients extends Component
 
         // $patients = new FHIRPatient;
         $response = $this->fhirService->getPatientsFromRemoteFHIRServer();
-
         $patients = [];
         $this->pagination_buttons = [0];
         if ($response->successful()) {
@@ -65,14 +64,14 @@ class Patients extends Component
                 /** @var FHIRId $id */
                 $id = $patient_resource->getId()->getValue()->getValue();
                 $name = $patient_resource->getName()[0];
-                $givenName = $name->getGiven()[0];
-                $familyName = $name->getFamily();
+                $given_name = $name->getGiven()[0];
+                $family_name = $name->getFamily();
                 $prefix = $name->getPrefix()[0] ?? '';
-                $familyExtension = $familyName->getExtension()[0] ?? '';
+                $family_extension = $family_name->getExtension()[0] ?? '';
                 /** @var FHIRAttachment $photo */
                 $photo = $patient_resource->getPhoto();
                 $avatar = !empty($photo) ? $photo->getUrl()[0] :
-                    Avatar::create("$givenName $familyName")->toBase64();
+                    Avatar::create("$given_name $family_name")->toBase64();
                 $gender = $patient_resource->getGender()->getValue()->getValue();
                 /** @var FHIRContactPoint $phone */
                 $phone = $patient_resource->getTelecom()[0]->getValue()->getValue()->__toString();
@@ -89,7 +88,7 @@ class Patients extends Component
 
                 $patients[] = [
                     'id' => $id,
-                    'name' => "$prefix $givenName $familyName $familyExtension",
+                    'name' => "$prefix $given_name $family_name $family_extension",
                     'avatar' => $avatar,
                     'gender' => $gender,
                     'phone' => $phone,
@@ -172,12 +171,5 @@ class Patients extends Component
         $this->first_page = $this->current_page === 1;
         $this->class = "show";
         $this->style = "display: block;";
-    }
-
-    public function paginate($items, $per_page = 10, $page = null, $options = [])
-    {
-        $page = $page ?: (Paginator::resolveCurrentPage() ?: 1);
-        $items = $items instanceof Collection ? $items : Collection::make($items);
-        return new LengthAwarePaginator($items->forPage($page, $per_page), $items->count(), $per_page, $page, $options);
     }
 }

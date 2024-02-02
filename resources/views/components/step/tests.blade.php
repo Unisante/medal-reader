@@ -1,5 +1,7 @@
 @props(['nodes', 'nodes_to_save', 'full_nodes'])
 
+<h2 class="fw-normal pb-3">Tests</h2>
+
 @foreach ($nodes as $node_id => $value)
   <P>{{ $node_id }}</P>
   <div wire:key="{{ 'nodes-' . $node_id }}">

@@ -10,7 +10,7 @@
     <h2 class="fw-normal">{{ $title }}</h2>
   </div>
 
-  <x-navigation.training-navstep :current_step="$current_step" :saved_step="$saved_step" :completion_per_step="$completion_per_step" />
+  <x-navigation.training-navsteps :$current_step :$saved_step :$completion_per_step />
 
   <div class="row g-3 mt-3">
     <div class="col-8">

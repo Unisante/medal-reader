@@ -1,5 +1,7 @@
 @props(['substep', 'nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages'])
 
+<h2 class="fw-normal pb-3">Consultation</h2>
+
 @foreach ($nodes as $title => $system)
   {{-- System container --}}
   <div wire:key="{{ 'system-' . $substep . $title }}">
@@ -10,8 +12,7 @@
           @if (isset($full_nodes[$node_id]['display_format']))
             @switch($full_nodes[$node_id]['display_format'])
               @case('RadioButton')
-                <x-inputs.radio step='{{"consultation.$substep.$title"}}' :node_id="$node_id"
-                  :full_nodes="$full_nodes"/>
+                <x-inputs.radio step='{{ "consultation.$substep.$title" }}' :node_id="$node_id" :full_nodes="$full_nodes" />
               @break
 
               @case('String')
@@ -47,6 +48,6 @@
     @endif
   </div>
   @if ($loop->last)
-    <button class="btn btn-sm btn-outline-primary m-1" wire:click="goToStep('tests')">tests</button>
+    <button class="btn button-unisante m-1" wire:click="goToStep('tests')">tests</button>
   @endif
 @endforeach

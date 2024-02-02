@@ -1,4 +1,6 @@
-@props(['nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages'])
+@props(['nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages', 'algorithm_type'])
+
+<h2 class="fw-normal pb-3">Registration</h2>
 
 @foreach ($nodes as $node_id => $answer_id)
   <div wire:key="{{ 'registration-' . $node_id }}" class="mb-2">
@@ -49,6 +51,12 @@
 
   </div>
 @endforeach
-
-<button class="btn btn-sm btn-outline-primary m-1"
-  wire:click="goToStep('first_look_assessment')">first_look_assessment</button>
+<div class="d-flex justify-content-end">
+  @if ($algorithm_type === 'dynamic')
+    <button class="btn button-unisante m-1" wire:click="goToStep('first_look_assessment')">First Look
+      Assessmenet</button>
+  @else
+    <button class="btn button-unisante m-1" wire:click="goToStep('first_look_assessment')">Choix des
+      questionnaires</button>
+  @endif
+</div>

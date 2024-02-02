@@ -2,28 +2,31 @@
   <div>
     <h2 class="fw-normal">{{ $title }}</h2>
   </div>
+  @php
+    $cache = Cache::get($cache_key);
+    $full_nodes = $cache['full_nodes'];
+    $final_diagnoses = $cache['final_diagnoses'];
+    $health_cares = $cache['health_cares'];
+  @endphp
+
+  <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
+
   <div class="row g-3">
     <div class="col-9">
-      @php
-        $cache = Cache::get($cache_key);
-        $full_nodes = $cache['full_nodes'];
-        $final_diagnoses = $cache['final_diagnoses'];
-        $health_cares = $cache['health_cares'];
-      @endphp
-
       {{-- Registration --}}
       @if (array_key_exists('first_look_assessment', $current_nodes))
         @if ($current_step === 'registration')
           <x-step.registration :nodes="$current_nodes['registration'] +
-              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :$nodes_to_save :$full_nodes :$cache_key />
+              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :$nodes_to_save :$full_nodes :$cache_key :$algorithm_type />
         @endif
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
+        <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
         @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
           <div wire:key="{{ 'cc-' . $node_id }}">
-            <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :node_id="$node_id" :$cache_key />
+            <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
           </div>
         @endforeach
       @endif
@@ -33,13 +36,9 @@
         <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key />
       @endif
 
-      {{-- Tests --}}
-      @if ($current_step === 'tests')
-      @endif
-
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
-        <h1 class="bg-dark text-light ">{{ strtoupper($current_step) }}</h1>
+        <h2 class="fw-normal pb-3">Résultats</h2>
         <ul class="nav nav-tabs" id="myTab" role="tablist">
           @foreach ($steps[$current_step] as $index => $title)
             <li class="nav-item" role="presentation">
@@ -54,8 +53,8 @@
 
         <div class="tab-content" id="myTabContent">
           @foreach ($steps[$current_step] as $index => $title)
-            <div class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
-              id="{{ Str::slug($title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($title) }}-tab">
+            <div class="tab-pane fade @if ($current_sub_step === $title) show active @endif" id="{{ Str::slug($title) }}"
+              role="tabpanel" aria-labelledby="{{ Str::slug($title) }}-tab">
               @if ($current_sub_step === 'final_diagnoses')
                 <table class="table table-striped">
                   <thead>
