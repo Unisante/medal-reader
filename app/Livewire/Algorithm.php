@@ -809,7 +809,7 @@ class Algorithm extends Component
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
-                                && intval($this->nodes_to_save[$condition['node_id']]['answer_id']) != $condition['answer_id']
+                                && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
                             ) {
                                 $other_conditions_met = false;
                             }
