@@ -38,13 +38,13 @@
             class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
             id="{{ Str::slug($substep_title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($substep_title) }}-tab">
             @if ($substep_title === 'medical_history')
-              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes
-                :$villages />
+              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes :$villages
+                :$debug_mode />
             @endif
             @if ($substep_title === 'physical_exams')
               @if (isset($current_nodes['consultation']['physical_exam']))
-                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :$nodes_to_save :$full_nodes
-                  :$villages />
+                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :$nodes_to_save :$full_nodes :$villages
+                  :$debug_mode />
               @endif
             @endif
           </div>

@@ -55,10 +55,12 @@
 @endforeach
 <div class="d-flex justify-content-end">
   @if ($algorithm_type === 'dynamic')
-    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">First Look
-      Assessmenet</button>
+    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">
+      First Look Assessment
+    </button>
   @else
-    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">Choix des
-      questionnaires</button>
+    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">
+      Choix des questionnaires
+    </button>
   @endif
 </div>

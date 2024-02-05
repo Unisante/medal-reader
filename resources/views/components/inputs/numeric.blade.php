@@ -15,7 +15,8 @@
     @endif
   </label>
   <input class="form-control @error('value') is-invalid @enderror" type="text"
-    wire:model.number.live='{{ "current_nodes.$step.$node_id" }}' name="{{ $node_id }}" id="{{ $node_id }}">
+    wire:model.live.debounce.300ms.number='{{ "current_nodes.$step.$node_id" }}' name="{{ $node_id }}"
+    id="{{ $node_id }}">
   @error("{{ 'current_nodes.registration.' . $node_id }}")
     <div class="invalid-feedback" role="alert">{{ $message }}</div>
   @enderror

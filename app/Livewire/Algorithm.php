@@ -629,7 +629,6 @@ class Algorithm extends Component
             $node = $full_nodes[$node_id];
             $system = isset($node['system']) ? $node['system'] : 'others';
             $this->nodes_to_save[$node_id]['value'] = $value;
-            Log::info("savedNode $node_id -> $value");
 
             if (array_key_exists($node_id, $formula_hash_map)) {
                 $pretty_answer = $this->handleFormula($node_id);
@@ -644,7 +643,12 @@ class Algorithm extends Component
 
                 if ($this->current_step === 'consultation') {
                     if ($this->algorithm_type === 'dynamic') {
-                        $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $pretty_answer;
+                        if (
+                            !array_key_exists($node_id, $this->current_nodes['registration'])
+                            && !array_key_exists($node_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
+                        ) {
+                            $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $pretty_answer;
+                        }
                     } else {
                         $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $pretty_answer;
                     }
@@ -676,19 +680,30 @@ class Algorithm extends Component
             }
 
             // If node is linked to some bc, we calculate them directly
+            //But only if the bcs is already displayed
             if (array_key_exists($node_id, $nodes_to_update)) {
                 foreach ($nodes_to_update[$node_id] as $node_to_update_id) {
                     $pretty_answer = $this->handleFormula($node_to_update_id);
                     if ($this->current_step === 'registration') {
-                        $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['registration'])) {
+                            $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
+                        }
                     }
                     if ($this->current_step === 'first_look_assessment') {
-                        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_to_update_id] = $pretty_answer;
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id']) || $this->algorithm_type === 'dynamic') {
+                            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_to_update_id] = $pretty_answer;
+                        }
                     }
                     if ($this->current_step === 'consultation') {
                         if ($this->algorithm_type === 'dynamic') {
-                            $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
-                        } else {
+                            if (
+                                !array_key_exists($node_to_update_id, $this->current_nodes['registration'])
+                                && !array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
+                            ) {
+                                $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
+                            }
+                        }
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
                             $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
                         }
                     }
@@ -696,9 +711,6 @@ class Algorithm extends Component
             }
         }
         Debugbar::stopMeasure("saveNode");
-        $t = $this->nodes_to_save[$node_id]['answer_id'] ?? $answer_id;
-
-        Log::info("displayNextNode $t -> $old_answer_id");
 
         return $this->displayNextNode($node_id, $this->nodes_to_save[$node_id]['answer_id'] ?? $answer_id, $old_answer_id);
     }
@@ -759,20 +771,23 @@ class Algorithm extends Component
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
                 if (array_key_exists($node, $formula_hash_map)) {
-                    if (!array_key_exists($node, $this->current_nodes['registration'])) {
-                        $pretty_answer = $this->handleFormula($node);
-                        if ($this->current_step === 'first_look_assessment') {
-                            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
-                        }
-                        if ($this->current_step === 'consultation') {
-                            if ($this->algorithm_type === 'dynamic') {
-                                $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
-                            } else {
-                                $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node] = $pretty_answer;
-                            }
-                        }
-                        $next_nodes_id = $this->getNextNodesId($this->nodes_to_save[$node]['value']);
+                    $pretty_answer = $this->handleFormula($node);
+                    if ($this->current_step === 'first_look_assessment') {
+                        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
                     }
+                    if ($this->current_step === 'consultation') {
+                        if ($this->algorithm_type === 'dynamic') {
+                            if (
+                                !array_key_exists($node, $this->current_nodes['registration'])
+                                && !array_key_exists($node, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
+                            ) {
+                                $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
+                            }
+                        } else {
+                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node] = $pretty_answer;
+                        }
+                    }
+                    $next_nodes_id = $this->getNextNodesId($this->nodes_to_save[$node]['answer_id']);
                 }
             }
         }
@@ -852,7 +867,6 @@ class Algorithm extends Component
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
                 if (!array_key_exists($node, $this->current_nodes['registration'])) {
-                    Log::info("set next node $node");
                     $this->setNextNode($node);
                 }
             }
@@ -995,7 +1009,9 @@ class Algorithm extends Component
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], $this->cache_key);
                 }
             } else {
-                $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id] = '';
+                if (!isset($this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id])) {
+                    $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id] = '';
+                }
             }
         }
     }
