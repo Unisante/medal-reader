@@ -175,6 +175,7 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
                 'dependency_map' => [],
+                'nodes_max_depth' => [],
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
@@ -294,7 +295,7 @@ class Algorithm extends Component
             });
 
         $answers_hash_map = [];
-        $dependency_map = [];
+        $nodes_max_depth = [];
         $consultation_nodes = [];
         $female_gender_answer_id = '';
         $male_gender_answer_id = '';
@@ -335,7 +336,6 @@ class Algorithm extends Component
                     }
 
                     if (!empty($instance['conditions'])) {
-
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
@@ -346,6 +346,8 @@ class Algorithm extends Component
                             if (!in_array($instance_id, $answers_hash_map[$step][$answer_id])) {
                                 $answers_hash_map[$step][$answer_id][] = $instance_id;
                             }
+
+                            $this->algorithmService->depthFirstSearch($diag['instances'], $node_id, $nodes_max_depth, 2);
 
                             $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $this->cache_key);
 
@@ -374,7 +376,6 @@ class Algorithm extends Component
             }
         }
 
-
         $this->algorithmService->sortSystemsAndNodesPerCC($consultation_nodes, $this->cache_key);
 
         $nodes_per_step = [
@@ -388,6 +389,9 @@ class Algorithm extends Component
         // We already know that every nodes inside $nodes_per_step are the one without condition
         $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
 
+        dump($nodes_max_depth);
+        //todo actually stop calulating again if cache found. Create function in service and
+        //cache get or cache create and get
         if (!$cache_found) {
             Cache::put($this->cache_key, [
                 ...$cached_data,
@@ -399,6 +403,7 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map,
+                'nodes_max_depth' => $nodes_max_depth,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
                 'need_emergency' => $need_emergency,
@@ -483,11 +488,55 @@ class Algorithm extends Component
         dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         dump($cached_data['answers_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
+    }
+
+    public function calculateCompletionPercentage()
+    {
+        $cached_data = Cache::get($this->cache_key);
+        foreach ($this->current_nodes['consultation']['medical_history'] as $nodes_in_system) {
+            $current_nodes = array_keys($nodes_in_system);
+        }
+
+        $visited_depth = array_sum(
+            array_intersect_key(
+                $cached_data['nodes_max_depth'],
+                array_flip($current_nodes)
+            )
+        );
+
+        // $total_depth = array_sum(array_unique($cached_data['nodes_max_depth']));
+
+        // dd($current_nodes);
+        // $visited_depth = count($current_nodes);
+        $max_depth = max(array_unique($cached_data['nodes_max_depth']));
+        $total_depth = $visited_depth + $max_depth;
+
+
+        if ($total_depth === 0) {
+            return 0;
+        }
+
+        $completion_percentage = ($visited_depth / $total_depth) * 100;
+        // dump($cached_data['nodes_max_depth']);
+        // dump(array_intersect_key(
+        // $cached_data['nodes_max_depth'],
+        // array_flip($current_nodes)
+        // ));
+        $start_percentage = $this->completion_per_step['consultation'];
+        dump($cached_data['nodes_max_depth']);
+        dump(array_intersect_key(
+            $cached_data['nodes_max_depth'],
+            array_flip($current_nodes)
+        ));
+        dump($current_nodes);
+        dump($total_depth);
+        $this->completion_per_step['consultation'] = min(100, round($completion_percentage));
+        $this->dispatch('animate', 2, $start_percentage);
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -523,6 +572,12 @@ class Algorithm extends Component
             if (array_key_exists($value, $need_emergency)) {
                 $this->dispatch('openEmergencyModal');
             }
+        }
+
+
+        //todo calulate but also check when modification behavior
+        if ($this->current_step === 'consultation') {
+            $this->calculateCompletionPercentage();
         }
     }
 

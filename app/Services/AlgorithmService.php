@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use DateTime;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 
 class AlgorithmService
@@ -10,6 +11,22 @@ class AlgorithmService
 
     public function __construct()
     {
+    }
+
+    public function depthFirstSearch($instances, $node_id, &$depth_map, $depth = 0)
+    {
+        if (!isset($depth_map[$node_id]) || $depth > $depth_map[$node_id]) {
+            $depth_map[$node_id] = $depth;
+
+            foreach ($instances as $instance) {
+                if ($instance['id'] === $node_id) {
+                    foreach ($instance['conditions'] as $condition) {
+                        $next_node_id = $condition['node_id'];
+                        $this->depthFirstSearch($instances, $next_node_id, $depth_map, $depth + 1);
+                    }
+                }
+            }
+        }
     }
 
     public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map)

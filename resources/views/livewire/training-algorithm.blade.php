@@ -44,6 +44,12 @@
         Livewire.on("scrollTop", () => {
           window.scrollTo(0, 0);
         });
+        Livewire.on('animate', (step, startPercentage) => {
+          circles = document.getElementsByClassName('circle-consultation')
+          circles[0].style.setProperty('--startPercentage', startPercentage);
+          var newone = circles[0].cloneNode(true);
+          circles[0].parentNode.replaceChild(newone, circles[0]);
+        });
       });
     </script>
   @endpush
