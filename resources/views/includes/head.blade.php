@@ -7,13 +7,15 @@
 <!-- Fonts -->
 <link rel="stylesheet" href="{{ mix('css/heebo.css') }}">
 <link rel="stylesheet" href="{{ mix('css/poppins.css') }}">
-<link rel="preload" href="{{ asset('fonts/poppins-v20-latin-500.woff2') }}" as="font" type="font/woff"
+
+{{-- todo when in prod and fonts chosen, preload these --}}
+{{-- <link rel="preload" href="{{ asset('fonts/poppins-v20-latin-500.woff2') }}" as="font" type="font/woff"
   crossorigin>
 <link rel="preload" href="{{ asset('fonts/poppins-v20-latin-regular.woff2') }}" as="font" type="font/woff"
   crossorigin>
 <link rel="preload" href="{{ asset('fonts/heebo-v21-latin-regular.woff2') }}" as="font" type="font/woff"
   crossorigin>
-<link rel="preload" href="{{ asset('fonts/heebo-v21-latin-500.woff2') }}" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="{{ asset('fonts/heebo-v21-latin-400.woff2') }}" as="font" type="font/woff" crossorigin> --}}
 <link href="{{ mix('css/app.css') }}" rel="stylesheet">
 <link rel="icon" href="{{ mix('images/favicon.png') }}">
 <style>

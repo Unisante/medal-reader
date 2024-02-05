@@ -14096,7 +14096,7 @@ textarea.form-control-lg {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
-  stroke: #e70005;
+  stroke: #d20f2c;
   animation: progress 1s ease-out forwards;
 }
 .single-chart .circular-chart .circle-animate {
@@ -14127,6 +14127,14 @@ textarea.form-control-lg {
 }
 .training-step {
   width: 33.3333333333%;
+}
+
+.prevention-step {
+  width: 25%;
+}
+
+.dynamic-step {
+  width: 20%;
 }
 
 .steps {
@@ -14181,7 +14189,7 @@ textarea.form-control-lg {
   align-items: center;
   align-content: center;
   border-radius: 100%;
-  background-color: #e70005;
+  background-color: #d20f2c;
   aspect-ratio: 1/1;
   margin: auto;
 }
@@ -14241,7 +14249,7 @@ textarea.form-control-lg {
   display: none;
 }
 .steps .step.success .content > .step-name {
-  color: #e70005;
+  color: #d20f2c;
 }
 .steps .step.success .success-icon {
   display: flex;
@@ -14260,7 +14268,7 @@ textarea.form-control-lg {
   background-color: #4b8def;
 }
 .bar-container .bar-completed.green {
-  background-color: #e70005;
+  background-color: #d20f2c;
 }
 
 .step-title {
@@ -14462,19 +14470,24 @@ textarea.form-control-lg {
 
 .button-unisante {
   display: block;
-  color: #e70005;
+  color: #d20f2c;
   background-color: #fff;
   border: 1px solid #acacac;
   transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 .button-unisante:hover {
   background-image: linear-gradient(to bottom, #feffff 0, #f2f5f7 100%);
-  color: #e70005;
+  color: #d20f2c;
   border: 1px solid #acacac;
 }
 .button-unisante:active {
   background-image: linear-gradient(to bottom, #f1f6f9 0, #e2e5eb 100%);
   border: 1px solid #acacac;
+}
+.button-unisante:disabled {
+  opacity: 0.65;
+  pointer-events: none;
+  color: #6c757d;
 }
 
 [x-cloak] {

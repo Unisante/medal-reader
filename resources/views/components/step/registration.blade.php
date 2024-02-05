@@ -1,4 +1,4 @@
-@props(['nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages', 'algorithm_type'])
+@props(['nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages', 'algorithm_type', 'debug_mode'])
 
 <h2 class="fw-normal pb-3">Registration</h2>
 
@@ -29,7 +29,7 @@
         @break
 
         @case('Input')
-          <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
+          <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
         @break
 
         @case('String')
@@ -42,7 +42,9 @@
         @break
 
         @case('Formula')
-          <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="true" />
+          @if ($debug_mode)
+            <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="true" />
+          @endif
         @break
 
         @default
@@ -53,10 +55,10 @@
 @endforeach
 <div class="d-flex justify-content-end">
   @if ($algorithm_type === 'dynamic')
-    <button class="btn button-unisante m-1" wire:click="goToStep('first_look_assessment')">First Look
+    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">First Look
       Assessmenet</button>
   @else
-    <button class="btn button-unisante m-1" wire:click="goToStep('first_look_assessment')">Choix des
+    <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">Choix des
       questionnaires</button>
   @endif
 </div>

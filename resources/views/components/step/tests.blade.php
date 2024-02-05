@@ -1,4 +1,4 @@
-@props(['nodes', 'nodes_to_save', 'full_nodes'])
+@props(['nodes', 'nodes_to_save', 'full_nodes', 'debug_mode'])
 
 <h2 class="fw-normal pb-3">Tests</h2>
 
@@ -16,7 +16,8 @@
         @break
 
         @case('Input')
-          <x-inputs.numeric step="tests.{{ $node_id }}" :node_id="$node_id" :full_nodes="$full_nodes" />
+          <x-inputs.numeric step="tests.{{ $node_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
+            :label="$nodes_to_save[$node_id]['label']":$debug_mode />
         @break
 
         @case('Formula')

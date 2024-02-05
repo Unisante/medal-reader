@@ -57,10 +57,14 @@ class FHIRService
         $resource = preg_replace('/[^A-Za-z]/', '', $resource);
         $url = rtrim($this->getRemoteFHIRServerUrl(), '/');
 
-        $response = Http::withHeaders($this->getHeaders())->get("$url/$resource", [
-            '_count' => 1000,
-            '_pretty' => true,
-        ]);
+        try {
+            $response = Http::withHeaders($this->getHeaders())->get("$url/$resource", [
+                '_count' => 1000,
+                '_pretty' => true,
+            ]);
+        } catch (Exception $e) {
+            return null;
+        }
         // $response->throw()->json();
         // dd($response);
 

@@ -1,4 +1,4 @@
-@props(['step', 'node_id', 'cache_key', 'is_background_calc','full_nodes'])
+@props(['step', 'node_id', 'cache_key', 'is_background_calc', 'full_nodes'])
 
 <div class="mb-2">
   <label class="form-label" for="{{ $node_id }}">

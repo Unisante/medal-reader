@@ -60,7 +60,7 @@ class AlgorithmService
         $formula = $node['formula'];
 
         preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($node, &$nodes_to_update) {
-            if (isset($nodes_to_update[$matches[1]])) {
+            if (isset($nodes_to_update[$matches[1]]) && !in_array($node['id'], $nodes_to_update[$matches[1]])) {
                 $nodes_to_update[$matches[1]][] = $node['id'];
             } else {
                 $nodes_to_update[$matches[1]] = [$node['id']];

@@ -9,6 +9,7 @@ use Barryvdh\Debugbar\Facades\Debugbar;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
+use DivisionByZeroError;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -28,6 +29,7 @@ class Algorithm extends Component
     public int $cache_expiration_time;
     public string $title;
     public string $algorithm_type;
+    public bool $debug_mode = true;
     //todo remove definition when in prod
     public string $age_key = 'older';
     public string $current_step = 'registration';
@@ -47,8 +49,8 @@ class Algorithm extends Component
     public array $drugs_formulation;
     public array $formulations_to_display;
 
-    private $algorithmService;
-    private $fhirService;
+    private AlgorithmService $algorithmService;
+    private FHIRService $fhirService;
     public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
@@ -75,11 +77,11 @@ class Algorithm extends Component
     ];
 
     public array $completion_per_step = [
-        0 => 90,
-        1 => 0,
-        2 => 0,
-        3 => 0,
-        4 => 0,
+        'registration' => 0,
+        'first_look_assessment' => 0,
+        'consultation' => 0,
+        'tests' => 0,
+        'diagnoses' => 0,
     ];
 
     public string $current_sub_step = '';
@@ -179,6 +181,8 @@ class Algorithm extends Component
                 'need_emergency' => [],
                 'female_gender_answer_id' => '',
                 'male_gender_answer_id' => '',
+                'registration_total' => '',
+                'first_look_assessment_total' => '',
             ], $this->cache_expiration_time);
         }
 
@@ -227,7 +231,11 @@ class Algorithm extends Component
             foreach ($cached_data['first_look_assessment_nodes_id'] as $substep_name => $substep) {
                 foreach ($substep as $node_id) {
                     if ($node_id !== $cached_data['general_cc_id'] && $node_id !== $cached_data['yi_general_cc_id']) {
-                        $this->nodes_to_save[$node_id] = "";
+                        $this->nodes_to_save[$node_id] = [
+                            'value' => '',
+                            'answer_id' => '',
+                            'label' => '',
+                        ];
                         $node = $cached_data['full_nodes'][$node_id];
                         $age_key = $node['is_neonat'] ? 'neonat' : 'older';
                         if (
@@ -267,12 +275,14 @@ class Algorithm extends Component
                         $need_emergency[$node['emergency_answer_id']] = $node['id'];
                     }
                     if ($node['display_format'] === "Input" || $node['display_format'] === "Formula") {
-                        $this->nodes_to_save[$node['id']] = "";
+                        $this->nodes_to_save[$node['id']]  = [
+                            'value' => '',
+                            'answer_id' => '',
+                            'label' => '',
+                        ];
                     }
                     if ($node['category'] === "background_calculation" || $node['display_format'] === "Formula") {
                         $formula_hash_map[$node['id']] = $node['formula'];
-                        //Todo create the hashmap for every linked nodes not only the last one
-                        //Exemple with BMI : only height make it recalulate, not the weight!
                         $this->algorithmService->handleNodesToUpdate($node, $nodes_to_update);
                     }
                     if (!empty($node['conditioned_by_cc'])) {
@@ -394,9 +404,12 @@ class Algorithm extends Component
                 'need_emergency' => $need_emergency,
                 'female_gender_answer_id' => $female_gender_answer_id,
                 'male_gender_answer_id' => $male_gender_answer_id,
+                'registration_total' => count($cached_data['registration_nodes_id']),
+                'first_look_assessment_total' =>  count($cached_data['first_look_assessment_nodes_id']),
             ], $this->cache_expiration_time);
             $cached_data = Cache::get($this->cache_key);
         }
+
         $this->current_nodes['registration'] = $registration_nodes;
 
         //todo remove these when in prod
@@ -417,14 +430,14 @@ class Algorithm extends Component
         }
 
         if ($this->algorithm_type === 'prevention') {
-            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
+            $this->current_nodes['registration'] +=
                 $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
 
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
         }
         //END TO REMOVE
-
+        // dd($this->current_nodes);
         // If we are in training mode then we go directly to consultation step
         if ($this->algorithm_type === 'training') {
             $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
@@ -467,13 +480,13 @@ class Algorithm extends Component
         // dump($cached_data['full_order']);
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
-        // dump($cached_data['formula_hash_map']);
+        dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
-        // dump($cached_data['nodes_to_update']);
+        dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
     }
 
@@ -505,12 +518,6 @@ class Algorithm extends Component
             return;
         }
 
-        // We force to int the value comming from
-        $intvalue = floatval($value);
-
-        if ($intvalue == $value || floatval($value) !== 0) {
-            Arr::set($this->current_nodes, $key, $intvalue);
-        }
         // If the answer trigger the emergency modal
         if ($this->algorithm_type === 'dynamic') {
             if (array_key_exists($value, $need_emergency)) {
@@ -534,7 +541,6 @@ class Algorithm extends Component
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $old_value = $this->chosen_complaint_categories[$modified_cc_id] ?? null;
         $current_nodes_per_step = $nodes_per_step['consultation']['general'];
-
 
         // We only do this modification behavior if the consultation step has already been calculated
         if (isset($this->current_nodes['consultation'])) {
@@ -616,38 +622,43 @@ class Algorithm extends Component
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
         $full_nodes = $cached_data['full_nodes'];
-        $initial_value = $value;
 
         Debugbar::stopMeasure("saveNodecache");
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             $node = $full_nodes[$node_id];
             $system = isset($node['system']) ? $node['system'] : 'others';
+            $this->nodes_to_save[$node_id]['value'] = $value;
+            Log::info("savedNode $node_id -> $value");
 
             if (array_key_exists($node_id, $formula_hash_map)) {
-                $value = $this->handleFormula($node_id);
-            }
-            $answer_id_and_label = $this->handleAnswers($node_id, $initial_value);
-            $this->nodes_to_save[$node_id] = intval($value);
-            if ($this->current_step === 'registration') {
-                $this->current_nodes['registration'][$node_id] = $answer_id_and_label;
-            }
+                $pretty_answer = $this->handleFormula($node_id);
 
-            if ($this->current_step === 'first_look_assessment') {
-                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_id] = $answer_id_and_label;
-            }
+                if ($this->current_step === 'registration') {
+                    $this->current_nodes['registration'][$node_id] = $pretty_answer;
+                }
 
-            if ($this->current_step === 'consultation') {
-                if ($this->algorithm_type === 'dynamic') {
-                    $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $answer_id_and_label;
-                } else {
-                    $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $answer_id_and_label;
+                if ($this->current_step === 'first_look_assessment') {
+                    $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_id] = $pretty_answer;
+                }
+
+                if ($this->current_step === 'consultation') {
+                    if ($this->algorithm_type === 'dynamic') {
+                        $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $pretty_answer;
+                    } else {
+                        $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $pretty_answer;
+                    }
                 }
             }
 
+            //This function will save in nodes_to_save the answer
+            //We do not display this pretty answer for now
+            $old_answer_id = $this->nodes_to_save[$node_id]['answer_id'] ?? null;
+            $pretty_answer_not_used = $this->handleAnswers($node_id, $this->nodes_to_save[$node_id]['value']);
+
             // If answer will set a drug, we add it to the drugs to display
-            if (array_key_exists($value, $drugs_hash_map)) {
-                foreach ($drugs_hash_map[$value] as $drug_id) {
+            if (array_key_exists($this->nodes_to_save[$node_id]['answer_id'], $drugs_hash_map)) {
+                foreach ($drugs_hash_map[$this->nodes_to_save[$node_id]['answer_id']] as $drug_id) {
                     if (!array_key_exists($drug_id, $this->drugs_to_display)) {
                         $this->drugs_to_display[$drug_id] = false;
                     }
@@ -656,34 +667,40 @@ class Algorithm extends Component
 
             // If answer will set a management, we add it to the managements to display
             if (isset($this->all_managements_to_display)) {
-                if (array_key_exists($value, $managements_hash_map)) {
+                if (array_key_exists($this->nodes_to_save[$node_id]['answer_id'], $managements_hash_map)) {
                     $this->all_managements_to_display = [
                         ...$this->all_managements_to_display,
-                        ...$managements_hash_map[$value]
+                        ...$managements_hash_map[$this->nodes_to_save[$node_id]['answer_id']]
                     ];
                 }
             }
+
             // If node is linked to some bc, we calculate them directly
             if (array_key_exists($node_id, $nodes_to_update)) {
-                foreach ($nodes_to_update[$node_id] as $node_id) {
-                    $value = $this->handleFormula($node_id);
-                    $answer_id = $this->handleAnswers($node_id, $initial_value);
+                foreach ($nodes_to_update[$node_id] as $node_to_update_id) {
+                    $pretty_answer = $this->handleFormula($node_to_update_id);
                     if ($this->current_step === 'registration') {
-                        $this->current_nodes['registration'][$node_id] = $answer_id;
+                        $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
                     }
                     if ($this->current_step === 'first_look_assessment') {
-                        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_id] = $answer_id;
+                        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_to_update_id] = $pretty_answer;
                     }
                     if ($this->current_step === 'consultation') {
-                        $this->current_nodes['consultation']['medical_history']['others'][$node_id] = $answer_id;
+                        if ($this->algorithm_type === 'dynamic') {
+                            $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
+                        } else {
+                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                        }
                     }
-                    $this->saveNode($node_id, $initial_value, null, null);
                 }
             }
         }
         Debugbar::stopMeasure("saveNode");
+        $t = $this->nodes_to_save[$node_id]['answer_id'] ?? $answer_id;
 
-        return $this->displayNextNode($node_id, $answer_id, $old_answer_id);
+        Log::info("displayNextNode $t -> $old_answer_id");
+
+        return $this->displayNextNode($node_id, $this->nodes_to_save[$node_id]['answer_id'] ?? $answer_id, $old_answer_id);
     }
 
     #[On('nodeUpdated')]
@@ -701,7 +718,7 @@ class Algorithm extends Component
         Debugbar::stopMeasure("displayNextNodeCache");
 
         // Modification behavior
-        if ($old_value) {
+        if ($old_value && $value !== $old_value) {
             // Remove linked diag and management
             if (isset($df_hash_map[$old_value])) {
                 foreach ($df_hash_map[$old_value] as $df) {
@@ -742,12 +759,19 @@ class Algorithm extends Component
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
                 if (array_key_exists($node, $formula_hash_map)) {
-                    // dd($value);
-                    // dd($next_nodes_id);
                     if (!array_key_exists($node, $this->current_nodes['registration'])) {
-                        $bc_value = $this->handleFormula($node);
-                        $this->nodes_to_save[$node] = intval($bc_value);
-                        $next_nodes_id = $this->getNextNodesId($value);
+                        $pretty_answer = $this->handleFormula($node);
+                        if ($this->current_step === 'first_look_assessment') {
+                            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
+                        }
+                        if ($this->current_step === 'consultation') {
+                            if ($this->algorithm_type === 'dynamic') {
+                                $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
+                            } else {
+                                $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node] = $pretty_answer;
+                            }
+                        }
+                        $next_nodes_id = $this->getNextNodesId($this->nodes_to_save[$node]['value']);
                     }
                 }
             }
@@ -770,7 +794,7 @@ class Algorithm extends Component
                             // Need also to calculate if node is not in nodes_to_save like radio button
                             if (
                                 array_key_exists($condition['node_id'], $this->nodes_to_save)
-                                && intval($this->nodes_to_save[$condition['node_id']]) != $condition['answer_id']
+                                && intval($this->nodes_to_save[$condition['node_id']]['answer_id']) != $condition['answer_id']
                             ) {
                                 $other_conditions_met = false;
                             }
@@ -828,6 +852,7 @@ class Algorithm extends Component
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
                 if (!array_key_exists($node, $this->current_nodes['registration'])) {
+                    Log::info("set next node $node");
                     $this->setNextNode($node);
                 }
             }
@@ -846,6 +871,7 @@ class Algorithm extends Component
 
         $formula = $formula_hash_map[$node_id];
 
+        //In this situation we just have to get the days/months/years
         if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
             $today = new DateTime('today');
             $dob = new DateTime($this->current_nodes['registration']['birth_date']);
@@ -877,44 +903,31 @@ class Algorithm extends Component
                         }
                     }
                 }
-                return $days;
+                $result = $days;
             } elseif ($formula === "ToMonth") {
-                return $interval->m + ($interval->y * 12);
+                $result = $interval->m + ($interval->y * 12);
             } elseif ($formula === "ToYear") {
-                return $interval->y;
+                $result = $interval->y;
+            }
+        } else {
+
+            //In this situation we have a formula to calculate
+            $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) {
+                return $this->nodes_to_save[$matches[1]]['value'];
+            }, $formula);
+
+            try {
+                $result = (new ExpressionLanguage())->evaluate($formula);
+            } catch (DivisionByZeroError $e) {
+                return null;
+            } catch (Exception $e) {
+                return null;
             }
         }
 
-        $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) {
-            return $this->nodes_to_save[$matches[1]];
-        }, $formula);
-
-        try {
-            $result = (new ExpressionLanguage())->evaluate($formula);
-        } catch (Exception $e) {
-            return null;
-        }
-
-        foreach ($full_nodes[$node_id]['answers'] as $answer) {
-
-            $value = $answer['value'];
-            $values = explode(',', $value);
-            $minValue = intval($values[0]);
-            $maxValue = intval($values[1] ?? $minValue);
-
-            $answer_id = match ($answer['operator']) {
-                'more_or_equal' => $result >= $minValue ? $answer['id'] : null,
-                'less' => $result < $minValue ? $answer['id'] : null,
-                'between' => ($result >= $minValue && $result < $maxValue) ? $answer['id'] : null,
-                default => null,
-            };
-            if ($answer_id) {
-                return $answer_id;
-            }
-        }
-
-        return null;
+        return $this->handleAnswers($node_id, $result);
     }
+
     public function handleAnswers($node_id, $value)
     {
         $answers = Cache::get($this->cache_key)['full_nodes'][$node_id]["answers"];
@@ -925,16 +938,22 @@ class Algorithm extends Component
             $minValue = intval($answer_values[0]);
             $maxValue = intval($answer_values[1] ?? $minValue);
 
-            $answer = match ($answer['operator']) {
-                'more_or_equal' => $result >= $minValue ? "{$answer['id']} : {$answer['label']['en']}" : null,
-                'less' => $result < $minValue ? "{$answer['id']} : {$answer['label']['en']}" : null,
-                'between' => ($result >= $minValue && $result < $maxValue) ? "{$answer['id']} : {$answer['label']['en']}" : null,
+            $answer_found = match ($answer['operator']) {
+                'more_or_equal' => $result >= $minValue ? true : false,
+                'less' => $result < $minValue ? true : false,
+                'between' => ($result >= $minValue && $result < $maxValue) ? true : false,
                 default => null,
             };
-            if ($answer) {
-                return $answer;
+
+            if ($answer_found) {
+                $label = "{$answer['id']} : {$answer['label']['en']} ($result is {$answer['operator']} {$answer['value']})";
+                $this->nodes_to_save[$node_id]['answer_id'] = $answer['id'];
+                $this->nodes_to_save[$node_id]['label'] = $label;
+                return $label;
             }
         }
+        $this->nodes_to_save[$node_id]['value'] = $value;
+
         return $value;
     }
 
@@ -944,9 +963,8 @@ class Algorithm extends Component
         $birth_date_formulas = $cached_data['birth_date_formulas'];
 
         foreach ($birth_date_formulas as $node_id) {
-            $value = $this->handleFormula($node_id);
-            $answer_id = $this->handleAnswers($node_id, $value);
-            $this->current_nodes['registration'][$node_id] = $answer_id;
+            $pretty_answer = $this->handleFormula($node_id);
+            $this->current_nodes['registration'][$node_id] = $pretty_answer;
         }
     }
 

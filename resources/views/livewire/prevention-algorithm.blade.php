@@ -1,6 +1,14 @@
 <div class="mb-5">
-  <div>
-    <h2 class="fw-normal">{{ $title }}</h2>
+  <div class="d-flex justify-content-between">
+    <div>
+      <h2 class="fw-normal">{{ $title }}</h2>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" wire:model.live="debug_mode" value="" id="enable_debug" checked>
+      <label class="form-check-label" for="enable_debug">
+        Enable debug mode
+      </label>
+    </div>
   </div>
   @php
     $cache = Cache::get($cache_key);
@@ -11,29 +19,35 @@
 
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
 
-  <div class="row g-3">
+  <div class="row g-3 mt-3">
     <div class="col-9">
       {{-- Registration --}}
       @if (array_key_exists('first_look_assessment', $current_nodes))
         @if ($current_step === 'registration')
-          <x-step.registration :nodes="$current_nodes['registration'] +
-              $current_nodes['first_look_assessment']['basic_measurements_nodes_id']" :$nodes_to_save :$full_nodes :$cache_key :$algorithm_type />
+          <x-step.registration :nodes="$current_nodes['registration']" :$nodes_to_save :$full_nodes :$cache_key :$algorithm_type
+            :$debug_mode />
         @endif
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-        <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
-        @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
-          <div wire:key="{{ 'cc-' . $node_id }}">
-            <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
+        <div>
+          <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
+          @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
+            <div wire:key="{{ 'cc-' . $node_id }}">
+              <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
+            </div>
+          @endforeach
+          <div class="d-flex justify-content-end">
+            <button class="btn button-unisante mt-3" @if (empty(array_filter($chosen_complaint_categories))) disabled @endif
+              wire:click="goToStep('consultation')">Questionnaires</button>
           </div>
-        @endforeach
+        </div>
       @endif
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
       @endif
 
       {{-- Diagnoses --}}
@@ -267,8 +281,8 @@
           <div wire:key="{{ 'go-step-' . $key }}">
             <button class="btn btn-outline-primary m-1"
               wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"
-              aria-expanded="false"></button>
+            <button class="btn btn-outline-primary m-1 dropdown-toggle dropdown-toggle-split"
+              data-bs-toggle="dropdown" aria-expanded="false"></button>
             <ul class="dropdown-menu">
               @foreach ($substeps as $substep)
                 <div wire:key="{{ 'go-sub-step-' . $substep }}">
@@ -293,45 +307,14 @@
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Modal -->
-  <div class="modal fade" id="emergencyModal" tabindex="-1" aria-labelledby="emergencyModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header border-0 d-flex justify-content-between">
-          <div></div>
-          <div>
-            <h5 class="modal-title text-danger" id="emergencyModalLabel">EMERGENCY ASSISTANCE</h5>
-          </div>
-          <div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-        </div>
-        <div class="modal-body border-0 mx-auto">
-          The patient is presenting a severe/emergency symptom or sign. Click on the emergency button if the child needs
-          emergency care now.
-        </div>
-        <div class="modal-footer border-0 mx-auto">
-          <button type="button" class="btn btn-danger">GO TO EMERGENCY</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  @push('scripts')
-    <script type="text/javascript">
-      document.addEventListener('livewire:init', () => {
-        const emergencyModal = document.getElementById('emergencyModal');
-
-        Livewire.on('openEmergencyModal', () => {
-          var bootstrapEmergencyModal = new bootstrap.Modal(emergencyModal)
-          bootstrapEmergencyModal.show()
-        });
-
-        Livewire.on("scrollTop", () => {
-          window.scrollTo(0, 0);
-        });
+@push('scripts')
+  <script type="text/javascript">
+    document.addEventListener('livewire:init', () => {
+      Livewire.on("scrollTop", () => {
+        window.scrollTo(0, 0);
       });
-    </script>
-  @endpush
+    });
+  </script>
+@endpush

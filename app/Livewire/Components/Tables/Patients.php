@@ -37,7 +37,7 @@ class Patients extends Component
     public string $class;
     public string $style;
 
-    protected $fhirService;
+    protected FHIRService $fhirService;
 
     public function boot(FHIRService $fhirService)
     {
@@ -54,7 +54,7 @@ class Patients extends Component
         $response = $this->fhirService->getPatientsFromRemoteFHIRServer();
         $patients = [];
         $this->pagination_buttons = [0];
-        if ($response->successful()) {
+        if ($response?->successful()) {
             /** @var FHIRBundle $patients_bundle */
             $patients_bundle = $parser->parse($response->json());
 

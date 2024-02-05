@@ -1,4 +1,4 @@
-@props(['nodes', 'cache_key', 'current_cc', 'nodes_to_save'])
+@props(['nodes', 'cache_key', 'current_cc', 'nodes_to_save', 'debug_mode'])
 
 @php
   $cache = Cache::get($cache_key);
@@ -19,33 +19,35 @@
 
           @switch($full_nodes[$node_id]['display_format'])
             @case('RadioButton')
-              <x-inputs.radio step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
-                :cache_key="$cache_key" />
+              <x-inputs.radio step="consultation.medical_history.{{ $cc_id }}" :$node_id :$full_nodes :$cache_key />
             @break
 
             @case('String')
-              <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
-                :cache_key="$cache_key" :is_background_calc="false" />
+              <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :$node_id :$full_nodes :$cache_key
+                :is_background_calc="false" />
             @break
 
             @case('DropDownList')
-              <x-inputs.select step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
-                :cache_key="$cache_key" />
+              <x-inputs.select step="consultation.medical_history.{{ $cc_id }}" :$node_id :$full_nodes :$cache_key />
             @break
 
             @case('Input')
-              <x-inputs.numeric step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :full_nodes="$full_nodes"
-                :cache_key="$cache_key" />
+              <x-inputs.numeric step="consultation.medical_history.{{ $cc_id }}" :$node_id :$full_nodes :$cache_key
+                :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
             @break
 
             @case('Formula')
-              <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :value="$nodes_to_save[$node_id]" :node_id="$node_id"
-                :full_nodes="$full_nodes" :cache_key="$cache_key" :is_background_calc="true" />
+              @if ($debug_mode)
+                <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :value="$nodes_to_save[$node_id]" :$node_id
+                  :$full_nodes :$cache_key :is_background_calc="true" />
+              @endif
             @break
 
             @case('Reference')
-              <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :node_id="$node_id" :value="$nodes_to_save[$node_id]"
-                :full_nodes="$full_nodes" :cache_key="$cache_key" :is_background_calc="true" />
+              @if ($debug_mode)
+                <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :$node_id :value="$nodes_to_save[$node_id]"
+                  :$full_nodes :$cache_key :is_background_calc="true" />
+              @endif
             @break
 
             @default
