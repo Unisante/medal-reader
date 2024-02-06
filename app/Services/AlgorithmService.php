@@ -13,20 +13,24 @@ class AlgorithmService
     {
     }
 
-    public function getReachableNodes($adjacency_list, $start)
+    public function getReachableNodes($adjacency_list, $answer_hash_map, $start)
     {
         $visited = [];
-        $this->dfs($adjacency_list, $start, $visited);
-        return $visited;
+        $max_nodes = 0;
+        $this->dfs($adjacency_list, $answer_hash_map, $start, 0, $max_nodes, $visited);
+        return $max_nodes;
     }
 
-    private function dfs($adjacency_list, $node, &$visited)
+    private function dfs($adjacency_list, $answer_hash_map, $answer_id, $current_count, &$max_nodes, &$visited)
     {
-        $visited[$node] = true;
-        if (isset($adjacency_list[$node])) {
-            foreach ($adjacency_list[$node] as $neighbor) {
+        $visited[$answer_id] = true;
+        $current_count++;
+        $max_nodes = max($max_nodes, $current_count);
+
+        if (isset($adjacency_list[$answer_id])) {
+            foreach ($adjacency_list[$answer_id] as $neighbor) {
                 if (!isset($visited[$neighbor])) {
-                    $this->dfs($adjacency_list, $neighbor, $visited);
+                    $this->dfs($adjacency_list, $answer_hash_map, $neighbor, $current_count, $max_nodes, $visited);
                 }
             }
         }
@@ -70,13 +74,38 @@ class AlgorithmService
         return $max_child_height;
     }
 
-    public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map)
+
+    public function calculateMaxChildLength($instances, $node_id, &$max_length)
     {
-        $stack = [$start_node_id];
+        if (!isset($instances[$node_id])) {
+            return 0;
+        }
+
+        $instance = $instances[$node_id];
+        $max_length[$node_id] = 0;
+
+        foreach ($instance['conditions'] as $condition) {
+            $child_max_length = 0;
+            foreach ($instance['children'] as $child_node_id) {
+                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $child_node_id, $max_length));
+            }
+            $max_length[$node_id] = max($max_length[$node_id], $child_max_length + 1);
+        }
+
+        return $max_length[$node_id];
+    }
+
+    public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length)
+    {
+        // Calculate maximum lengths for each node
+        $this->calculateMaxChildLength($instances, $start_node_id, $max_length);
+
+        // Implement breadth-first search using $max_length
+        $stack = [[$start_node_id, 0]];
         $nodes_visited = [];
 
         while (!empty($stack)) {
-            $node_id = array_shift($stack);
+            [$node_id, $length] = array_shift($stack);
 
             if (isset($nodes_visited[$node_id])) {
                 continue;
@@ -89,29 +118,37 @@ class AlgorithmService
                     if (!isset($dependency_map[$answer_id])) {
                         $dependency_map[$answer_id] = [];
                     }
-                    $dependency_map[$answer_id][] = $instance_id;
+                    if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
+                        $dependency_map[$answer_id][] = $instance_id;
+                    }
                 }
 
-                $children = $instance['children'];
                 foreach ($instance['conditions'] as $condition) {
                     if ($condition['node_id'] === $node_id) {
+                        $length++;
+
+                        $length = max($max_length[$node_id] ?? 0, $length);
+                        if (!isset($max_length[$answer_id]) || $length > $max_length[$answer_id]) {
+                            $max_length[$answer_id] = $length;
+                        }
 
                         if (!isset($dependency_map[$answer_id])) {
                             $dependency_map[$answer_id] = [];
                         }
 
-                        if (!in_array($instance_id, $dependency_map[$answer_id])) {
+                        if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
                             $dependency_map[$answer_id][] = $instance_id;
                         }
 
-                        foreach ($children as $child_node_id) {
-                            $stack[] = $child_node_id;
+                        foreach ($instance['children'] as $child_node_id) {
+                            $stack[] = [$child_node_id, $length];
                         }
                     }
                 }
             }
         }
     }
+
 
     public function handleNodesToUpdate($node, &$nodes_to_update)
     {

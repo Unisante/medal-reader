@@ -175,6 +175,7 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
                 'dependency_map' => [],
+                'max_length' => [],
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
@@ -294,7 +295,7 @@ class Algorithm extends Component
             });
 
         $answers_hash_map = [];
-        $adjacency_list = [];
+        $max_length = [];
         $consultation_nodes = [];
         $female_gender_answer_id = '';
         $male_gender_answer_id = '';
@@ -346,19 +347,9 @@ class Algorithm extends Component
                                 $answers_hash_map[$step][$answer_id][] = $instance_id;
                             }
 
-                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $this->cache_key);
-
-                            if (!isset($adjacency_list[$answer_id])) {
-                                $adjacency_list[$answer_id] = [];
-                            }
-                            $dependencies = [];
-                            if (isset($dependency_map[$answer_id])) {
-                                $dependencies = $dependency_map[$answer_id];
-                            }
-                            $adjacency_list[$answer_id] = array_merge($adjacency_list[$answer_id], $dependencies);
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $max_length);
 
                             $node = $cached_data['full_nodes'][$node_id];
-
                             if ($node['type'] === 'QuestionsSequence') {
                                 foreach ($node['instances'] as $qs_instance) {
                                     if (!empty($qs_instance['conditions'])) {
@@ -370,7 +361,7 @@ class Algorithm extends Component
                                             // Need to find the good if because if we just filter priority_sign it will then not remove
                                             // if (isset($cached_data['full_nodes'][$qs_instance['id']]['system']) && $cached_data['full_nodes'][$qs_instance['id']]['system'] !== 'priority_sign') {
                                             $answers_hash_map[$step][$qs_condition['answer_id']][] = $qs_instance['id'];
-                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map, $this->cache_key);
+                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map, $max_length);
                                             // }
                                         }
                                     }
@@ -394,8 +385,9 @@ class Algorithm extends Component
 
         // We already know that every nodes inside $nodes_per_step are the one without condition
         $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
-        dump($adjacency_list);
 
+        // dump($dependency_map);
+        // dump($max_length);
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
@@ -409,6 +401,7 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map,
+                'max_length' => $max_length,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
                 'need_emergency' => $need_emergency,
@@ -482,7 +475,7 @@ class Algorithm extends Component
             }
         }
 
-        dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
+        // dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
 
         // dd($this->registration_nodes_id);
         // dd($cached_data);
@@ -494,8 +487,8 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map'][6625]);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['answers_hash_map'][6625]);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -508,46 +501,44 @@ class Algorithm extends Component
         //not existing mean stop tree for that node
 
         $cached_data = Cache::get($this->cache_key);
-        $max_height = max($cached_data['answers_height']) + 2;
+        $current_answers = array_flip(array_filter(Arr::flatten($this->current_nodes['consultation']['medical_history'])));
+        $total = 0;
 
-        $visited_nodes = array_filter(Arr::flatten($this->current_nodes['consultation']['medical_history']));
-
-        $visited_height = 0;
-        $root_weight = 0;
-        $total_weight = 0;
-        foreach ($visited_nodes as $node) {
-            if (isset($cached_data['answers_weight'][intval($node)])) {
-                $height = $cached_data['answers_weight'][$node];
-                $weight = isset($cached_data['answers_weight'][$node]) ? $cached_data['answers_weight'][$node] : 0;
-                if ($height === 0) {
-                    $root_weight += $weight;
-                    $root_nodes[] = $node;
-                } else {
-                    $visited_height += $height * $weight;
-                    $total_weight += $weight;
+        foreach ($this->current_nodes['consultation']['medical_history'][$this->current_cc] as $node_id => $answer_id) {
+            if (empty($answer_id)) {
+                $answers = array_keys($cached_data['full_nodes'][$node_id]['answers']);
+                $potential_total = $total;
+                $potential_totals = [];
+                foreach ($answers as $answer_id) {
+                    $length = $cached_data['max_length'][$answer_id] ?? 0;
+                    $potential_totals[] = $length;
+                    // dump("answer :  $answer_id");
+                    // dump("next path :  $length");
                 }
-                $max_height = max($max_height, $height + 2);
+                // Find the maximum potential total among all paths
+                $potential_total = max($potential_totals);
+                // dump("potential_total : $potential_total");
+                $total += $potential_total; // Accumulate potential total to the total
+            } else {
+                $total++;
+                // dump("total++ : $total");
             }
         }
 
-        // If no nodes visited (except the root), consider max_height as visited height
-        if ($total_weight === 0 && !empty($visited_nodes)) {
-            $visited_height = $max_height - count($root_nodes);
-        }
+        $empty_nodes = array_reduce($this->current_nodes['consultation']['medical_history'], function ($carry, $inner_array) {
+            return $carry + count(array_filter($inner_array, function ($value) {
+                return empty($value);
+            }));
+        }, 0);
 
-        // Add the weight of the root node to the total weight
-        $total_weight += $root_weight;
+        // dump("empty_nodes : $empty_nodes");
+        $total = $total + $empty_nodes;
 
-        // If the total weight is 0, consider max_height as visited height
-        if ($total_weight === 0) {
-            $visited_height = $max_height;
-        }
-
-        dump($visited_nodes);
-        dump("visited_height $visited_height");
-        dump("max_height $max_height");
-
-        $completion_percentage = $visited_height / $max_height * 100;
+        // $total = $total + $potential_total;
+        // dump("total : $total");
+        // dump(count($current_answers));
+        // dump($total);
+        $completion_percentage = count($current_answers) / $total * 100;
 
         $start_percentage = $this->completion_per_step['consultation'];
         // dump($start_percentage);
@@ -590,7 +581,6 @@ class Algorithm extends Component
                 $this->dispatch('openEmergencyModal');
             }
         }
-
 
         //todo calulate but also check when modification behavior
         if ($this->current_step === 'consultation') {
@@ -757,9 +747,10 @@ class Algorithm extends Component
                 foreach ($nodes_to_update[$node_id] as $node_to_update_id) {
                     $pretty_answer = $this->handleFormula($node_to_update_id);
                     if ($this->current_step === 'registration') {
-                        if (array_key_exists($node_to_update_id, $this->current_nodes['registration'])) {
-                            $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
-                        }
+                        //todo Fix here as it's not displaying in all cases
+                        // if (array_key_exists($node_to_update_id, $this->current_nodes['registration'])) {
+                        $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
+                        // }
                     }
                     if ($this->current_step === 'first_look_assessment') {
                         if (array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id']) || $this->algorithm_type === 'dynamic') {

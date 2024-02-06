@@ -38,11 +38,13 @@
   @script
     <script type="text/javascript">
       $wire.on('animate', ([step, startPercentage]) => {
-        console.log(startPercentage)
-        circles = document.getElementsByClassName('circle')
-        circles[step].style.setProperty('--startPercentage', startPercentage);
-        var newone = circles[step].cloneNode(true);
-        circles[step].parentNode.replaceChild(newone, circles[step]);
+        setTimeout(() => {
+          console.log(startPercentage)
+          circles = document.getElementsByClassName('circle')
+          circles[step].style.setProperty('--startPercentage', startPercentage);
+          var newone = circles[step].cloneNode(true);
+          circles[step].parentNode.replaceChild(newone, circles[step]);
+        }, 1);
       });
       document.addEventListener('livewire:init', () => {
         Livewire.on("scrollTop", () => {
