@@ -544,7 +544,11 @@ class Algorithm extends Component
         // dump($start_percentage);
         // dump($completion_percentage);
         $this->completion_per_step['consultation'] = intval(min(100, round($completion_percentage)));
-        $this->dispatch('animate', 0, $start_percentage);
+        if ($this->algorithm_type === 'training') {
+            $this->dispatch('animate', 0, $start_percentage);
+        } else {
+            $this->dispatch('animate', 2, $start_percentage);
+        }
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -1183,6 +1187,8 @@ class Algorithm extends Component
         if (!empty($this->steps[$this->current_step])) {
             $this->current_sub_step = $this->steps[$this->current_step][0];
         }
+
+        $this->saved_step = array_search($this->current_step, array_keys($this->steps)) + 1;
 
         //todo uncomment it when in prod
         // $this->dispatch('scrollTop');
