@@ -175,7 +175,6 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
                 'dependency_map' => [],
-                'nodes_max_depth' => [],
                 'nodes_to_update' => [],
                 'nodes_per_step' => [],
                 'no_condition_nodes' => [],
@@ -295,7 +294,7 @@ class Algorithm extends Component
             });
 
         $answers_hash_map = [];
-        $nodes_max_depth = [];
+        $adjacency_list = [];
         $consultation_nodes = [];
         $female_gender_answer_id = '';
         $male_gender_answer_id = '';
@@ -347,9 +346,16 @@ class Algorithm extends Component
                                 $answers_hash_map[$step][$answer_id][] = $instance_id;
                             }
 
-                            $this->algorithmService->depthFirstSearch($diag['instances'], $node_id, $nodes_max_depth, 2);
-
                             $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $this->cache_key);
+
+                            if (!isset($adjacency_list[$answer_id])) {
+                                $adjacency_list[$answer_id] = [];
+                            }
+                            $dependencies = [];
+                            if (isset($dependency_map[$answer_id])) {
+                                $dependencies = $dependency_map[$answer_id];
+                            }
+                            $adjacency_list[$answer_id] = array_merge($adjacency_list[$answer_id], $dependencies);
 
                             $node = $cached_data['full_nodes'][$node_id];
 
@@ -388,8 +394,8 @@ class Algorithm extends Component
 
         // We already know that every nodes inside $nodes_per_step are the one without condition
         $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
+        dump($adjacency_list);
 
-        dump($nodes_max_depth);
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
@@ -403,7 +409,6 @@ class Algorithm extends Component
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map,
-                'nodes_max_depth' => $nodes_max_depth,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
                 'need_emergency' => $need_emergency,
@@ -477,6 +482,8 @@ class Algorithm extends Component
             }
         }
 
+        dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
+
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);
@@ -485,58 +492,68 @@ class Algorithm extends Component
         // dump($cached_data['full_order']);
         // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
-        dump($cached_data['formula_hash_map']);
+        // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map'][6625]);
         dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
-        dump($cached_data['nodes_to_update']);
+        // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
     }
 
     public function calculateCompletionPercentage()
     {
+        // -1 is a leaf
+        //not existing mean stop tree for that node
+
         $cached_data = Cache::get($this->cache_key);
-        foreach ($this->current_nodes['consultation']['medical_history'] as $nodes_in_system) {
-            $current_nodes = array_keys($nodes_in_system);
+        $max_height = max($cached_data['answers_height']) + 2;
+
+        $visited_nodes = array_filter(Arr::flatten($this->current_nodes['consultation']['medical_history']));
+
+        $visited_height = 0;
+        $root_weight = 0;
+        $total_weight = 0;
+        foreach ($visited_nodes as $node) {
+            if (isset($cached_data['answers_weight'][intval($node)])) {
+                $height = $cached_data['answers_weight'][$node];
+                $weight = isset($cached_data['answers_weight'][$node]) ? $cached_data['answers_weight'][$node] : 0;
+                if ($height === 0) {
+                    $root_weight += $weight;
+                    $root_nodes[] = $node;
+                } else {
+                    $visited_height += $height * $weight;
+                    $total_weight += $weight;
+                }
+                $max_height = max($max_height, $height + 2);
+            }
         }
 
-        $visited_depth = array_sum(
-            array_intersect_key(
-                $cached_data['nodes_max_depth'],
-                array_flip($current_nodes)
-            )
-        );
-
-        // $total_depth = array_sum(array_unique($cached_data['nodes_max_depth']));
-
-        // dd($current_nodes);
-        // $visited_depth = count($current_nodes);
-        $max_depth = max(array_unique($cached_data['nodes_max_depth']));
-        $total_depth = $visited_depth + $max_depth;
-
-
-        if ($total_depth === 0) {
-            return 0;
+        // If no nodes visited (except the root), consider max_height as visited height
+        if ($total_weight === 0 && !empty($visited_nodes)) {
+            $visited_height = $max_height - count($root_nodes);
         }
 
-        $completion_percentage = ($visited_depth / $total_depth) * 100;
-        // dump($cached_data['nodes_max_depth']);
-        // dump(array_intersect_key(
-        // $cached_data['nodes_max_depth'],
-        // array_flip($current_nodes)
-        // ));
+        // Add the weight of the root node to the total weight
+        $total_weight += $root_weight;
+
+        // If the total weight is 0, consider max_height as visited height
+        if ($total_weight === 0) {
+            $visited_height = $max_height;
+        }
+
+        dump($visited_nodes);
+        dump("visited_height $visited_height");
+        dump("max_height $max_height");
+
+        $completion_percentage = $visited_height / $max_height * 100;
+
         $start_percentage = $this->completion_per_step['consultation'];
-        dump($cached_data['nodes_max_depth']);
-        dump(array_intersect_key(
-            $cached_data['nodes_max_depth'],
-            array_flip($current_nodes)
-        ));
-        dump($current_nodes);
-        dump($total_depth);
-        $this->completion_per_step['consultation'] = min(100, round($completion_percentage));
-        $this->dispatch('animate', 2, $start_percentage);
+        // dump($start_percentage);
+        // dump($completion_percentage);
+        $this->completion_per_step['consultation'] = intval(min(100, round($completion_percentage)));
+        $this->dispatch('animate', 0, $start_percentage);
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -1124,18 +1141,23 @@ class Algorithm extends Component
 
                 $this->current_cc = key(array_filter($this->chosen_complaint_categories));
                 $current_nodes_per_step = $nodes_per_step[$step];
-
                 foreach ($current_nodes_per_step as $system_name => $system_data) {
                     foreach ($system_data as $cc_id => $nodes) {
                         if (isset($this->chosen_complaint_categories[$cc_id])) {
+
                             if ($this->algorithm_type === 'dynamic') {
                                 $consultation_nodes[$system_name] = $system_data[$cc_id];
-                            } else {
+                            } elseif ($this->algorithm_type === 'prevention') {
                                 $consultation_nodes[$cc_id] = $system_data[$cc_id];
+                            } else {
+                                if (isset($consultation_nodes[$cc_id])) {
+                                    $consultation_nodes[$cc_id] += $system_data[$cc_id];
+                                } else {
+                                    $consultation_nodes[$cc_id] = $system_data[$cc_id];
+                                }
                             }
                             continue;
                         }
-
                         // We only add nodes that are not excluded by CC
                         if (isset($conditioned_nodes_hash_map[$cc_id])) {
                             $consultation_nodes[$system_name] = array_diff(
@@ -1145,6 +1167,7 @@ class Algorithm extends Component
                         }
                     }
                 }
+
                 $this->current_nodes['consultation']['medical_history'] = $consultation_nodes;
             }
             $this->current_cc = key(array_filter($this->chosen_complaint_categories));

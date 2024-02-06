@@ -13,20 +13,61 @@ class AlgorithmService
     {
     }
 
-    public function depthFirstSearch($instances, $node_id, &$depth_map, $depth = 0)
+    public function getReachableNodes($adjacency_list, $start)
     {
-        if (!isset($depth_map[$node_id]) || $depth > $depth_map[$node_id]) {
-            $depth_map[$node_id] = $depth;
+        $visited = [];
+        $this->dfs($adjacency_list, $start, $visited);
+        return $visited;
+    }
 
-            foreach ($instances as $instance) {
-                if ($instance['id'] === $node_id) {
-                    foreach ($instance['conditions'] as $condition) {
-                        $next_node_id = $condition['node_id'];
-                        $this->depthFirstSearch($instances, $next_node_id, $depth_map, $depth + 1);
-                    }
+    private function dfs($adjacency_list, $node, &$visited)
+    {
+        $visited[$node] = true;
+        if (isset($adjacency_list[$node])) {
+            foreach ($adjacency_list[$node] as $neighbor) {
+                if (!isset($visited[$neighbor])) {
+                    $this->dfs($adjacency_list, $neighbor, $visited);
                 }
             }
         }
+    }
+
+    function createAdjacencyList($answer_hash_map, $dependency_map, &$adjacency_list)
+    {
+        foreach ($answer_hash_map as $answerId => $nodes) {
+            $adjacentNodes = [];
+            foreach ($nodes as $node) {
+                if (isset($dependency_map[$answerId])) {
+                    $adjacentNodes = array_merge($adjacentNodes, $dependency_map[$answerId]);
+                }
+            }
+            // Remove duplicate dependencies and add the adjacent nodes to the adjacency list
+            $adjacencyList[$answerId] = array_unique($adjacentNodes);
+        }
+    }
+
+    public function depthFirstSearch($instances, $node_id, $answer_id, &$height_map, &$visited)
+    {
+        if (isset($height_map[$answer_id])) {
+            return $height_map[$answer_id];
+        }
+
+        if (!isset($instances[$node_id])) {
+            return 0;
+        }
+
+        $max_child_height = 0;
+
+        foreach ($instances[$node_id]['conditions'] as $condition) {
+            $next_node_id = $condition['node_id'];
+            $child_height = 1 + $this->depthFirstSearch($instances, $next_node_id, $answer_id, $height_map, $visited);
+            $max_child_height = max($max_child_height, $child_height);
+        }
+
+        $height_map[$answer_id] = $max_child_height;
+        $visited[$answer_id] = true;
+
+        return $max_child_height;
     }
 
     public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map)

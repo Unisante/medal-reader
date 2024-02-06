@@ -35,21 +35,19 @@
     </div>
   </div>
 
-  {{-- Should we have emergency for training ? --}}
-  {{-- <x-modals.emergency /> --}}
-
-  @push('scripts')
+  @script
     <script type="text/javascript">
+      $wire.on('animate', ([step, startPercentage]) => {
+        console.log(startPercentage)
+        circles = document.getElementsByClassName('circle')
+        circles[step].style.setProperty('--startPercentage', startPercentage);
+        var newone = circles[step].cloneNode(true);
+        circles[step].parentNode.replaceChild(newone, circles[step]);
+      });
       document.addEventListener('livewire:init', () => {
         Livewire.on("scrollTop", () => {
           window.scrollTo(0, 0);
         });
-        Livewire.on('animate', (step, startPercentage) => {
-          circles = document.getElementsByClassName('circle-consultation')
-          circles[0].style.setProperty('--startPercentage', startPercentage);
-          var newone = circles[0].cloneNode(true);
-          circles[0].parentNode.replaceChild(newone, circles[0]);
-        });
       });
     </script>
-  @endpush
+  @endscript
