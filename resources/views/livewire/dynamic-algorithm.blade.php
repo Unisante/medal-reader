@@ -22,7 +22,7 @@
   <div class="row g-3">
     <div class="col-9">
       <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
-        @foreach ($steps[$current_step] as $index => $title)
+        @foreach ($steps[$algorithm_type][$current_step] as $index => $title)
           <li class="nav-item" role="presentation">
             <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
               data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
@@ -33,7 +33,7 @@
         @endforeach
       </ul>
       <div class="tab-content" id="myTabContent">
-        @foreach ($steps[$current_step] as $index => $substep_title)
+        @foreach ($steps[$algorithm_type][$current_step] as $index => $substep_title)
           <div wire:key="{{ 'consultation-' . $substep_title }}"
             class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
             id="{{ Str::slug($substep_title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($substep_title) }}-tab">
@@ -79,7 +79,7 @@
       @if ($current_step === 'diagnoses')
         <h2 class="fw-normal pb-3">Diagnoses</h2>
         <div class="tab-content" id="myTabContent">
-          @foreach ($steps[$current_step] as $index => $title)
+          @foreach ($steps[$algorithm_type][$current_step] as $index => $title)
             <div class="tab-pane fade @if ($current_sub_step === $title) show active @endif"
               id="{{ Str::slug($title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($title) }}-tab">
               @if ($current_sub_step === 'final_diagnoses')

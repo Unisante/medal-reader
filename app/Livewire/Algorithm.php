@@ -296,13 +296,15 @@ class Algorithm extends Component
             ->pointer('/medal_r_json/nodes')
             ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency) {
                 foreach ($value as $node) {
-                    if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
+                    // We don't skip REF
+                    // if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
+                    if ($node['type'] === 'QuestionsSequence') {
                         continue;
                     }
                     if ($node['emergency_status'] === 'emergency') {
                         $need_emergency[$node['emergency_answer_id']] = $node['id'];
                     }
-                    if ($node['display_format'] === "Input" || $node['display_format'] === "Formula") {
+                    if ($node['display_format'] === "Input" || $node['display_format'] === "Formula" || $node['display_format'] === 'Reference') {
                         $this->nodes_to_save[$node['id']]  = [
                             'value' => '',
                             'answer_id' => '',
@@ -310,8 +312,12 @@ class Algorithm extends Component
                         ];
                     }
                     if ($node['category'] === "background_calculation" || $node['display_format'] === "Formula") {
-                        $formula_hash_map[$node['id']] = $node['formula'];
-                        $this->algorithmService->handleNodesToUpdate($node, $nodes_to_update);
+                        // todo find another way to remove Reference from $formula_hash_map it's needed to filter from the total count of the percentage
+                        // but for now it's added in $formula_hash_map and in nodes_to_save
+                        $formula_hash_map[$node['id']] = $node['formula'] ?? '';
+                        if (array_key_exists('formula', $node)) {
+                            $this->algorithmService->handleNodesToUpdate($node, $nodes_to_update);
+                        }
                     }
                     if (!empty($node['conditioned_by_cc'])) {
                         foreach ($node['conditioned_by_cc'] as $cc_id) {
@@ -531,16 +537,18 @@ class Algorithm extends Component
 
         if ($this->current_step === 'registration') {
             $current_nodes = array_diff_key($this->current_nodes[$this->current_step], $cached_data['formula_hash_map']);
-            $total = count(array_diff_key(array_flip($cached_data['registration_nodes_id']), $cached_data['formula_hash_map']));
-            // $total = $cached_data['registration_nodes_id'];
+            $total = count($current_nodes);
         }
-        dump($current_nodes);
-        dump($cached_data['registration_nodes_id']);
-        dump(array_diff_key(array_flip($cached_data['registration_nodes_id']), $cached_data['formula_hash_map']));
 
         if ($this->current_step === 'first_look_assessment') {
-            $current_nodes = $this->current_nodes[$this->current_step]['basic_measurement'];
-            $total = $cached_data['first_look_assessment_total'];
+            $current_nodes = array_diff_key($this->current_nodes[$this->current_step]['basic_measurements_nodes_id'], $cached_data['formula_hash_map']);
+            $total = count($current_nodes);
+            if ($total === 0) {
+                $current_nodes = 1;
+                $total = 1;
+            }
+            // dump($this->current_nodes[$this->current_step]['basic_measurements_nodes_id']);
+            // dump($cached_data['formula_hash_map']);
         }
 
         if ($this->current_step === 'consultation') {
@@ -585,8 +593,6 @@ class Algorithm extends Component
         $this->completion_per_step[$this->current_step]['start'] = $start_percentage;
         $end_percentage = intval(min(100, round($completion_percentage)));
         $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
-        $step_index = array_search($this->current_step, array_keys($this->steps[$this->algorithm_type]));
-        // $this->dispatch('animate', $step_index, $start_percentage, $end_percentage);
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -608,6 +614,7 @@ class Algorithm extends Component
 
                 $cached_data = Cache::get($this->cache_key);
                 //todo optimize this function. As it take 1,3s for 35 nodes
+                $this->calculateCompletionPercentage();
                 $this->updateLinkedNodesOfDob($value);
 
                 // Set the first_look_assessment nodes that are depending on the age key
@@ -1219,7 +1226,7 @@ class Algorithm extends Component
 
         //We set the first substep
         if ($this->algorithm_type === 'dynamic') {
-            if (!empty($this->steps[$this->current_step][$this->algorithm_type])) {
+            if (!empty($this->steps[$this->algorithm_type][$this->current_step])) {
                 $this->current_sub_step = $this->steps[$this->algorithm_type][$this->current_step][0];
             }
         }
