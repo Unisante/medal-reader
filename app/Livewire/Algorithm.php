@@ -89,11 +89,26 @@ class Algorithm extends Component
     ];
 
     public array $completion_per_step = [
-        'registration' => 0,
-        'first_look_assessment' => 0,
-        'consultation' => 0,
-        'tests' => 0,
-        'diagnoses' => 0,
+        'registration' => [
+            'start' => 0,
+            'end' => 0,
+        ],
+        'first_look_assessment' => [
+            'start' => 0,
+            'end' => 0,
+        ],
+        'consultation' => [
+            'start' => 0,
+            'end' => 0,
+        ],
+        'tests' => [
+            'start' => 0,
+            'end' => 0,
+        ],
+        'diagnoses' => [
+            'start' => 0,
+            'end' => 0,
+        ],
     ];
 
     public string $current_sub_step = '';
@@ -510,13 +525,18 @@ class Algorithm extends Component
     public function calculateCompletionPercentage()
     {
         $cached_data = Cache::get($this->cache_key);
-        $current_answers = array_flip(array_filter(Arr::flatten($this->current_nodes['consultation']['medical_history'])));
         $total = 0;
 
+        // todo $current_nodes can contains background_calculation
+
         if ($this->current_step === 'registration') {
-            $current_nodes = $this->current_nodes[$this->current_step];
-            $total = $cached_data['registration_total'];
+            $current_nodes = array_diff_key($this->current_nodes[$this->current_step], $cached_data['formula_hash_map']);
+            $total = count(array_diff_key(array_flip($cached_data['registration_nodes_id']), $cached_data['formula_hash_map']));
+            // $total = $cached_data['registration_nodes_id'];
         }
+        dump($current_nodes);
+        dump($cached_data['registration_nodes_id']);
+        dump(array_diff_key(array_flip($cached_data['registration_nodes_id']), $cached_data['formula_hash_map']));
 
         if ($this->current_step === 'first_look_assessment') {
             $current_nodes = $this->current_nodes[$this->current_step]['basic_measurement'];
@@ -554,18 +574,19 @@ class Algorithm extends Component
             }
         }
 
-
+        $current_answers = array_filter($current_nodes);
         $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
 
         $total = $this->current_step === 'consultation' ? $total + $empty_nodes : $total;
 
         $completion_percentage = count($current_answers) / $total * 100;
 
-        $start_percentage = $this->completion_per_step['consultation'];
+        $start_percentage = $this->completion_per_step[$this->current_step]['end'];
+        $this->completion_per_step[$this->current_step]['start'] = $start_percentage;
         $end_percentage = intval(min(100, round($completion_percentage)));
-        $this->completion_per_step[$this->current_step] = $end_percentage;
+        $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
         $step_index = array_search($this->current_step, array_keys($this->steps[$this->algorithm_type]));
-        $this->dispatch('animate', $step_index, $start_percentage, $end_percentage);
+        // $this->dispatch('animate', $step_index, $start_percentage, $end_percentage);
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -603,9 +624,7 @@ class Algorithm extends Component
             }
         }
 
-        // if (Str::of($key)->contains('first_look_nodes_id')) {
         $this->calculateCompletionPercentage();
-        // }
     }
     public function updatingCurrentNodes($value, $key)
     {

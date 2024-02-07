@@ -14,15 +14,17 @@
         </div>
       @endif
 
-      <div class="single-chart" wire:ignore>
+      <div class="single-chart">
         <svg viewBox="0 0 36 36" class="circular-chart">
           <path class="circle-bg" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-          <path class="circle circle-animate" stroke-dasharray="{{ $completion_per_step['registration'] }}, 100" d="M18 2.0845
+          <path class="circle circle-animate circle-registration"
+            stroke-dasharray="{{ $completion_per_step['registration']['end'] }}, 100" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
-          a 15.9155 15.9155 0 0 1 0 -31.831" />
-          <text x="18" y="20.35" class="percentage">{{ $completion_per_step['registration'] }}%</text>
+          a 15.9155 15.9155 0
+           0 1 0 -31.831" />
+          <text x="18" y="20.35" class="percentage">{{ $completion_per_step['registration']['end'] }}%</text>
         </svg>
       </div>
 
@@ -36,10 +38,10 @@
     @if ($saved_step >= 2)
       <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
         wire:click="goToStep('first_look_assessment')"
-        class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
       @else
         <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
-          class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+          class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
     @endif
 
     @if ($saved_step >= 2)
@@ -49,16 +51,16 @@
         </div>
       </div>
     @endif
-    <div class="single-chart" wire:ignore>
+    <div class="single-chart">
       <svg viewBox="0 0 36 36" class="circular-chart">
         <path class="circle-bg" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-        <path class="circle circle-animate" stroke-dasharray="{{ $completion_per_step['first_look_assessment'] }}, 100"
-          d="M18 2.0845
+        <path class="circle circle-animate circle-first_look_assessment"
+          stroke-dasharray="{{ $completion_per_step['first_look_assessment']['end'] }}, 100" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-        <text x="18" y="20.35" class="percentage">{{ $completion_per_step['first_look_assessment'] }}%</text>
+        <text x="18" y="20.35" class="percentage">{{ $completion_per_step['first_look_assessment']['end'] }}%</text>
       </svg>
     </div>
     <div class="content">
@@ -71,10 +73,10 @@
   @if ($saved_step >= 3)
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('consultation')"
-      class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+      class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
   @endif
 
   @if ($saved_step >= 3)
@@ -84,15 +86,16 @@
       </div>
     </div>
   @endif
-  <div class="single-chart" wire:ignore>
+  <div class="single-chart">
     <svg viewBox="0 0 36 36" class="circular-chart">
       <path class="circle-bg" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-      <path class="circle circle-animate" stroke-dasharray="{{ $completion_per_step['consultation'] }}, 100" d="M18 2.0845
+      <path class="circle circle-animate circle-consultation"
+        stroke-dasharray="{{ $completion_per_step['consultation']['end'] }}, 100" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-      <text x="18" y="20.35" class="percentage">{{ $completion_per_step['consultation'] }}%</text>
+      <text x="18" y="20.35" class="percentage">{{ $completion_per_step['consultation']['end'] }}%</text>
     </svg>
   </div>
   <div class="content">
@@ -105,10 +108,10 @@
   @if ($saved_step >= 4)
     <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('diagnoses')"
-      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
+      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
   @endif
 
   @if ($saved_step >= 4)
@@ -118,12 +121,12 @@
       </div>
     </div>
   @endif
-  <div class="single-chart" wire:ignore>
+  <div class="single-chart">
     <svg viewBox="0 0 36 36" class="circular-chart">
       <path class="circle-bg" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-      <path class="circle circle-animate" stroke-dasharray="100, 100" d="M18 2.0845
+      <path class="circle circle-animate circle-diagnoses" stroke-dasharray="100, 100" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
       <text x="18" y="20.35" class="percentage">100%</text>

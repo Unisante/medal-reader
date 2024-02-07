@@ -37,25 +37,38 @@
 
   @script
     <script type="text/javascript">
-      $wire.on('animate', ([step, startPercentage, endPercentage]) => {
-        console.log('animate')
-        circles = document.getElementsByClassName('circle')
-        circles[step].setAttribute('stroke-dasharray', endPercentage + ',100');
-        circles[step].style.setProperty('--startPercentage', startPercentage);
-        var newone = circles[step].cloneNode(true);
-        circles[step].nextElementSibling.innerHTML = endPercentage + "%"
-        circles[step].parentNode.replaceChild(newone, circles[step]);
-        let components = Livewire.all()
-
-      });
-      Livewire.hook('commit', ({
+      let jsComponent = {}
+      let lastStartPercentage = [];
+      Livewire.hook('morph.updated', ({
+        el,
         component,
-        commit
+        toEl,
+        skip,
+        childrenOnly
       }) => {
-        // if (el.classList.contains('circle')) {
-        console.log(component)
-        // }
+        // todo fix when going next step without success icon
+        let currentStep = jsComponent.snapshot.data.current_step
+        if (el.classList.contains('circle-' + currentStep)) {
+          let startPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].start
+          let endPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].end
+          if (lastStartPercentage[currentStep] !== startPercentage) {
+            el.setAttribute('stroke-dasharray', endPercentage + ',100');
+            el.style.setProperty('--startPercentage', startPercentage);
+            var newone = el.cloneNode(true);
+            el.nextElementSibling.innerHTML = endPercentage + "%"
+            el.parentNode.replaceChild(newone, el);
+            console.log(lastStartPercentage)
+            lastStartPercentage[currentStep] = startPercentage;
+            console.log(startPercentage)
+          }
+        }
       });
+      Livewire.hook('component.init', ({
+        component,
+        cleanup
+      }) => {
+        jsComponent = component
+      })
       document.addEventListener('livewire:init', () => {
         Livewire.on("scrollTop", () => {
           window.scrollTo(0, 0);
