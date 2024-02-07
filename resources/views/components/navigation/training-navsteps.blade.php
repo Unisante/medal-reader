@@ -4,7 +4,7 @@
   <div class="steps">
     <div name="navstep" style="{{ $saved_step >= 1 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="{{ $saved_step >= 1 ? 'goToStep(\'consultation\')' : '' }}"
-      class="step training-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step > 1 ? ' success' : '' }}">
+      class="step training-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $completion_per_step['consultation'] >= 100 && $saved_step > 1 ? ' success' : '' }}">
       @if ($saved_step > 1)
         <div class="success-icon">
           <div>
@@ -12,7 +12,6 @@
           </div>
         </div>
       @endif
-
       <div class="single-chart">
         <svg viewBox="0 0 36 36" class="circular-chart">
           <path class="circle-bg" d="M18 2.0845

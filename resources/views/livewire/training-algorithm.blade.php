@@ -37,14 +37,24 @@
 
   @script
     <script type="text/javascript">
-      $wire.on('animate', ([step, startPercentage]) => {
-        setTimeout(() => {
-          console.log(startPercentage)
-          circles = document.getElementsByClassName('circle')
-          circles[step].style.setProperty('--startPercentage', startPercentage);
-          var newone = circles[step].cloneNode(true);
-          circles[step].parentNode.replaceChild(newone, circles[step]);
-        }, 1);
+      $wire.on('animate', ([step, startPercentage, endPercentage]) => {
+        console.log('animate')
+        circles = document.getElementsByClassName('circle')
+        circles[step].setAttribute('stroke-dasharray', endPercentage + ',100');
+        circles[step].style.setProperty('--startPercentage', startPercentage);
+        var newone = circles[step].cloneNode(true);
+        circles[step].nextElementSibling.innerHTML = endPercentage + "%"
+        circles[step].parentNode.replaceChild(newone, circles[step]);
+        let components = Livewire.all()
+
+      });
+      Livewire.hook('commit', ({
+        component,
+        commit
+      }) => {
+        // if (el.classList.contains('circle')) {
+        console.log(component)
+        // }
       });
       document.addEventListener('livewire:init', () => {
         Livewire.on("scrollTop", () => {

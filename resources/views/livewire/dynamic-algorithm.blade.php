@@ -41,9 +41,9 @@
               <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes :$villages
                 :$debug_mode />
             @endif
-            @if ($substep_title === 'physical_exams')
+            @if ($substep_title === 'physical_exam')
               @if (isset($current_nodes['consultation']['physical_exam']))
-                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exams" :$nodes_to_save :$full_nodes :$villages
+                <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exam" :$nodes_to_save :$full_nodes :$villages
                   :$debug_mode />
               @endif
             @endif
@@ -360,19 +360,20 @@
 
   <x-modals.emergency />
 
-  @push('scripts')
+  @script
     <script type="text/javascript">
+      $wire.on('animate', ([step, startPercentage, endPercentage]) => {
+        circles = document.getElementsByClassName('circle')
+        circles[step].setAttribute('stroke-dasharray', endPercentage + ',100');
+        circles[step].style.setProperty('--startPercentage', startPercentage);
+        var newone = circles[step].cloneNode(true);
+        circles[step].nextElementSibling.innerHTML = endPercentage + "%"
+        circles[step].parentNode.replaceChild(newone, circles[step]);
+      });
       document.addEventListener('livewire:init', () => {
-        const emergencyModal = document.getElementById('emergencyModal');
-
-        Livewire.on('openEmergencyModal', () => {
-          var bootstrapEmergencyModal = new bootstrap.Modal(emergencyModal)
-          bootstrapEmergencyModal.show()
-        });
-
         Livewire.on("scrollTop", () => {
           window.scrollTo(0, 0);
         });
       });
     </script>
-  @endpush
+  @endscript

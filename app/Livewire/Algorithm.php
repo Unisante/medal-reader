@@ -55,24 +55,36 @@ class Algorithm extends Component
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
 
-    public array $steps = [
-        'registration' => [],
-        'first_look_assessment' => [
-            'vital_signs',
-            'complaint_categories',
-            'basic_measurement',
+    public array $steps =  [
+        'dynamic' => [
+            'registration' => [],
+            'first_look_assessment' => [
+                'vital_signs',
+                'complaint_categories',
+                'basic_measurement',
+            ],
+            'consultation' => [
+                'medical_history',
+                'physical_exam',
+            ],
+            'tests' => [],
+            'diagnoses' => [
+                'final_diagnoses',
+                'treatment_questions',
+                'medicines',
+                'summary',
+                'referral',
+            ],
         ],
-        'consultation' => [
-            'medical_history',
-            'physical_exams',
+        'prevention' => [
+            'registration' => [],
+            'first_look_assessment' => [],
+            'consultation' => [],
+            'diagnoses' => [],
         ],
-        'tests' => [],
-        'diagnoses' => [
-            'final_diagnoses',
-            'treatment_questions',
-            'medicines',
-            'summary',
-            'referral',
+        'training' => [
+            'consultation' => [],
+            'diagnoses' => [],
         ],
     ];
 
@@ -497,58 +509,63 @@ class Algorithm extends Component
 
     public function calculateCompletionPercentage()
     {
-        // -1 is a leaf
-        //not existing mean stop tree for that node
-
         $cached_data = Cache::get($this->cache_key);
         $current_answers = array_flip(array_filter(Arr::flatten($this->current_nodes['consultation']['medical_history'])));
         $total = 0;
 
-        foreach ($this->current_nodes['consultation']['medical_history'][$this->current_cc] as $node_id => $answer_id) {
-            if (empty($answer_id)) {
-                $answers = array_keys($cached_data['full_nodes'][$node_id]['answers']);
-                $potential_total = $total;
-                $potential_totals = [];
-                foreach ($answers as $answer_id) {
-                    $length = $cached_data['max_length'][$answer_id] ?? 0;
-                    $potential_totals[] = $length;
-                    // dump("answer :  $answer_id");
-                    // dump("next path :  $length");
-                }
-                // Find the maximum potential total among all paths
-                $potential_total = max($potential_totals);
-                // dump("potential_total : $potential_total");
-                $total += $potential_total; // Accumulate potential total to the total
+        if ($this->current_step === 'registration') {
+            $current_nodes = $this->current_nodes[$this->current_step];
+            $total = $cached_data['registration_total'];
+        }
+
+        if ($this->current_step === 'first_look_assessment') {
+            $current_nodes = $this->current_nodes[$this->current_step]['basic_measurement'];
+            $total = $cached_data['first_look_assessment_total'];
+        }
+
+        if ($this->current_step === 'consultation') {
+            if ($this->algorithm_type !== 'dynamic') {
+                $current_nodes = $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc];
             } else {
-                $total++;
-                // dump("total++ : $total");
+                $current_nodes = $this->current_nodes[$this->current_step];
+                foreach ($current_nodes as $steps) {
+                    foreach ($steps as $systems) {
+                        foreach ($systems as $node_id => $answer_id) {
+                            $flattened_array[$node_id] = $answer_id;
+                        }
+                    }
+                }
+                $current_nodes = $flattened_array;
+            }
+            foreach ($current_nodes as $node_id => $answer_id) {
+                if (empty($answer_id)) {
+                    $answers = array_keys($cached_data['full_nodes'][$node_id]['answers']);
+                    $potential_total = $total;
+                    $potential_totals = [];
+                    foreach ($answers as $answer_id) {
+                        $length = $cached_data['max_length'][$answer_id] ?? 0;
+                        $potential_totals[] = $length;
+                    }
+                    $potential_total = max($potential_totals);
+                    $total += $potential_total;
+                } else {
+                    $total++;
+                }
             }
         }
 
-        $empty_nodes = array_reduce($this->current_nodes['consultation']['medical_history'], function ($carry, $inner_array) {
-            return $carry + count(array_filter($inner_array, function ($value) {
-                return empty($value);
-            }));
-        }, 0);
 
-        // dump("empty_nodes : $empty_nodes");
-        $total = $total + $empty_nodes;
+        $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
 
-        // $total = $total + $potential_total;
-        // dump("total : $total");
-        // dump(count($current_answers));
-        // dump($total);
+        $total = $this->current_step === 'consultation' ? $total + $empty_nodes : $total;
+
         $completion_percentage = count($current_answers) / $total * 100;
 
         $start_percentage = $this->completion_per_step['consultation'];
-        // dump($start_percentage);
-        // dump($completion_percentage);
-        $this->completion_per_step['consultation'] = intval(min(100, round($completion_percentage)));
-        if ($this->algorithm_type === 'training') {
-            $this->dispatch('animate', 0, $start_percentage);
-        } else {
-            $this->dispatch('animate', 2, $start_percentage);
-        }
+        $end_percentage = intval(min(100, round($completion_percentage)));
+        $this->completion_per_step[$this->current_step] = $end_percentage;
+        $step_index = array_search($this->current_step, array_keys($this->steps[$this->algorithm_type]));
+        $this->dispatch('animate', $step_index, $start_percentage, $end_percentage);
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -586,12 +603,10 @@ class Algorithm extends Component
             }
         }
 
-        //todo calulate but also check when modification behavior
-        if ($this->current_step === 'consultation') {
-            $this->calculateCompletionPercentage();
-        }
+        // if (Str::of($key)->contains('first_look_nodes_id')) {
+        $this->calculateCompletionPercentage();
+        // }
     }
-
     public function updatingCurrentNodes($value, $key)
     {
         if ($this->algorithmService->isDate($value)) return;
@@ -1184,11 +1199,14 @@ class Algorithm extends Component
         $this->current_step = $step;
 
         //We set the first substep
-        if (!empty($this->steps[$this->current_step])) {
-            $this->current_sub_step = $this->steps[$this->current_step][0];
+        if ($this->algorithm_type === 'dynamic') {
+            if (!empty($this->steps[$this->current_step][$this->algorithm_type])) {
+                $this->current_sub_step = $this->steps[$this->algorithm_type][$this->current_step][0];
+            }
         }
 
-        $this->saved_step = array_search($this->current_step, array_keys($this->steps)) + 1;
+        //Need to be on the future validateStep function, not here and remove the max
+        $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
         //todo uncomment it when in prod
         // $this->dispatch('scrollTop');
