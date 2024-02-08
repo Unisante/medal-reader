@@ -32,6 +32,44 @@
         </div>
       </div>
     </form>
+    <hr>
+    <section>
+      <h2 class="fw-normal mb-3">
+        or choose an algorithm from the list below
+      </h2>
+      <div class="row mb-3">
+        @forelse ($files as $file)
+          <div class="col-6 col-lg-3 mb-2">
+            <div class="card h-100 d-flex">
+              <div class="card-body">
+                <h5 class="card-title">{{ $file['name'] }}</h5>
+                <h6 class="card-subtitle mb-2 text-body-secondary">
+                  {{ $file['project_name'] }}
+                </h6>
+                <p class="card-text">
+                  Last updated {{ $file['updated_at'] }}
+                </p>
+              </div>
+              <div class="d-flex justify-content-end align-content-end mb-2 me-2">
+                @if ($file['type'] === 'dynamic')
+                  <button class="btn button-unisante" type="button" data-bs-toggle="modal" data-bs-target="#start"
+                    data-bs-algorithm_id="{{ $file['id'] }}">
+                    Start
+                  </button>
+                @else
+                  <a href="{{ route('home.process', ['id' => $file['id']]) }}" class="btn button-unisante">
+                    Start
+                  </a>
+                @endif
+
+              </div>
+            </div>
+          </div>
+        @empty
+          <p>No jsons found</p>
+        @endforelse
+      </div>
+    </section>
   </div>
 
   {{-- New consultation modal --}}

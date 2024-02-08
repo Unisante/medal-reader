@@ -37,10 +37,10 @@
     @if ($saved_step >= 2)
       <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
         wire:click="goToStep('first_look_assessment')"
-        class="step dynamic-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+        class="step dynamic-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step > 2 ? ' success' : '' }}">
       @else
         <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
-          class="step dynamic-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+          class="step dynamic-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step > 2 ? ' success' : '' }}">
     @endif
 
     @if ($saved_step >= 2)
@@ -72,10 +72,10 @@
   @if ($saved_step >= 3)
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('consultation')"
-      class="step dynamic-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+      class="step dynamic-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step > 3 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step dynamic-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+        class="step dynamic-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step > 3 ? ' success' : '' }}">
   @endif
 
   @if ($saved_step >= 3)
@@ -107,10 +107,10 @@
   @if ($saved_step >= 4)
     <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('tests')"
-      class="step dynamic-step{{ $current_step === 'tests' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['tests']['end'] >= 98 && $saved_step >= 4 ? ' success' : '' }}">
+      class="step dynamic-step{{ $current_step === 'tests' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['tests']['end'] >= 98 && $saved_step > 4 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step dynamic-step{{ $current_step === 'tests' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['tests']['end'] >= 98 && $saved_step >= 4 ? ' success' : '' }}">
+        class="step dynamic-step{{ $current_step === 'tests' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['tests']['end'] >= 98 && $saved_step > 4 ? ' success' : '' }}">
   @endif
 
   @if ($saved_step >= 4)
@@ -142,10 +142,10 @@
   @if ($saved_step >= 5)
     <div name="navstep" style="{{ $saved_step >= 5 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('diagnoses')"
-      class="step dynamic-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 5 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 98 && $saved_step >= 5 ? ' success' : '' }}">
+      class="step dynamic-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 5 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 98 && $saved_step > 5 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 5 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step dynamic-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 5 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 98 && $saved_step >= 5 ? ' success' : '' }}">
+        class="step dynamic-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 5 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 98 && $saved_step > 5 ? ' success' : '' }}">
   @endif
 
   @if ($saved_step >= 5)

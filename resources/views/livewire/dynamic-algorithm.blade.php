@@ -20,7 +20,7 @@
   <x-navigation.dynamic-navsteps :$current_step :$saved_step :$completion_per_step />
 
   <div class="row g-3">
-    <div class="col-9">
+    <div class="col-8">
       <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
         @foreach ($steps[$algorithm_type][$current_step] as $index => $title)
           <li class="nav-item" role="presentation">
@@ -324,7 +324,7 @@
         </div>
       @endif
     </div>
-    <div class="col-3">
+    {{-- <div class="col-3">
       <div class="container">
         Steps
         @foreach ($steps[$algorithm_type] as $key => $substeps)
@@ -355,7 +355,7 @@
           @endforeach
         </div>
       </div>
-    </div>
+    </div> --}}
   </div>
 
   <x-modals.emergency />
@@ -382,9 +382,7 @@
             var newone = el.cloneNode(true);
             el.nextElementSibling.innerHTML = endPercentage + "%"
             el.parentNode.replaceChild(newone, el);
-            console.log(lastStartPercentage)
             lastStartPercentage[currentStep] = startPercentage;
-            console.log(startPercentage)
           }
         }
       });
@@ -394,10 +392,15 @@
       }) => {
         jsComponent = component
       })
-      document.addEventListener('livewire:init', () => {
-        Livewire.on("scrollTop", () => {
-          window.scrollTo(0, 0);
-        });
+
+      Livewire.on('openEmergencyModal', () => {
+        const emergencyModal = document.getElementById('emergencyModal');
+        var bootstrapEmergencyModal = new bootstrap.Modal(emergencyModal)
+        bootstrapEmergencyModal.show()
       });
+      Livewire.on("scrollTop", () => {
+        window.scrollTo(0, 0);
+      });
+      document.addEventListener('livewire:init', () => {});
     </script>
   @endscript

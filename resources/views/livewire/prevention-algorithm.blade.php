@@ -20,7 +20,7 @@
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
 
   <div class="row g-3 mt-3">
-    <div class="col-9">
+    <div class="col-8">
       {{-- Registration --}}
       @if (array_key_exists('first_look_assessment', $current_nodes))
         @if ($current_step === 'registration')
@@ -56,7 +56,7 @@
       @endif
 
     </div>
-    <div class="col-3">
+    {{-- <div class="col-3">
       <div class="container">
         Steps
         @foreach ($steps[$algorithm_type] as $key => $substeps)
@@ -76,7 +76,7 @@
           @endforeach
         </div>
       </div>
-    </div>
+    </div> --}}
   </div>
 </div>
 
@@ -102,9 +102,7 @@
           var newone = el.cloneNode(true);
           el.nextElementSibling.innerHTML = endPercentage + "%"
           el.parentNode.replaceChild(newone, el);
-          //   console.log(lastStartPercentage)
           lastStartPercentage[currentStep] = startPercentage;
-          console.log(endPercentage)
         }
       }
     });

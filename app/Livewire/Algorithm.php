@@ -505,11 +505,11 @@ class Algorithm extends Component
                     $cached_data['male_gender_answer_id'];
                 $this->current_nodes['registration'][$cached_data['village_question_id']] = $city;
                 $this->updateLinkedNodesOfDob($date_of_birth);
+                $this->calculateCompletionPercentage();
             }
         }
 
         // dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
-
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dump($conditioned_nodes_hash_map);

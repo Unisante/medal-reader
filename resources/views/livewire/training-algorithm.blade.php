@@ -57,9 +57,7 @@
             var newone = el.cloneNode(true);
             el.nextElementSibling.innerHTML = endPercentage + "%"
             el.parentNode.replaceChild(newone, el);
-            console.log(lastStartPercentage)
             lastStartPercentage[currentStep] = startPercentage;
-            console.log(startPercentage)
           }
         }
       });

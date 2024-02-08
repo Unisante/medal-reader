@@ -17,5 +17,6 @@ use Illuminate\Support\Facades\Route;
 // Auth::routes(['register' => true, 'verify' => true]);
 
 Route::get('/', [AlgorithmController::class, 'index'])->name('home.index');
+Route::get('/justarandomurlnothingtosee', [AlgorithmController::class, 'hidden'])->name('home.hidden');
 Route::post('/', [AlgorithmController::class, 'store'])->name('home.store');
 Route::get('/algorithm/{id}/{patient_id?}', [AlgorithmController::class, 'process'])->name('home.process');

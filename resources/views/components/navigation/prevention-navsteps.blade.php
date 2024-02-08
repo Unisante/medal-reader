@@ -38,13 +38,13 @@
     @if ($saved_step >= 2)
       <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
         wire:click="goToStep('first_look_assessment')"
-        class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 100 && $saved_step > 2 ? ' success' : '' }}">
       @else
         <div name="navstep" style="{{ $saved_step >= 2 ? 'cursor:pointer;' : 'cursor:default;' }}"
-          class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 98 && $saved_step >= 2 ? ' success' : '' }}">
+          class="step prevention-step{{ $current_step === 'first_look_assessment' ? ' active' : '' }}{{ $saved_step < 2 ? ' empty' : '' }}{{ $completion_per_step['first_look_assessment']['end'] >= 100 && $saved_step > 2 ? ' success' : '' }}">
     @endif
 
-    @if ($saved_step >= 2)
+    @if ($saved_step > 2)
       <div class="success-icon">
         <div>
           <img src=" {{ mix('images/icons-done.svg') }}" />
@@ -73,13 +73,13 @@
   @if ($saved_step >= 3)
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('consultation')"
-      class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+      class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 100 && $saved_step > 3 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 98 && $saved_step >= 3 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 100 && $saved_step > 3 ? ' success' : '' }}">
   @endif
 
-  @if ($saved_step >= 3)
+  @if ($saved_step > 3)
     <div class="success-icon">
       <div>
         <img src=" {{ mix('images/icons-done.svg') }}" />
@@ -108,13 +108,13 @@
   @if ($saved_step >= 4)
     <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('diagnoses')"
-      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
+      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step > 4 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step >= 4 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step > 4 ? ' success' : '' }}">
   @endif
 
-  @if ($saved_step >= 4)
+  @if ($saved_step > 4)
     <div class="success-icon">
       <div>
         <img src=" {{ mix('images/icons-done.svg') }}" />

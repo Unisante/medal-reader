@@ -21,6 +21,16 @@ class AlgorithmController extends Controller
      */
     public function index()
     {
+        $urls = explode(',', Config::get('medal.urls.creator_algorithm_url'));
+
+        return view('home', compact('urls'));
+    }
+
+    /**
+     * @return Renderable
+     */
+    public function hidden()
+    {
         $directory = Config::get('medal.storage.json_extract_dir');
         $storage_files = Storage::files($directory);
         $urls = explode(',', Config::get('medal.urls.creator_algorithm_url'));
@@ -45,7 +55,7 @@ class AlgorithmController extends Controller
         }
 
 
-        return view('home', compact('files', 'urls'));
+        return view('hidden-home', compact('files', 'urls'));
     }
 
     /**
