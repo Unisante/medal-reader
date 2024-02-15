@@ -25,5 +25,6 @@
     },
     "dependencies": {
         "fhir.js": "^0.0.22"
-    }
+    },
+    "name": "medal-reader"
 }
