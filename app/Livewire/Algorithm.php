@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Services\AlgorithmService;
 use App\Services\FHIRService;
 use App\Services\FormulationService;
-use Barryvdh\Debugbar\Facades\Debugbar;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
@@ -720,17 +719,12 @@ class Algorithm extends Component
     #[On('nodeToSave')]
     public function saveNode($node_id, $value, $answer_id, $old_answer_id)
     {
-        Debugbar::startMeasure("saveNode");
-        Debugbar::startMeasure("saveNodecache");
-
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
         $full_nodes = $cached_data['full_nodes'];
-
-        Debugbar::stopMeasure("saveNodecache");
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             $node = $full_nodes[$node_id];
@@ -818,7 +812,6 @@ class Algorithm extends Component
                 }
             }
         }
-        Debugbar::stopMeasure("saveNode");
 
         return $this->displayNextNode($node_id, $this->nodes_to_save[$node_id]['answer_id'] ?? $answer_id, $old_answer_id);
     }
@@ -826,16 +819,12 @@ class Algorithm extends Component
     #[On('nodeUpdated')]
     public function displayNextNode($node_id, $value, $old_value)
     {
-        Debugbar::startMeasure("displayNextNode");
-        Debugbar::startMeasure("displayNextNodeCache");
         $cached_data = Cache::get($this->cache_key);
         $dependency_map = $cached_data['dependency_map'];
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
-
-        Debugbar::stopMeasure("displayNextNodeCache");
 
         // Modification behavior
         if ($old_value && $value !== $old_value) {
@@ -979,8 +968,6 @@ class Algorithm extends Component
                 }
             }
         }
-
-        Debugbar::stopMeasure("displayNextNode");
     }
 
     public function handleFormula($node_id)
