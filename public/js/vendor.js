@@ -1,4 +1,4 @@
-(self["webpackChunk"] = self["webpackChunk"] || []).push([["/js/vendor"],{
+(self["webpackChunkmedal_reader"] = self["webpackChunkmedal_reader"] || []).push([["/js/vendor"],{
 
 /***/ "./node_modules/@popperjs/core/lib/createPopper.js":
 /*!*********************************************************!*\

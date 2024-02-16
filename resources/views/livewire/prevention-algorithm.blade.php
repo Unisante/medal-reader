@@ -15,48 +15,77 @@
     $full_nodes = $cache['full_nodes'];
     $final_diagnoses = $cache['final_diagnoses'];
     $health_cares = $cache['health_cares'];
+    $diagnoses_per_cc = $cache['dd_hash_map'];
   @endphp
 
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
 
-  <div class="row g-3 mt-3">
-    <div class="col-8">
-      {{-- Registration --}}
-      @if (array_key_exists('first_look_assessment', $current_nodes))
-        @if ($current_step === 'registration')
+  {{-- Registration --}}
+  @if (array_key_exists('first_look_assessment', $current_nodes))
+    @if ($current_step === 'registration')
+      <div class="row g-3 mt-3">
+        <div class="col-8">
           <x-step.registration :nodes="$current_nodes['registration']" :$nodes_to_save :$full_nodes :$cache_key :$algorithm_type
             :$debug_mode />
-        @endif
-      @endif
+        </div>
+      </div>
+    @endif
+  @endif
 
-      {{-- first_look_assessment --}}
-      @if ($current_step === 'first_look_assessment')
-        <div>
-          <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
-          @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
-            <div wire:key="{{ 'cc-' . $node_id }}">
-              <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
+  {{-- first_look_assessment --}}
+  @if ($current_step === 'first_look_assessment')
+    <div class="row g-3 mt-3">
+      <div class="col-9">
+        <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
+        @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
+          <div wire:key="{{ 'cc-' . $node_id }}">
+            <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
+          </div>
+        @endforeach
+        <div class="d-flex justify-content-end pe-3">
+          <button class="btn button-unisante mt-3" @if (empty(array_filter($chosen_complaint_categories))) disabled @endif
+            wire:click="goToStep('consultation')">Questionnaires</button>
+        </div>
+      </div>
+      <div class="col-3">
+        @foreach ($diagnoses_per_cc as $cc => $diagnoses)
+          @foreach ($diagnoses as $diagnose)
+            <div wire:key="{{ $diagnose }}">
+              @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
+                <p class="text-success mb-0">{{ $diagnose }}</p>
+              @else
+                <p class="mb-0">{{ $diagnose }}</p>
+              @endif
             </div>
           @endforeach
-          <div class="d-flex justify-content-end">
-            <button class="btn button-unisante mt-3" @if (empty(array_filter($chosen_complaint_categories))) disabled @endif
-              wire:click="goToStep('consultation')">Questionnaires</button>
-          </div>
-        </div>
-      @endif
-
-      {{-- Consultation --}}
-      @if ($current_step === 'consultation')
-        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
-      @endif
-
-      {{-- Diagnoses --}}
-      @if ($current_step === 'diagnoses')
-        <x-step.prevention-results :$df_to_display :$final_diagnoses :$cache_key />
-      @endif
-
+        @endforeach
+      </div>
     </div>
-    {{-- <div class="col-3">
+  @endif
+
+  {{-- Consultation --}}
+  @if ($current_step === 'consultation')
+    <div class="row g-3 mt-3">
+      <div class="col-8">
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
+      </div>
+      <div class="col-4">
+        @foreach (array_filter($chosen_complaint_categories) as $cc)
+          <div wire:key="{{ 'step-' . $cc }}">
+            <x-navigation.prevention-navsubsteps :$current_step :$saved_step :$completion_per_step />
+          </div>
+        @endforeach
+      </div>
+    </div>
+  @endif
+
+  {{-- Diagnoses --}}
+  @if ($current_step === 'diagnoses')
+    <x-step.prevention-results :$df_to_display :$final_diagnoses :$cache_key />
+  @endif
+
+</div>
+{{-- <div class="col-3">
       <div class="container">
         Steps
         @foreach ($steps[$algorithm_type] as $key => $substeps)
@@ -77,7 +106,6 @@
         </div>
       </div>
     </div> --}}
-  </div>
 </div>
 
 @script

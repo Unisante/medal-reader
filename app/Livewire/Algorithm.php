@@ -7,6 +7,7 @@ use App\Services\FHIRService;
 use App\Services\FormulationService;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
+use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use DivisionByZeroError;
 use Exception;
@@ -197,6 +198,7 @@ class Algorithm extends Component
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
+                'dd_hash_map' => [],
                 'drugs_hash_map' => [],
                 'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
@@ -327,6 +329,7 @@ class Algorithm extends Component
             });
 
         $answers_hash_map = [];
+        $dd_hash_map = [];
         $max_length = [];
         $consultation_nodes = [];
         $female_gender_answer_id = '';
@@ -338,6 +341,8 @@ class Algorithm extends Component
             });
 
             foreach ($diagnosesForStep as $diag) {
+                $dd_hash_map[$diag['complaint_category']][] = $diag['label']['en'];
+
                 foreach ($diag['instances'] as $instance_id => $instance) {
 
                     if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
@@ -429,6 +434,7 @@ class Algorithm extends Component
                 'formula_hash_map' => $formula_hash_map,
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
+                'dd_hash_map' => $dd_hash_map,
                 'drugs_hash_map' => $drugs_hash_map,
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
@@ -465,6 +471,8 @@ class Algorithm extends Component
         }
 
         if ($this->algorithm_type === 'prevention') {
+            unset($this->current_nodes['registration']['first_name']);
+            unset($this->current_nodes['registration']['last_name']);
             $this->current_nodes['registration'] +=
                 $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
 
@@ -479,7 +487,7 @@ class Algorithm extends Component
             $this->goToStep('consultation');
         }
 
-        if ($patient_id) {
+        if ($this->patient_id) {
             $response = $this->fhirService->getPatientFromRemoteFHIRServer($patient_id);
             $parser = new PHPFHIRResponseParser();
             if ($response->successful()) {
@@ -1294,6 +1302,38 @@ class Algorithm extends Component
 
         $previous_key = $keys[$previous_index];
         $this->current_cc = $previous_key;
+    }
+
+    public function setConditionsToPatients()
+    {
+        if (!$this->patient_id) {
+            return flash()->addError('No current patient');
+        }
+
+        $cached_data = Cache::get($this->cache_key);
+        $df = $cached_data['final_diagnoses'];
+
+        $agreed_diagnoses = array_filter($this->diagnoses_status);
+        foreach ($agreed_diagnoses as $diagnose_id => $accepted) {
+            $conditions[] = [
+                'medal_c_id' => "$diagnose_id",
+                'label' => $df[$diagnose_id]['label']['en'],
+            ];
+        }
+        if (!isset($conditions)) {
+            flash()->addError('There is no agreed diagnose');
+            return;
+        }
+
+        $response = $this->fhirService->setConditionsToPatient($this->patient_id, $conditions);
+
+        if (!$response) {
+            flash()->addError('An error occured while saving. Please try again');
+            return;
+        }
+
+        flash()->addSuccess('Patient updated successfully');
+        return redirect()->route("home.hidden");
     }
 
     public function render()

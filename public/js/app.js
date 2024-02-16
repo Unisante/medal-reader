@@ -1,5 +1,5 @@
 "use strict";
-(self["webpackChunk"] = self["webpackChunk"] || []).push([["/js/app"],{
+(self["webpackChunkmedal_reader"] = self["webpackChunkmedal_reader"] || []).push([["/js/app"],{
 
 /***/ "./resources/js/app.js":
 /*!*****************************!*\

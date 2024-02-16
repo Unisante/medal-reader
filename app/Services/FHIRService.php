@@ -3,9 +3,7 @@
 namespace App\Services;
 
 use DateTime;
-use DCarbone\PHPFHIRGenerated\R4\FHIRElement\FHIRBackboneElement\FHIRBundle\FHIRBundleEntry;
-use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRBundle;
-use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
+use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRCondition;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use Exception;
 use Illuminate\Support\Facades\Http;
@@ -48,6 +46,59 @@ class FHIRService
     function getPatientsFromRemoteFHIRServer()
     {
         return $this->getDataFromRemoteFHIRServer('Patient');
+    }
+
+    function setConditionsToPatient($patient_id, $conditions)
+    {
+        $url = rtrim($this->getRemoteFHIRServerUrl(), '/');
+        $headers = [
+            'Content-Type: application/fhir+json',
+        ];
+
+        foreach ($conditions as $condition) {
+            $data = [
+                'code' => [
+                    'coding' => [
+                        [
+                            'code' => $condition['medal_c_id'],
+                            'display' => $condition['label'],
+                        ]
+                    ],
+                    'text' => $condition['label'],
+                ],
+                'subject' => [
+                    'reference' => "Patient/$patient_id",
+                ],
+                'clinicalStatus' => [
+                    'text' => 'active'
+                ],
+                'verificationStatus' => [
+                    'text' => 'confirmed'
+                ],
+                'onsetDateTime' => [
+                    'value' => today()->format('Y-m-d')
+                ],
+            ];
+            $condition = new FHIRCondition($data);
+            if (empty($condition->_getValidationErrors())) {
+                $response = Http::withHeaders($headers)->post("$url/Condition", $condition->jsonSerialize());
+            }
+            if ($response->failed()) {
+                return false;
+            }
+        }
+
+        // $response = Http::withHeaders($headers)->get("$url/Condition", [
+        //     'subject' => '181',
+        // ]);
+
+        //delete
+        // $response = Http::withHeaders($headers)->delete("$url/Condition/222357");
+
+        //for update
+        // $response = Http::withHeaders($headers)->put("$url/Condition/222356", $c->jsonSerialize());
+
+        return true;
     }
 
     function getDataFromRemoteFHIRServer($resource)

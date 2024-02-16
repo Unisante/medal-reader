@@ -54,7 +54,6 @@ class AlgorithmController extends Controller
             ];
         }
 
-
         return view('hidden-home', compact('files', 'urls'));
     }
 

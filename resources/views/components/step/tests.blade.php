@@ -35,3 +35,6 @@
     @endif
   </div>
 @endforeach
+<div class="d-flex justify-content-end">
+  <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">diagnoses</button>
+</div>

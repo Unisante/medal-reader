@@ -71,7 +71,10 @@
           <x-step.tests :nodes="$current_nodes['tests']" :$nodes_to_save :$full_nodes />
         @else
           <h2 class="fw-normal pb-3">Tests</h2>
-          <h3 class="fw-normal pb-3">There are no test</h3>
+          <p>There are no test</p>
+          <div class="d-flex justify-content-end">
+            <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">diagnoses</button>
+          </div>
         @endif
       @endif
 
@@ -321,6 +324,11 @@
               @endif
             </div>
           @endforeach
+        </div>
+        <div class="d-flex justify-content-end">
+          <button class="btn button-unisante mt-3" wire:click="setConditionsToPatients()">
+            Send data to FHIR
+          </button>
         </div>
       @endif
     </div>
