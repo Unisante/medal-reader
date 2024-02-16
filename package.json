@@ -10,7 +10,6 @@
         "prod": "npm run production",
         "production": "mix --production",
         "heroku-postbuild": "npm run production",
-        "build": "npm run production"
     },
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
