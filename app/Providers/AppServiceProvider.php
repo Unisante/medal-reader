@@ -23,7 +23,5 @@ class AppServiceProvider extends ServiceProvider
         if (!$this->app->isLocal()) {
             URL::forceScheme('https');
         }
-
-        Paginator::useBootstrapFive();
     }
 }
