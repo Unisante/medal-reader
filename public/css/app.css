@@ -14133,6 +14133,10 @@ textarea.form-control-lg {
   width: 25%;
 }
 
+.prevention-substep {
+  width: 100%;
+}
+
 .dynamic-step {
   width: 20%;
 }
@@ -14191,7 +14195,7 @@ textarea.form-control-lg {
   border-radius: 100%;
   background-color: #d20f2c;
   aspect-ratio: 1/1;
-  margin: auto;
+  margin: 12px auto;
 }
 .steps .step .success-icon > div > img {
   width: 70%;
@@ -14253,22 +14257,6 @@ textarea.form-control-lg {
 }
 .steps .step.success .success-icon {
   display: flex;
-}
-
-.bar-container {
-  position: relative;
-  width: 100%;
-  height: 6px;
-  border-radius: 10px;
-  background-color: #f7f7f7;
-}
-.bar-container .bar-completed {
-  height: 6px;
-  border-radius: 10px;
-  background-color: #4b8def;
-}
-.bar-container .bar-completed.green {
-  background-color: #d20f2c;
 }
 
 .step-title {

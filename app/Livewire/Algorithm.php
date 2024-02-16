@@ -111,6 +111,8 @@ class Algorithm extends Component
         ],
     ];
 
+    public array $completion_per_substep = [];
+
     public string $current_sub_step = '';
 
     public function boot(AlgorithmService $algorithmService, FHIRService $fhirService)
@@ -554,8 +556,6 @@ class Algorithm extends Component
                 $current_nodes = 1;
                 $total = 1;
             }
-            // dump($this->current_nodes[$this->current_step]['basic_measurements_nodes_id']);
-            // dump($cached_data['formula_hash_map']);
         }
 
         if ($this->current_step === 'consultation') {
@@ -572,6 +572,7 @@ class Algorithm extends Component
                 }
                 $current_nodes = $flattened_array;
             }
+
             foreach ($current_nodes as $node_id => $answer_id) {
                 if (empty($answer_id)) {
                     $answers = array_keys($cached_data['full_nodes'][$node_id]['answers']);
@@ -596,10 +597,30 @@ class Algorithm extends Component
 
         $completion_percentage = count($current_answers) / $total * 100;
 
-        $start_percentage = $this->completion_per_step[$this->current_step]['end'];
-        $this->completion_per_step[$this->current_step]['start'] = $start_percentage;
-        $end_percentage = intval(min(100, round($completion_percentage)));
-        $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
+        if ($this->current_step === 'consultation' && $this->algorithm_type === 'prevention') {
+            //substep management
+            $start_percentage_substep = $this->completion_per_substep[$this->current_cc]['end'];
+            $this->completion_per_substep[$this->current_cc]['start'] = $start_percentage_substep;
+            $end_percentage_substep = intval(min(100, round($completion_percentage)));
+            $this->completion_per_substep[$this->current_cc]['end'] = $end_percentage_substep;
+
+            $cc_done = count(array_filter($this->completion_per_substep, function ($item) {
+                return $item['end'] >= 100;
+            }));
+
+            //step management
+            $total = count(array_filter($this->chosen_complaint_categories));
+            $completion_percentage = $cc_done / $total * 100;
+            $start_percentage = $this->completion_per_step[$this->current_step]['end'];
+            $this->completion_per_step[$this->current_step]['start'] = $start_percentage;
+            $end_percentage = intval(min(100, round($completion_percentage)));
+            $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
+        } else {
+            $start_percentage = $this->completion_per_step[$this->current_step]['end'];
+            $this->completion_per_step[$this->current_step]['start'] = $start_percentage;
+            $end_percentage = intval(min(100, round($completion_percentage)));
+            $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
+        }
     }
 
     public function updatedCurrentNodes($value, $key)
@@ -1203,6 +1224,15 @@ class Algorithm extends Component
             }
             $this->current_cc = key(array_filter($this->chosen_complaint_categories));
 
+            if ($this->algorithm_type === 'prevention' && empty($this->completion_per_substep)) {
+                foreach (array_keys(array_filter($this->chosen_complaint_categories)) as $cc) {
+                    $this->completion_per_substep[$cc] = [
+                        'start' => 0,
+                        'end' => 0,
+                    ];
+                }
+            }
+
             // dd($consultation_nodes);
         } else {
             // For registration step we do not know the $age_key yet
@@ -1237,7 +1267,6 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
 
-
         $this->goToStep($step);
         $this->current_sub_step = $substep;
 
@@ -1271,6 +1300,11 @@ class Algorithm extends Component
             $formulations = new FormulationService($common_agreed_drugs, $common_agreed_df, $this->cache_key, $weight);
             $this->formulations_to_display = $formulations->getFormulations();
         }
+    }
+
+    public function goToCc($cc_id): void
+    {
+        $this->current_cc = $cc_id;
     }
 
     public function goToNextCc(): void

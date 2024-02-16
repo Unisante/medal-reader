@@ -14,6 +14,10 @@
     width: calc(100% / 4);
 }
 
+.prevention-substep {
+    width: 100%;
+}
+
 .dynamic-step {
     width: calc(100% / 5);
 }
@@ -84,7 +88,7 @@
                 border-radius: 100%;
                 background-color: $color-primary;
                 aspect-ratio: 1/1;
-                margin: auto;
+                margin: 12px auto;
 
                 >img {
                     width: 70%;
@@ -166,24 +170,6 @@
             .success-icon {
                 display: flex;
             }
-        }
-    }
-}
-
-.bar-container {
-    position: relative;
-    width: 100%;
-    height: 6px;
-    border-radius: 10px;
-    background-color: #f7f7f7;
-
-    .bar-completed {
-        height: 6px;
-        border-radius: 10px;
-        background-color: $color-marker;
-
-        &.green {
-            background-color: $color-primary
         }
     }
 }

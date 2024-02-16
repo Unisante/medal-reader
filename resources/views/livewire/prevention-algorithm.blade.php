@@ -66,22 +66,28 @@
   {{-- Consultation --}}
   @if ($current_step === 'consultation')
     <div class="row g-3 mt-3">
-      <div class="col-8">
+      <div class="col-8 border-end">
         <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
       </div>
       <div class="col-4">
-        @foreach (array_filter($chosen_complaint_categories) as $cc)
-          <div wire:key="{{ 'step-' . $cc }}">
-            <x-navigation.prevention-navsubsteps :$current_step :$saved_step :$completion_per_step />
-          </div>
-        @endforeach
+        <div style="position: -webkit-sticky; position: sticky; top: 128px;">
+          @foreach (array_keys(array_filter($chosen_complaint_categories)) as $index => $cc)
+            <div wire:key="{{ 'step-' . $cc }}">
+              <x-navigation.prevention-navsubsteps :$current_cc :$completion_per_substep :$cc :$full_nodes :$index />
+            </div>
+          @endforeach
+        </div>
       </div>
     </div>
   @endif
 
   {{-- Diagnoses --}}
   @if ($current_step === 'diagnoses')
-    <x-step.prevention-results :$df_to_display :$final_diagnoses :$cache_key />
+    <div class="row g-3 mt-3">
+      <div class="col-10">
+        <x-step.prevention-results :$df_to_display :$final_diagnoses :$cache_key />
+      </div>
+    </div>
   @endif
 
 </div>
@@ -112,6 +118,7 @@
   <script type="text/javascript">
     let jsComponent = {}
     let lastStartPercentage = [];
+    let lastSubStepStartPercentage = {};
     Livewire.hook('morph.updated', ({
       el,
       component,
@@ -121,16 +128,34 @@
     }) => {
       // todo fix when going next step without success icon
       let currentStep = jsComponent.snapshot.data.current_step
-      if (el.classList.contains('circle-' + currentStep)) {
-        let startPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].start
-        let endPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].end
-        if (lastStartPercentage[currentStep] !== startPercentage) {
+      let startPercentage = 0;
+      let endPercentage = 0;
+      let currentCc = jsComponent.snapshot.data.current_cc
+      if (el.classList.contains('circle-substep-' + currentStep + '-' + currentCc)) {
+        startPercentage = jsComponent.snapshot.data.completion_per_substep[0][currentCc][0].start
+        endPercentage = jsComponent.snapshot.data.completion_per_substep[0][currentCc][0].end
+        if (!lastSubStepStartPercentage.hasOwnProperty(currentCc)) {
+          lastSubStepStartPercentage[currentCc] = [];
+        }
+        if (startPercentage === 0 || lastSubStepStartPercentage[currentCc] !== startPercentage) {
           el.setAttribute('stroke-dasharray', endPercentage + ',100');
           el.style.setProperty('--startPercentage', startPercentage);
           var newone = el.cloneNode(true);
           el.nextElementSibling.innerHTML = endPercentage + "%"
           el.parentNode.replaceChild(newone, el);
-          lastStartPercentage[currentStep] = startPercentage;
+          lastSubStepStartPercentage[currentCc] = startPercentage;
+        }
+      }
+      if (el.classList.contains('circle-' + currentStep)) {
+        startPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].start
+        endPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].end
+        if (lastStartPercentage[currentStep] !== endPercentage) {
+          el.setAttribute('stroke-dasharray', endPercentage + ',100');
+          el.style.setProperty('--startPercentage', startPercentage);
+          var newone = el.cloneNode(true);
+          el.nextElementSibling.innerHTML = endPercentage + "%"
+          el.parentNode.replaceChild(newone, el);
+          lastStartPercentage[currentStep] = endPercentage;
         }
       }
     });
