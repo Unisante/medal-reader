@@ -31,4 +31,5 @@
         </span>
       </div>
     </div>
+  </div>
 </section>

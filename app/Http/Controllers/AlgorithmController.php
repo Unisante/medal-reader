@@ -94,6 +94,12 @@ class AlgorithmController extends Controller
             return back()->withErrors($error);
         }
 
+        if (empty($data)) {
+            $error['error'] = "The algorithm {$request['id']} is empty";
+            Log::error($error['error']);
+            return back()->withErrors($error['error']);
+        }
+
         Storage::disk('local')->put("$extract_dir/$request->id.json", $data);
 
         return redirect()->route('home.process', ['id' => $request->id]);
