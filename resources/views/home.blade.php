@@ -33,19 +33,4 @@
       </div>
     </form>
   </div>
-
-  {{-- New consultation modal --}}
-  <x-modals.new-consultation />
 @endsection
-
-@push('scripts')
-  <script>
-    var start = document.getElementById('start')
-    start.addEventListener('show.bs.modal', function(event) {
-      var button = event.relatedTarget
-      var algorithm_id = button.getAttribute('data-bs-algorithm_id')
-      var url = "{{ route('home.process', '') }}" + "/" + algorithm_id;
-      document.getElementById("start_consultation").href = url;
-    })
-  </script>
-@endpush

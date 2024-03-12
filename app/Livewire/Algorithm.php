@@ -157,7 +157,7 @@ class Algorithm extends Component
                 'final_diagnoses' => $json['medal_r_json']['final_diagnoses'],
                 'health_cares' => $json['medal_r_json']['health_cares'],
                 'full_order' => $json['medal_r_json']['config']['full_order'],
-                'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'],
+                'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'] ?? [],
                 'registration_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['registration_step'],
                     ...$json['medal_r_json']['patient_level_questions'],
