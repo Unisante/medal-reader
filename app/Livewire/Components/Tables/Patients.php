@@ -44,7 +44,7 @@ class Patients extends Component
         $this->fhirService = $fhirService;
     }
 
-    public function mount($algorithm_id = 94)
+    public function mount($algorithm_id = 96)
     {
         $this->algorithm_id = $algorithm_id;
 
