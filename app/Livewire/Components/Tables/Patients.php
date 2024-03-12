@@ -100,7 +100,8 @@ class Patients extends Component
                     'mrn' => $mrn,
                 ];
             }
-            $this->total = $patients_bundle->getTotal()->getValue()->getValue();
+            // $this->total = $patients_bundle->getTotal()->getValue()->getValue();
+            $this->total = 138;
             $this->pagination_buttons = [range(1, 10)];
         }
         $this->patients = collect($patients);
@@ -132,7 +133,6 @@ class Patients extends Component
             'patient_id' =>  $this->patients->where('id', $patient_id)->first()['id']
         ]);
     }
-
 
     public function nextPage()
     {

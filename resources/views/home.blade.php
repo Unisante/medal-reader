@@ -36,9 +36,6 @@
 
   {{-- New consultation modal --}}
   <x-modals.new-consultation />
-
-  {{-- Patients table modal --}}
-  <livewire:components.tables.patients />
 @endsection
 
 @push('scripts')

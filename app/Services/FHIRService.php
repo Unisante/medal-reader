@@ -110,7 +110,7 @@ class FHIRService
 
         try {
             $response = Http::withHeaders($this->getHeaders())->get("$url/$resource", [
-                '_count' => 243,
+                '_count' => 138,
                 '_pretty' => true,
             ]);
         } catch (Exception $e) {
