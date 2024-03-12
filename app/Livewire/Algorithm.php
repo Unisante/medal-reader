@@ -173,12 +173,12 @@ class Algorithm extends Component
 
                 'consultation_nodes' => [
                     ...array_combine(
-                        array_column($json['medal_r_json']['config']['full_order']['medical_history_step'], 'title'),
-                        array_values($json['medal_r_json']['config']['full_order']['medical_history_step'])
+                        array_column($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [], 'title'),
+                        array_values($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [])
                     ),
                     ...['others' => ['title' => 'others', 'data' => []]]
                 ],
-                'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'],
+                'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'] ?? [],
                 'diagnoses_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['health_care_questions_step'] ?? [],
                     ...$json['medal_r_json']['config']['full_order']['referral_step'] ?? [],
@@ -440,7 +440,7 @@ class Algorithm extends Component
                 'drugs_hash_map' => $drugs_hash_map,
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
-                'dependency_map' => $dependency_map,
+                'dependency_map' => $dependency_map ?? [],
                 'max_length' => $max_length,
                 'nodes_per_step' => $nodes_per_step,
                 'no_condition_nodes' => $no_condition_nodes,
@@ -1220,7 +1220,7 @@ class Algorithm extends Component
                     }
                 }
 
-                $this->current_nodes['consultation']['medical_history'] = $consultation_nodes;
+                $this->current_nodes['consultation']['medical_history'] = $consultation_nodes ?? [];
             }
             $this->current_cc = key(array_filter($this->chosen_complaint_categories));
 
