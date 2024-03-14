@@ -560,7 +560,7 @@ class Algorithm extends Component
 
     public function calculateCompletionPercentage()
     {
-        if ($this->current_step === 'diagnoses') {
+        if ($this->current_step === 'diagnoses' || $this->current_step === 'tests') {
             return;
         }
         $cached_data = Cache::get($this->cache_key);
@@ -779,15 +779,6 @@ class Algorithm extends Component
         $nodes_to_update = $cached_data['nodes_to_update'];
         $full_nodes = $cached_data['full_nodes'];
 
-        // If answer will set a drug, we add it to the drugs to display
-        if (array_key_exists($answer_id, $drugs_hash_map)) {
-            foreach ($drugs_hash_map[$answer_id] as $drug_id) {
-                if (!array_key_exists($drug_id, $this->drugs_to_display)) {
-                    $this->drugs_to_display[$drug_id] = false;
-                }
-            }
-        }
-
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             $node = $full_nodes[$node_id];
             $system = isset($node['system']) ? $node['system'] : 'others';
@@ -890,6 +881,15 @@ class Algorithm extends Component
                             ];
                         }
                     }
+                }
+            }
+        }
+
+        // If answer will set a drug, we add it to the drugs to display
+        if (array_key_exists($answer_id, $drugs_hash_map)) {
+            foreach ($drugs_hash_map[$answer_id] as $drug_id) {
+                if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                    $this->drugs_to_display[$drug_id] = false;
                 }
             }
         }
@@ -1207,6 +1207,18 @@ class Algorithm extends Component
                                 ...$managements_hash_map[$this->nodes_to_save[$node_to_update_id]['answer_id']]
                             ];
                         }
+                    }
+                }
+            }
+
+            // If answer will set a drug, we add it to the drugs to display
+            if (array_key_exists($this->nodes_to_save[$node_id]['answer_id'], $drugs_hash_map)) {
+                foreach ($drugs_hash_map[$this->nodes_to_save[$node_id]['answer_id']] as $drug_id) {
+                    if (!isset($this->drugs_to_display)) {
+                        $this->drugs_to_display = [];
+                    }
+                    if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                        $this->drugs_to_display[$drug_id] = false;
                     }
                 }
             }
