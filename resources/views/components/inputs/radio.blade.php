@@ -25,7 +25,7 @@ $node_id,$full_nodes,$step
   @foreach ($full_nodes[$node_id]['answers'] as $answer)
     <div wire:key="{{ 'answer-' . $answer['id'] }}" class="form-check">
       <input class="form-check-input" type="radio"
-        wire:model.live="current_nodes.{{ $step }}.{{ $node_id }}" value={{ $answer['id'] }}
+        wire:model.live.number="current_nodes.{{ $step }}.{{ $node_id }}" value={{ $answer['id'] }}
         name="{{ $node_id }}" id="{{ $answer['id'] }}">
       <label class="form-check-label" for="{{ $answer['id'] }}">
         {{ $answer['label']['en'] }}

@@ -160,7 +160,7 @@ class Algorithm extends Component
                 'full_order_medical_history' => $json['medal_r_json']['config']['full_order']['medical_history_step'][0]['data'] ?? [],
                 'registration_nodes_id' => [
                     ...$json['medal_r_json']['config']['full_order']['registration_step'],
-                    ...$json['medal_r_json']['patient_level_questions'],
+                    // ...$json['medal_r_json']['patient_level_questions'],
                 ],
                 'first_look_assessment_nodes_id' => [
                     'first_look_nodes_id' => $json['medal_r_json']['config']['full_order']['first_look_assessment_step'] ?? [],
@@ -172,11 +172,20 @@ class Algorithm extends Component
                 ],
 
                 'consultation_nodes' => [
-                    ...array_combine(
-                        array_column($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [], 'title'),
-                        array_values($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [])
-                    ),
-                    ...['others' => ['title' => 'others', 'data' => []]]
+                    'medical_history' => [
+                        ...array_combine(
+                            array_column($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [], 'title'),
+                            array_values($json['medal_r_json']['config']['full_order']['medical_history_step'] ?? [])
+                        ),
+                        ...['others' => ['title' => 'others', 'data' => []]]
+                    ],
+                    'physical_exam' => [
+                        ...array_combine(
+                            array_column($json['medal_r_json']['config']['full_order']['physical_exam_step'] ?? [], 'title'),
+                            array_values($json['medal_r_json']['config']['full_order']['physical_exam_step'] ?? [])
+                        ),
+                        ...['others' => ['title' => 'others', 'data' => []]]
+                    ]
                 ],
                 'tests_nodes_id' => $json['medal_r_json']['config']['full_order']['test_step'] ?? [],
                 'diagnoses_nodes_id' => [
@@ -362,16 +371,14 @@ class Algorithm extends Component
                     if (empty($instance['conditions'])) {
 
                         // We don't care about background calculations
-                        if (!array_key_exists('system', $cached_data['full_nodes'][$instance_id])) {
+                        if (!array_key_exists('system', $node)) {
                             continue;
                         }
 
-                        if ($cached_data['full_nodes'][$instance_id]['category'] === 'physical_exam') {
-                            continue;
-                        }
+                        $substep = $node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
 
                         $system = $node['category'] !== 'background_calculation' ? $node['system'] : 'others';
-                        $consultation_nodes[$system][$step][$instance_id] = '';
+                        $consultation_nodes[$substep][$system][$step][$instance_id] = '';
                     }
 
                     if (!empty($instance['conditions'])) {
@@ -391,6 +398,19 @@ class Algorithm extends Component
                             $node = $cached_data['full_nodes'][$node_id];
                             if ($node['type'] === 'QuestionsSequence') {
                                 foreach ($node['instances'] as $qs_instance) {
+                                    if (empty($qs_instance['conditions'])) {
+                                        $qs_node = $cached_data['full_nodes'][$qs_instance['id']];
+
+                                        // We don't care about background calculations
+                                        if (!array_key_exists('system', $qs_node)) {
+                                            continue;
+                                        }
+
+                                        $substep = $qs_node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
+
+                                        $system = $qs_node['category'] !== 'background_calculation' ? $qs_node['system'] : 'others';
+                                        $consultation_nodes[$substep][$system][$step][$qs_instance['id']] = '';
+                                    }
                                     if (!empty($qs_instance['conditions'])) {
                                         foreach ($qs_instance['conditions'] as $qs_condition) {
                                             // We only add or treat nodes that have a system
@@ -412,7 +432,8 @@ class Algorithm extends Component
             }
         }
 
-        $this->algorithmService->sortSystemsAndNodesPerCC($consultation_nodes, $this->cache_key);
+
+        $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
 
         $nodes_per_step = [
             'registration' => $registration_nodes,
@@ -525,11 +546,11 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        // dump($cached_data['nodes_per_step']);
+        dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        // dump($cached_data['answers_hash_map'][6625]);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
@@ -539,6 +560,9 @@ class Algorithm extends Component
 
     public function calculateCompletionPercentage()
     {
+        if ($this->current_step === 'diagnoses') {
+            return;
+        }
         $cached_data = Cache::get($this->cache_key);
         $total = 0;
 
@@ -675,10 +699,10 @@ class Algorithm extends Component
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $old_value = $this->chosen_complaint_categories[$modified_cc_id] ?? null;
-        $current_nodes_per_step = $nodes_per_step['consultation']['general'];
+        $current_nodes_per_step = $nodes_per_step['consultation']['general'] ?? $nodes_per_step['consultation'];
 
         // We only do this modification behavior if the consultation step has already been calculated
-        if (isset($this->current_nodes['consultation'])) {
+        if ($this->saved_step >= 2) {
             if ($this->algorithm_type !== 'dynamic') {
                 if ($old_value) {
                     unset($this->current_nodes['consultation'][$modified_cc_id]);
@@ -754,6 +778,15 @@ class Algorithm extends Component
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
         $full_nodes = $cached_data['full_nodes'];
+
+        // If answer will set a drug, we add it to the drugs to display
+        if (array_key_exists($answer_id, $drugs_hash_map)) {
+            foreach ($drugs_hash_map[$answer_id] as $drug_id) {
+                if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                    $this->drugs_to_display[$drug_id] = false;
+                }
+            }
+        }
 
         if (array_key_exists($node_id, $this->nodes_to_save)) {
             $node = $full_nodes[$node_id];
@@ -838,6 +871,25 @@ class Algorithm extends Component
                             $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
                         }
                     }
+
+                    // If answer will set a drug, we add it to the drugs to display
+                    if (array_key_exists($this->nodes_to_save[$node_to_update_id]['answer_id'], $drugs_hash_map)) {
+                        foreach ($drugs_hash_map[$this->nodes_to_save[$node_to_update_id]['answer_id']] as $drug_id) {
+                            if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                                $this->drugs_to_display[$drug_id] = false;
+                            }
+                        }
+                    }
+
+                    // If answer will set a management, we add it to the managements to display
+                    if (isset($this->all_managements_to_display)) {
+                        if (array_key_exists($this->nodes_to_save[$node_to_update_id]['answer_id'], $managements_hash_map)) {
+                            $this->all_managements_to_display = [
+                                ...$this->all_managements_to_display,
+                                ...$managements_hash_map[$this->nodes_to_save[$node_to_update_id]['answer_id']]
+                            ];
+                        }
+                    }
                 }
             }
         }
@@ -913,7 +965,7 @@ class Algorithm extends Component
                             $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node] = $pretty_answer;
                         }
                     }
-                    $next_nodes_id = $this->getNextNodesId($this->nodes_to_save[$node]['answer_id']);
+                    $next_nodes_id_after_bc = $this->getNextNodesId($this->nodes_to_save[$node]['answer_id']);
                 }
             }
         }
@@ -1070,11 +1122,11 @@ class Algorithm extends Component
     {
         $answers = Cache::get($this->cache_key)['full_nodes'][$node_id]["answers"];
         foreach ($answers as $answer) {
-            $result = intval($value);
+            $result = floatval($value);
             $answer_value = $answer['value'];
             $answer_values = explode(',', $answer_value);
-            $minValue = intval($answer_values[0]);
-            $maxValue = intval($answer_values[1] ?? $minValue);
+            $minValue = floatval($answer_values[0]);
+            $maxValue = floatval($answer_values[1] ?? $minValue);
 
             $answer_found = match ($answer['operator']) {
                 'more_or_equal' => $result >= $minValue ? true : false,
@@ -1099,10 +1151,65 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $birth_date_formulas = $cached_data['birth_date_formulas'];
+        $drugs_hash_map = $cached_data['drugs_hash_map'];
+        $nodes_to_update = $cached_data['nodes_to_update'];
+        $managements_hash_map = $cached_data['managements_hash_map'];
 
         foreach ($birth_date_formulas as $node_id) {
+
             $pretty_answer = $this->handleFormula($node_id);
             $this->current_nodes['registration'][$node_id] = $pretty_answer;
+
+            // If node is linked to some bc, we calculate them directly
+            //But only if the bcs is already displayed
+            if (array_key_exists($node_id, $nodes_to_update)) {
+                foreach ($nodes_to_update[$node_id] as $node_to_update_id) {
+                    $pretty_answer = $this->handleFormula($node_to_update_id);
+                    if ($this->current_step === 'registration') {
+                        //todo Fix here as it's not displaying in all cases
+                        // if (array_key_exists($node_to_update_id, $this->current_nodes['registration'])) {
+                        $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
+                        // }
+                    }
+                    if ($this->current_step === 'first_look_assessment') {
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id']) || $this->algorithm_type === 'dynamic') {
+                            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_to_update_id] = $pretty_answer;
+                        }
+                    }
+                    if ($this->current_step === 'consultation') {
+                        if ($this->algorithm_type === 'dynamic') {
+                            if (
+                                !array_key_exists($node_to_update_id, $this->current_nodes['registration'])
+                                && !array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
+                            ) {
+                                $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
+                            }
+                        }
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
+                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                        }
+                    }
+
+                    // If answer will set a drug, we add it to the drugs to display
+                    if (array_key_exists($this->nodes_to_save[$node_to_update_id]['answer_id'], $drugs_hash_map)) {
+                        foreach ($drugs_hash_map[$this->nodes_to_save[$node_to_update_id]['answer_id']] as $drug_id) {
+                            if (!array_key_exists($drug_id, $this->drugs_to_display)) {
+                                $this->drugs_to_display[$drug_id] = false;
+                            }
+                        }
+                    }
+
+                    // If answer will set a management, we add it to the managements to display
+                    if (isset($this->all_managements_to_display)) {
+                        if (array_key_exists($this->nodes_to_save[$node_to_update_id]['answer_id'], $managements_hash_map)) {
+                            $this->all_managements_to_display = [
+                                ...$this->all_managements_to_display,
+                                ...$managements_hash_map[$this->nodes_to_save[$node_to_update_id]['answer_id']]
+                            ];
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1119,18 +1226,29 @@ class Algorithm extends Component
             // assessment test goes somewhere else.
             if ($this->algorithm_type === 'dynamic') {
                 $system = isset($node['system']) ? $node['system'] : 'others';
-                match ($node['category']) {
-                    'physical_exam' => $this->current_nodes['consultation']['physical_exam'][$system][$node["id"]] = '',
-                    'symptom', 'predefined_syndrome', 'background_calculation', 'exposure' => $this->current_nodes['consultation']['medical_history'][$system][$node["id"]] = '',
-                    'assessment_test' => $this->current_nodes['tests'][$node["id"]] = '',
-                    'treatment_question' => $this->current_nodes['diagnoses']['treatment_questions'][$node["id"]] = false,
-                    default => null,
-                };
+
+                switch ($node['category']) {
+                    case 'physical_exam':
+                        $this->current_nodes['consultation']['physical_exam'][$system][$node['id']] = '';
+                        break;
+                    case 'symptom';
+                    case 'predefined_syndrome';
+                    case 'background_calculation';
+                    case 'exposure';
+                        $this->current_nodes['consultation']['medical_history'][$system][$node['id']] = '';
+                        break;
+                    case 'assessment_test':
+                        $this->current_nodes['tests'][$node['id']] = '';
+                        break;
+                    case 'treatment_question':
+                        $this->current_nodes['diagnoses']['treatment_questions'][$node['id']] = false;
+                        break;
+                }
                 if (isset($this->current_nodes['consultation']['physical_exam'])) {
-                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], $this->cache_key);
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
                 }
                 if (isset($this->current_nodes['consultation']['medical_history'])) {
-                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], $this->cache_key);
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
                 }
             } else {
                 if (!isset($this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id])) {
@@ -1139,7 +1257,6 @@ class Algorithm extends Component
             }
         }
     }
-
 
     public function getNextNodesId($node_id)
     {
@@ -1181,7 +1298,7 @@ class Algorithm extends Component
         }
 
         if ($step === 'consultation') {
-            if (!isset($this->current_nodes['consultation'])) {
+            if ($this->saved_step >= 2) {
                 $cc_order = array_flip($cached_data['complaint_categories_steps']);
 
                 // Respect the order in the complaint_categories_step key
@@ -1193,34 +1310,41 @@ class Algorithm extends Component
 
                 $this->current_cc = key(array_filter($this->chosen_complaint_categories));
                 $current_nodes_per_step = $nodes_per_step[$step];
-                foreach ($current_nodes_per_step as $system_name => $system_data) {
-                    foreach ($system_data as $cc_id => $nodes) {
-                        if (isset($this->chosen_complaint_categories[$cc_id])) {
+                foreach ($current_nodes_per_step as $step_name => $step_systems) {
+                    foreach ($step_systems as $system_name => $system_data) {
+                        foreach ($system_data as $cc_id => $nodes) {
+                            if (isset($this->chosen_complaint_categories[$cc_id])) {
 
-                            if ($this->algorithm_type === 'dynamic') {
-                                $consultation_nodes[$system_name] = $system_data[$cc_id];
-                            } elseif ($this->algorithm_type === 'prevention') {
-                                $consultation_nodes[$cc_id] = $system_data[$cc_id];
-                            } else {
-                                if (isset($consultation_nodes[$cc_id])) {
-                                    $consultation_nodes[$cc_id] += $system_data[$cc_id];
-                                } else {
+                                if ($this->algorithm_type === 'dynamic') {
+                                    $consultation_nodes[$step_name][$system_name] = $system_data[$cc_id];
+                                } elseif ($this->algorithm_type === 'prevention') {
                                     $consultation_nodes[$cc_id] = $system_data[$cc_id];
+                                } else {
+                                    if (isset($consultation_nodes[$cc_id])) {
+                                        $consultation_nodes[$cc_id] += $system_data[$cc_id];
+                                    } else {
+                                        $consultation_nodes[$cc_id] = $system_data[$cc_id];
+                                    }
                                 }
+                                continue;
                             }
-                            continue;
-                        }
-                        // We only add nodes that are not excluded by CC
-                        if (isset($conditioned_nodes_hash_map[$cc_id])) {
-                            $consultation_nodes[$system_name] = array_diff(
-                                $consultation_nodes[$system_name] ?? [],
-                                $conditioned_nodes_hash_map[$cc_id]
-                            );
+                            // We only add nodes that are not excluded by CC
+                            if (isset($conditioned_nodes_hash_map[$cc_id])) {
+                                $consultation_nodes[$step_name][$system_name] = array_diff(
+                                    $consultation_nodes[$step_name][$system_name] ?? [],
+                                    $conditioned_nodes_hash_map[$cc_id]
+                                );
+                            }
                         }
                     }
                 }
-
-                $this->current_nodes['consultation']['medical_history'] = $consultation_nodes ?? [];
+                if (isset($this->current_nodes['consultation'])) {
+                    $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes);
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
+                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
+                } else {
+                    $this->current_nodes['consultation'] = $consultation_nodes ?? [];
+                }
             }
             $this->current_cc = key(array_filter($this->chosen_complaint_categories));
 
@@ -1275,7 +1399,6 @@ class Algorithm extends Component
             $health_cares = $cached_data['health_cares'];
             $agreed_diagnoses = array_filter($this->diagnoses_status);
             $common_agreed_df = array_intersect_key($this->df_to_display, $agreed_diagnoses);
-
             foreach ($this->drugs_to_display as $drug_id => $is_displayed) {
                 $this->drugs_to_display[$drug_id] = false;
                 foreach ($common_agreed_df as $diagnosis_id => $drugs) {

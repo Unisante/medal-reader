@@ -1,6 +1,14 @@
 <div class="mb-5">
-  <div>
-    <h2 class="fw-normal">{{ $title }}</h2>
+  <div class="d-flex justify-content-between">
+    <div>
+      <h2 class="fw-normal">{{ $title }}</h2>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" wire:model.live="debug_mode" value="" id="enable_debug" checked>
+      <label class="form-check-label" for="enable_debug">
+        Enable debug mode
+      </label>
+    </div>
   </div>
   @php
     $cache = Cache::get($cache_key);
@@ -20,7 +28,7 @@
   <x-navigation.dynamic-navsteps :$current_step :$saved_step :$completion_per_step />
 
   <div class="row g-3">
-    <div class="col-8">
+    <div class="col-10">
       <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
         @foreach ($steps[$algorithm_type][$current_step] as $index => $title)
           <li class="nav-item" role="presentation">
@@ -40,11 +48,18 @@
             @if ($substep_title === 'medical_history')
               <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes :$villages
                 :$debug_mode />
+              <div class="d-flex justify-content-end">
+                <button class="btn button-unisante m-1"
+                  wire:click="goToSubStep('consultation', 'physical_exam')">Physical exam</button>
+              </div>
             @endif
             @if ($substep_title === 'physical_exam')
               @if (isset($current_nodes['consultation']['physical_exam']))
                 <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exam" :$nodes_to_save :$full_nodes :$villages
                   :$debug_mode />
+                <div class="d-flex justify-content-end">
+                  <button class="btn button-unisante m-1" wire:click="goToStep('tests')">tests</button>
+                </div>
               @endif
             @endif
           </div>
@@ -115,7 +130,9 @@
               @endif
               @if ($current_sub_step === 'treatment_questions')
                 @php
-                  $treatment_questions = isset($current_nodes['diagnoses']['treatment_questions']) ? $current_nodes['diagnoses']['treatment_questions'] : null;
+                  $treatment_questions = isset($current_nodes['diagnoses']['treatment_questions'])
+                      ? $current_nodes['diagnoses']['treatment_questions']
+                      : null;
                 @endphp
                 @if (isset($treatment_questions))
                   <table class="table table-striped">
@@ -127,17 +144,16 @@
                     <tbody>
                       @foreach ($treatment_questions as $node_id => $answer)
                         <tr wire:key="{{ 'treatment-question-' . $node_id }}">
-
                           @switch($full_nodes[$node_id]['display_format'])
                             @case('RadioButton')
                               <td>
-                                <x-inputs.radio step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
+                                <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
                               </td>
                             @break
 
                             @case('DropDownList')
                               <td>
-                                <x-inputs.select step="diagnoses.treatment_questions" :node_id="$node_id" :cache_key="$cache_key" />
+                                <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
                               </td>
                             @break
 

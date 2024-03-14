@@ -165,22 +165,28 @@ class AlgorithmService
         return $nodes_to_update;
     }
 
-    public function sortSystemsAndNodesPerCC(array &$nodes, string $cache_key)
+    public function sortSystemsAndNodesPerCCPerStep(array &$nodes, string $cache_key)
     {
-        $cached_data = Cache::get($cache_key);
-        $consultation_nodes = $cached_data['consultation_nodes'];
-
-        $this->sortSystems($consultation_nodes, $nodes);
-        $this->sortNodes($consultation_nodes, $nodes, true);
+        $this->sortSystemsAndNodesPerCC($nodes['medical_history'], 'medical_history', $cache_key);
+        $this->sortSystemsAndNodesPerCC($nodes['physical_exam'], 'physical_exam', $cache_key);
     }
 
-    public function sortSystemsAndNodes(array &$nodes, string $cache_key)
+    public function sortSystemsAndNodesPerCC(array &$nodes, $step, string $cache_key)
     {
         $cached_data = Cache::get($cache_key);
         $consultation_nodes = $cached_data['consultation_nodes'];
 
-        $this->sortSystems($consultation_nodes, $nodes);
-        $this->sortNodes($consultation_nodes, $nodes, false);
+        $this->sortSystems($consultation_nodes[$step], $nodes);
+        $this->sortNodes($consultation_nodes[$step], $nodes, true);
+    }
+
+    public function sortSystemsAndNodes(array &$nodes, $step, string $cache_key)
+    {
+        $cached_data = Cache::get($cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+
+        $this->sortSystems($consultation_nodes[$step], $nodes);
+        $this->sortNodes($consultation_nodes[$step], $nodes, false);
     }
 
     public function sortSystems(array $consultation_nodes, array &$nodes)

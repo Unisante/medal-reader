@@ -45,9 +45,4 @@
       @endforeach
     @endif
   </div>
-  @if ($loop->last)
-    <div class="d-flex justify-content-end">
-      <button class="btn button-unisante m-1" wire:click="goToStep('tests')">tests</button>
-    </div>
-  @endif
 @endforeach
