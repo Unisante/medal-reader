@@ -6,7 +6,7 @@
   {{-- System container --}}
   <div wire:key="{{ 'system-' . $substep . $title }}">
     @if (count($system))
-      <h4>{{ $title }}</h4>
+      <h4>{{ trans("systems.$title") }}</h4>
       @foreach ($system as $node_id => $answer_id)
         <div wire:key="{{ 'nodes-' . $node_id }}">
           @if (isset($full_nodes[$node_id]['display_format']))

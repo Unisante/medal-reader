@@ -239,7 +239,7 @@ class FormulationService
                 $drugDose = $this->makeDrugDose();
                 $liquid_concentration = $this->current_formulation['liquid_concentration'];
                 $dose_form = $this->current_formulation['dose_form'];
-                return 'Give ' . $drugDose['doseResult'] . 'ml of ' . $this->roundSup($liquid_concentration) . 'mg/' . $dose_form . 'ml' . $medication_form;
+                return 'Give ' . $drugDose['doseResult'] . 'ml of ' . $this->roundSup($liquid_concentration) . 'mg/' . $dose_form . 'ml';
             }
         }
         return 'Give ' . $medication_form;

@@ -135,36 +135,23 @@
                       : null;
                 @endphp
                 @if (isset($treatment_questions))
-                  <table class="table table-striped">
-                    <thead>
-                      <tr>
-                        <th scope="col">Treatment Question</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @foreach ($treatment_questions as $node_id => $answer)
-                        <tr wire:key="{{ 'treatment-question-' . $node_id }}">
-                          @switch($full_nodes[$node_id]['display_format'])
-                            @case('RadioButton')
-                              <td>
-                                <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
-                              </td>
-                            @break
+                  @foreach ($treatment_questions as $node_id => $answer)
+                    <div wire:key="{{ 'treatment-question-' . $node_id }}">
+                      @switch($full_nodes[$node_id]['display_format'])
+                        @case('RadioButton')
+                          <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
+                        @break
 
-                            @case('DropDownList')
-                              <td>
-                                <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
-                              </td>
-                            @break
+                        @case('DropDownList')
+                          <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
+                        @break
 
-                            @default
-                          @endswitch
-                        </tr>
-                      @endforeach
-                    </tbody>
-                  </table>
+                        @default
+                      @endswitch
+                    </div>
+                  @endforeach
                 @else
-                  <h1>There are no Questions</h1>
+                  <h4>There are no questions</h4>
                 @endif
               @endif
               @if ($current_sub_step === 'medicines')
@@ -213,6 +200,8 @@
                       @endforeach
                     </tbody>
                   </table>
+                @else
+                  <h4>There are no medecine</h4>
                 @endif
               @endif
               @if ($current_sub_step === 'summary')

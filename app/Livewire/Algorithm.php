@@ -546,11 +546,11 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        dump($cached_data['nodes_per_step']);
+        // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
+        // dump($cached_data['answers_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
@@ -702,7 +702,7 @@ class Algorithm extends Component
         $current_nodes_per_step = $nodes_per_step['consultation']['general'] ?? $nodes_per_step['consultation'];
 
         // We only do this modification behavior if the consultation step has already been calculated
-        if ($this->saved_step >= 2) {
+        if ($this->saved_step > 2) {
             if ($this->algorithm_type !== 'dynamic') {
                 if ($old_value) {
                     unset($this->current_nodes['consultation'][$modified_cc_id]);
@@ -1396,7 +1396,7 @@ class Algorithm extends Component
         $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
         //todo uncomment it when in prod
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void
