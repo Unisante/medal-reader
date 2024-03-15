@@ -67,7 +67,7 @@
   @if ($current_step === 'consultation')
     <div class="row g-3 mt-3">
       <div class="col-8 border-end">
-        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
       </div>
       <div class="col-4">
         <div style="position: -webkit-sticky; position: sticky; top: 128px;">

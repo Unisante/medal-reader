@@ -507,6 +507,7 @@ class Algorithm extends Component
         // If we are in training mode then we go directly to consultation step
         if ($this->algorithm_type === 'training') {
             $this->chosen_complaint_categories[$cached_data['general_cc_id']] = true;
+            $this->saved_step = 2;
             $this->goToStep('consultation');
         }
 
@@ -584,7 +585,7 @@ class Algorithm extends Component
 
         if ($this->current_step === 'consultation') {
             if ($this->algorithm_type !== 'dynamic') {
-                $current_nodes = $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc];
+                $current_nodes = $this->current_nodes[$this->current_step][$this->current_cc];
             } else {
                 $current_nodes = $this->current_nodes[$this->current_step];
                 foreach ($current_nodes as $steps) {
@@ -1395,7 +1396,6 @@ class Algorithm extends Component
         //Need to be on the future validateStep function, not here and remove the max
         $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
-        //todo uncomment it when in prod
         $this->dispatch('scrollTop');
     }
 

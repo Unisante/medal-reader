@@ -168,7 +168,9 @@ class AlgorithmService
     public function sortSystemsAndNodesPerCCPerStep(array &$nodes, string $cache_key)
     {
         $this->sortSystemsAndNodesPerCC($nodes['medical_history'], 'medical_history', $cache_key);
-        $this->sortSystemsAndNodesPerCC($nodes['physical_exam'], 'physical_exam', $cache_key);
+        if (array_key_exists('physical_exam', $nodes)) {
+            $this->sortSystemsAndNodesPerCC($nodes['physical_exam'], 'physical_exam', $cache_key);
+        }
     }
 
     public function sortSystemsAndNodesPerCC(array &$nodes, $step, string $cache_key)

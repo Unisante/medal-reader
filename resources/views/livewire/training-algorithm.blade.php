@@ -25,7 +25,7 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
       @endif
 
       {{-- Diagnoses --}}
