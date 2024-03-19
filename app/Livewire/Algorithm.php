@@ -924,11 +924,12 @@ class Algorithm extends Component
             // Remove every linked nodes to old answer
             if (array_key_exists($old_value, $dependency_map)) {
                 foreach ($dependency_map[$old_value] as $node_id) {
-                    foreach ($this->current_nodes['consultation']['medical_history'] as $system_name => $nodes_per_system) {
-                        if (isset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id])) {
+                    $medical_history_nodes = $this->current_nodes['consultation']['medical_history'] ?? $this->current_nodes['consultation'];
+                    foreach ($medical_history_nodes as $system_name => $nodes_per_system) {
+                        if (isset($medical_history_nodes[$system_name][$node_id])) {
                             // Remove every df and managements dependency of linked nodes
-                            if (array_key_exists($this->current_nodes['consultation']['medical_history'][$system_name][$node_id], $df_hash_map)) {
-                                foreach ($df_hash_map[$this->current_nodes['consultation']['medical_history'][$system_name][$node_id]] as $df) {
+                            if (array_key_exists($medical_history_nodes[$system_name][$node_id], $df_hash_map)) {
+                                foreach ($df_hash_map[$medical_history_nodes[$system_name][$node_id]] as $df) {
                                     if (array_key_exists($df, $this->df_to_display)) {
                                         if (isset($final_diagnoses[$df]['managements'])) {
                                             unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
@@ -937,7 +938,11 @@ class Algorithm extends Component
                                     }
                                 }
                             }
-                            unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id]);
+                            if ($this->algorithm_type === 'dynamic') {
+                                unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id]);
+                            } else {
+                                unset($this->current_nodes['consultation'][$system_name][$node_id]);
+                            }
                         }
                     }
                 }
@@ -1264,8 +1269,8 @@ class Algorithm extends Component
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
                 }
             } else {
-                if (!isset($this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id])) {
-                    $this->current_nodes[$this->current_step]['medical_history'][$this->current_cc][$next_node_id] = '';
+                if (!isset($this->current_nodes[$this->current_step][$this->current_cc][$next_node_id])) {
+                    $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
                 }
             }
         }

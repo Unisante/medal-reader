@@ -3,7 +3,7 @@
 <h2 class="fw-normal pb-3">Tests</h2>
 
 @foreach ($nodes as $node_id => $value)
-  <P>{{ $node_id }}</P>
+  {{-- <P>{{ $node_id }}</P> --}}
   <div wire:key="{{ 'nodes-' . $node_id }}">
     @if (isset($full_nodes[$node_id]['display_format']))
       @switch($full_nodes[$node_id]['display_format'])
