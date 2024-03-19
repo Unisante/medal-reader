@@ -859,8 +859,14 @@ class Algorithm extends Component
                                 $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
                             }
                         }
-                        if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
-                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                        if ($this->algorithm_type === 'dynamic') {
+                            if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
+                                $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                            }
+                        } else {
+                            if (array_key_exists($node_to_update_id, $this->current_nodes['consultation'][$this->current_cc])) {
+                                $this->current_nodes['consultation'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                            }
                         }
                     }
 
@@ -1145,6 +1151,7 @@ class Algorithm extends Component
                 $label = "{$answer['id']} : {$answer['label']['en']} ($result is {$answer['operator']} {$answer['value']})";
                 $this->nodes_to_save[$node_id]['answer_id'] = $answer['id'];
                 $this->nodes_to_save[$node_id]['label'] = $label;
+                $this->nodes_to_save[$node_id]['value'] = $value;
                 return $label;
             }
         }

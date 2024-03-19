@@ -35,7 +35,7 @@
   {{-- first_look_assessment --}}
   @if ($current_step === 'first_look_assessment')
     <div class="row g-3 mt-3">
-      <div class="col-9">
+      <div class="col-8 pe-5">
         <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
         @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
           <div wire:key="{{ 'cc-' . $node_id }}">
@@ -47,7 +47,7 @@
             wire:click="goToStep('consultation')">Questionnaires</button>
         </div>
       </div>
-      <div class="col-3">
+      <div class="col-4">
         @foreach ($diagnoses_per_cc as $cc => $diagnoses)
           @foreach ($diagnoses as $diagnose)
             <div wire:key="{{ $diagnose }}">
