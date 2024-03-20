@@ -3,9 +3,7 @@
 namespace App\Services;
 
 use DateTime;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 class AlgorithmService
 {
