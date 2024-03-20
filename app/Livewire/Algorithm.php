@@ -393,7 +393,7 @@ class Algorithm extends Component
                                 $answers_hash_map[$step][$answer_id][] = $instance_id;
                             }
 
-                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $max_length);
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $max_length, $cached_data['final_diagnoses']);
 
                             $node = $cached_data['full_nodes'][$node_id];
                             if ($node['type'] === 'QuestionsSequence') {
@@ -420,7 +420,7 @@ class Algorithm extends Component
                                             // Need to find the good if because if we just filter priority_sign it will then not remove
                                             // if (isset($cached_data['full_nodes'][$qs_instance['id']]['system']) && $cached_data['full_nodes'][$qs_instance['id']]['system'] !== 'priority_sign') {
                                             $answers_hash_map[$step][$qs_condition['answer_id']][] = $qs_instance['id'];
-                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map, $max_length);
+                                            $this->algorithmService->breadthFirstSearch($node['instances'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map, $max_length, $cached_data['final_diagnoses']);
                                             // }
                                         }
                                     }
@@ -551,12 +551,12 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['answers_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
-        // dump($cached_data['max_length']);
+        dump($cached_data['max_length']);
     }
 
     public function calculateCompletionPercentage()

@@ -5,11 +5,12 @@ namespace App\Services;
 use DateTime;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AlgorithmService
 {
 
-    public function calculateMaxChildLength($instances, $node_id, &$max_length)
+    public function calculateMaxChildLength($instances, $node_id, &$max_length, $diags)
     {
         if (!isset($instances[$node_id])) {
             return 0;
@@ -21,7 +22,10 @@ class AlgorithmService
         foreach ($instance['conditions'] as $condition) {
             $child_max_length = 0;
             foreach ($instance['children'] as $child_node_id) {
-                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $child_node_id, $max_length));
+                if (isset($diags[$child_node_id])) {
+                    return $max_length[$node_id];
+                }
+                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $child_node_id, $max_length, $diags));
             }
             $max_length[$node_id] = max($max_length[$node_id], $child_max_length + 1);
         }
@@ -29,10 +33,10 @@ class AlgorithmService
         return $max_length[$node_id];
     }
 
-    public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length)
+    public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length, $diags)
     {
         // Calculate maximum lengths for each node
-        $this->calculateMaxChildLength($instances, $start_node_id, $max_length);
+        $this->calculateMaxChildLength($instances, $start_node_id, $max_length, $diags);
 
         // Implement breadth-first search using $max_length
         $stack = [[$start_node_id, 0]];
