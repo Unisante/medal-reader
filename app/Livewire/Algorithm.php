@@ -1363,7 +1363,7 @@ class Algorithm extends Component
                         }
                     }
                 }
-                if (isset($this->current_nodes['consultation'])) {
+                if (isset($this->current_nodes['consultation']) && $this->algorithm_type !== 'training') {
                     $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes);
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
