@@ -29,7 +29,7 @@ class Algorithm extends Component
     public int $cache_expiration_time;
     public string $title;
     public string $algorithm_type;
-    public bool $debug_mode = true;
+    public bool $debug_mode = false;
     //todo remove definition when in prod
     public string $age_key = 'older';
     public string $current_step = 'registration';
@@ -371,13 +371,13 @@ class Algorithm extends Component
                     if (empty($instance['conditions'])) {
 
                         // We don't care about background calculations
-                        if (!array_key_exists('system', $node)) {
+                        if (!array_key_exists('system', $node) && $node['category'] !== 'unique_triage_question') {
                             continue;
                         }
 
                         $substep = $node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
 
-                        $system = $node['category'] !== 'background_calculation' ? $node['system'] : 'others';
+                        $system = $node['category'] !== 'background_calculation' ? $node['system'] ?? 'others' : 'others';
                         $consultation_nodes[$substep][$system][$step][$instance_id] = '';
                     }
 
@@ -431,7 +431,6 @@ class Algorithm extends Component
                 }
             }
         }
-
 
         $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
 
@@ -557,6 +556,7 @@ class Algorithm extends Component
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
+        // dump($cached_data['max_length']);
     }
 
     public function calculateCompletionPercentage()
@@ -1363,10 +1363,12 @@ class Algorithm extends Component
                         }
                     }
                 }
-                if (isset($this->current_nodes['consultation']) && $this->algorithm_type !== 'training') {
-                    $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes);
-                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
-                    $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
+                if (isset($this->current_nodes['consultation'])) {
+                    if ($this->algorithm_type !== 'training') {
+                        $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes);
+                        $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['medical_history'], 'medical_history', $this->cache_key);
+                        $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
+                    }
                 } else {
                     $this->current_nodes['consultation'] = $consultation_nodes ?? [];
                 }
