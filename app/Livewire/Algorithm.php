@@ -433,7 +433,7 @@ class Algorithm extends Component
         }
 
         if (empty($consultation_nodes)) {
-            flash()->addError('Aucune question à afficher. Algorithme vide ou uniquement des questions de type démographiques configurées');
+            flash()->addError('Aucune question à afficher. Algorithme vide ou uniquement des questions de type démographique configurées');
             return redirect()->route("home.index");
         }
 
