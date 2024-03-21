@@ -27,16 +27,14 @@ class AlgorithmService
             }
             $max_length[$node_id] = max($max_length[$node_id], $child_max_length + 1);
         }
-
         return $max_length[$node_id];
     }
 
     public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length, $diags)
     {
-        // Calculate maximum lengths for each node
+        // Calculate maximum path length for each node
         $this->calculateMaxChildLength($instances, $start_node_id, $max_length, $diags);
 
-        // Implement breadth-first search using $max_length
         $stack = [[$start_node_id, 0]];
         $nodes_visited = [];
 

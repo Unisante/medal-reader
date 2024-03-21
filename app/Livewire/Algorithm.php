@@ -432,8 +432,12 @@ class Algorithm extends Component
             }
         }
 
-        $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
+        if (empty($consultation_nodes)) {
+            flash()->addError('Aucune question à afficher. Algorithme vide ou uniquement des questions de type démographiques configurées');
+            return redirect()->route("home.index");
+        }
 
+        $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
         $nodes_per_step = [
             'registration' => $registration_nodes,
             'first_look_assessment' => $first_look_assessment_nodes ?? [],
@@ -542,7 +546,6 @@ class Algorithm extends Component
         // dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
         // dd($this->registration_nodes_id);
         // dd($cached_data);
-        // dump($conditioned_nodes_hash_map);
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
