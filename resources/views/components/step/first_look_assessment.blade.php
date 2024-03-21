@@ -39,7 +39,10 @@
       @break
 
       @case('Formula')
-        <x-inputs.text step="first_look_assessment.basic_measurements_nodes_id" :$node_id :$full_nodes :is_background_calc="true" />
+        @if ($debug_mode)
+          <x-inputs.text step="first_look_assessment.basic_measurements_nodes_id" :$node_id :$full_nodes
+            :is_background_calc="true" />
+        @endif
       @break
 
       @default

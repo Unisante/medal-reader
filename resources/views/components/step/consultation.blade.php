@@ -29,13 +29,17 @@
               @break
 
               @case('Formula')
-                <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
-                  :is_background_calc="true" />
+                @if ($debug_mode)
+                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                    :is_background_calc="true" />
+                @endif
               @break
 
               @case('Reference')
-                <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
-                  :is_background_calc="true" />
+                @if ($debug_mode)
+                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                    :is_background_calc="true" />
+                @endif
               @break
 
               @default

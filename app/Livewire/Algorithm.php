@@ -1326,7 +1326,7 @@ class Algorithm extends Component
         }
 
         if ($step === 'consultation') {
-            if ($this->saved_step >= 2) {
+            if ($this->saved_step === 2) {
                 $cc_order = array_flip($cached_data['complaint_categories_steps']);
 
                 // Respect the order in the complaint_categories_step key
