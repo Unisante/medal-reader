@@ -7,6 +7,9 @@
       <div class="input-container m-5">
         <label class="form-check-label" for="{{ $diagnosis_id }}">
           @markdown($final_diagnoses[$diagnosis_id]['label']['en'])
+          @if (isset($final_diagnoses[$diagnosis_id]['description']['en']))
+            @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+          @endif
         </label>
       </div>
     </div>

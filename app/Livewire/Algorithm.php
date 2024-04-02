@@ -689,6 +689,7 @@ class Algorithm extends Component
 
         $this->calculateCompletionPercentage();
     }
+
     public function updatingCurrentNodes($value, $key)
     {
         if ($this->algorithmService->isDate($value)) return;
@@ -697,6 +698,7 @@ class Algorithm extends Component
 
         $this->saveNode($node_id, $value, $value, $old_answer_id);
     }
+
     public function updatingChosenComplaintCategories($key, int $modified_cc_id)
     {
         $cached_data = Cache::get($this->cache_key);
@@ -1272,6 +1274,7 @@ class Algorithm extends Component
                         $this->current_nodes['diagnoses']['treatment_questions'][$node['id']] = false;
                         break;
                 }
+
                 if (isset($this->current_nodes['consultation']['physical_exam'])) {
                     $this->algorithmService->sortSystemsAndNodes($this->current_nodes['consultation']['physical_exam'], 'physical_exam', $this->cache_key);
                 }

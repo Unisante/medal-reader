@@ -4,7 +4,7 @@
 
 @foreach ($nodes as $title => $system)
   {{-- System container --}}
-  <div wire:key="{{ 'system-' . $substep . $title }}">
+  <div wire:key="{{ 'system-' . $substep . '-' . $title }}">
     @if (count($system))
       <h4>{{ trans("systems.$title") }}</h4>
       @foreach ($system as $node_id => $answer_id)

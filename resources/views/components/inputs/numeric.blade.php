@@ -5,7 +5,7 @@
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])
       <div x-data="{ open: false }">
-        <button class="btn btn-sm btn-outline-secondary m-1" @click="open = !open">
+        <button class="btn btn-sm btn-outline-secondary m-1" x-on:click="open = !open">
           <i class="bi bi-info-circle"> Description</i>
         </button>
         <div x-show="open">

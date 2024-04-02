@@ -17,13 +17,6 @@
     $health_cares = $cache['health_cares'];
     $villages = $cache['villages'];
   @endphp
-  {{-- @dump($current_nodes) --}}
-  {{-- Registration --}}
-
-  {{-- @dump($current_nodes["registration"]) --}}
-  {{-- @dump($current_nodes["first_look_assessment"]) --}}
-  {{-- @dump($current_nodes["consultation"]) --}}
-  {{-- @dump($current_nodes["registration"]["others"]) --}}
 
   <x-navigation.dynamic-navsteps :$current_step :$saved_step :$completion_per_step />
 
@@ -31,20 +24,23 @@
     <div class="col-10">
       <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
         @foreach ($steps[$algorithm_type][$current_step] as $index => $title)
-          <li class="nav-item" role="presentation">
-            <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
-              data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
-              aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
-              wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
-            </button>
-          </li>
+          <div wire:key="{{ 'tab-consultation-' . $title }}">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link @if ($current_sub_step === $title) active @endif" id="{{ Str::slug($title) }}-tab"
+                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($title) }}" type="button" role="tab"
+                aria-controls="{{ Str::slug($title) }}" aria-selected="{{ $current_sub_step === $index }}"
+                wire:click="goToSubStep('{{ $current_step }}','{{ $title }}')">{{ ucwords(str_replace('_', ' ', $title)) }}
+              </button>
+            </li>
+          </div>
         @endforeach
       </ul>
       <div class="tab-content" id="myTabContent">
         @foreach ($steps[$algorithm_type][$current_step] as $index => $substep_title)
           <div wire:key="{{ 'consultation-' . $substep_title }}"
             class="tab-pane fade @if ($current_sub_step === $substep_title) show active @endif"
-            id="{{ Str::slug($substep_title) }}" role="tabpanel" aria-labelledby="{{ Str::slug($substep_title) }}-tab">
+            id="{{ Str::slug($substep_title) }}" role="tabpanel"
+            aria-labelledby="{{ Str::slug($substep_title) }}-tab">
             @if ($substep_title === 'medical_history')
               <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes :$villages
                 :$debug_mode />
