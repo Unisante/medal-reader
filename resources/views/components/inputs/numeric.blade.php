@@ -17,11 +17,11 @@
   <input class="form-control @error('value') is-invalid @enderror" type="text"
     wire:model.live.debounce.300ms.number='{{ "current_nodes.$step.$node_id" }}' name="{{ $node_id }}"
     id="{{ $node_id }}">
-  @error("{{ 'current_nodes.registration.' . $node_id }}")
+  {{-- @error("{{ 'current_nodes.registration.' . $node_id }}")
     <div class="invalid-feedback" role="alert">{{ $message }}</div>
-  @enderror
+  @enderror --}}
   @if ($debug_mode)
-    <p class="fst-italic">{{ $label }}</p>
+    <p style="font-size: smaller;" class="fst-italic">{{ $label }}</p>
   @endif
 </div>
 

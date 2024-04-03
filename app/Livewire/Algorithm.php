@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
@@ -43,6 +44,12 @@ class Algorithm extends Component
     public array $managements_to_display;
     public array $all_managements_to_display;
     public array $nodes_to_save;
+    #[Validate([
+        'current_nodes.registration.birth_date' => 'required:date',
+    ], message: [
+        'required' => 'The date of birth is required to continue',
+        'date' => 'The date of birth is required to continue',
+    ])]
     public array $current_nodes;
     public array $nodes;
     public array $diagnoses_status;
@@ -514,7 +521,11 @@ class Algorithm extends Component
 
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
+
+            $this->current_nodes['registration']['birth_date'] = '1970-10-05';
+            $this->updateLinkedNodesOfDob('1970-10-05');
         }
+
         //END TO REMOVE
         // dd($this->current_nodes);
         // If we are in training mode then we go directly to consultation step
@@ -712,21 +723,32 @@ class Algorithm extends Component
     public function updatingChosenComplaintCategories($key, int $modified_cc_id)
     {
         $cached_data = Cache::get($this->cache_key);
+        $full_nodes = $cached_data['full_nodes'];
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $old_value = $this->chosen_complaint_categories[$modified_cc_id] ?? null;
-        $current_nodes_per_step = $nodes_per_step['consultation']['general'] ?? $nodes_per_step['consultation'];
+        $current_nodes_per_step = $nodes_per_step['consultation']['medical_history']['general'] ?? $nodes_per_step['consultation']['medical_history'];
 
         // We only do this modification behavior if the consultation step has already been calculated
         if ($this->saved_step > 2) {
             if ($this->algorithm_type !== 'dynamic') {
                 if ($old_value) {
                     unset($this->current_nodes['consultation'][$modified_cc_id]);
+                    unset($this->completion_per_substep[$modified_cc_id]);
                 } else {
                     foreach ($current_nodes_per_step as $system_name => $system_data) {
                         if ($modified_cc_id === $system_name) {
-                            $this->current_nodes['consultation'][$modified_cc_id] = $system_data;
+                            foreach ($system_data as $node_id => $value) {
+                                //Respect cut off
+                                if (!empty(array_intersect_key(array_flip($full_nodes[$node_id]['dd']), $this->diagnoses_per_cc[$modified_cc_id]))) {
+                                    $this->current_nodes['consultation'][$modified_cc_id][$node_id] = '';
+                                }
+                            }
                         }
+                        $this->completion_per_substep[$modified_cc_id] = [
+                            'start' => 0,
+                            'end' => 0,
+                        ];
                     }
                 }
             } else {
@@ -820,7 +842,7 @@ class Algorithm extends Component
                             $this->current_nodes['consultation']['medical_history'][$system][$node_id] = $pretty_answer;
                         }
                     } else {
-                        $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_id] = $pretty_answer;
+                        $this->current_nodes['consultation'][$this->current_cc][$node_id] = $pretty_answer;
                     }
                 }
             }
@@ -873,8 +895,7 @@ class Algorithm extends Component
                             ) {
                                 $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
                             }
-                        }
-                        if ($this->algorithm_type === 'dynamic') {
+
                             if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
                                 $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
                             }
@@ -944,13 +965,13 @@ class Algorithm extends Component
             }
             // Remove every linked nodes to old answer
             if (array_key_exists($old_value, $dependency_map)) {
-                foreach ($dependency_map[$old_value] as $node_id) {
+                foreach ($dependency_map[$old_value] as $node_id_to_unset) {
                     $medical_history_nodes = $this->current_nodes['consultation']['medical_history'] ?? $this->current_nodes['consultation'];
                     foreach ($medical_history_nodes as $system_name => $nodes_per_system) {
-                        if (isset($medical_history_nodes[$system_name][$node_id])) {
+                        if (isset($medical_history_nodes[$system_name][$node_id_to_unset])) {
                             // Remove every df and managements dependency of linked nodes
-                            if (array_key_exists($medical_history_nodes[$system_name][$node_id], $df_hash_map)) {
-                                foreach ($df_hash_map[$medical_history_nodes[$system_name][$node_id]] as $df) {
+                            if (array_key_exists($medical_history_nodes[$system_name][$node_id_to_unset], $df_hash_map)) {
+                                foreach ($df_hash_map[$medical_history_nodes[$system_name][$node_id_to_unset]] as $df) {
                                     if (array_key_exists($df, $this->df_to_display)) {
                                         if (isset($final_diagnoses[$df]['managements'])) {
                                             unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
@@ -960,9 +981,9 @@ class Algorithm extends Component
                                 }
                             }
                             if ($this->algorithm_type === 'dynamic') {
-                                unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id]);
+                                unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id_to_unset]);
                             } else {
-                                unset($this->current_nodes['consultation'][$system_name][$node_id]);
+                                unset($this->current_nodes['consultation'][$system_name][$node_id_to_unset]);
                             }
                         }
                     }
@@ -989,7 +1010,15 @@ class Algorithm extends Component
                                 $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
                             }
                         } else {
-                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node] = $pretty_answer;
+                            $found = false;
+                            foreach ($this->current_nodes[$this->current_step] as $nodes_per_cc) {
+                                if (array_key_exists($node, $nodes_per_cc)) {
+                                    $found = true;
+                                }
+                            }
+                            if (!$found) {
+                                $this->current_nodes['consultation'][$this->current_cc] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$this->current_cc], [$node => $pretty_answer], $node_id);
+                            }
                         }
                     }
                     $next_nodes_id_after_bc = $this->getNextNodesId($this->nodes_to_save[$node]['answer_id']);
@@ -1072,7 +1101,7 @@ class Algorithm extends Component
         if ($next_nodes_id) {
             foreach ($next_nodes_id as $node) {
                 if (!array_key_exists($node, $this->current_nodes['registration'])) {
-                    $this->setNextNode($node);
+                    $this->setNextNode($node, $node_id);
                 }
             }
         }
@@ -1227,8 +1256,8 @@ class Algorithm extends Component
                                 $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
                             }
                         }
-                        if (array_key_exists($node_to_update_id, $this->current_nodes['consultation']['medical_history'][$this->current_cc])) {
-                            $this->current_nodes['consultation']['medical_history'][$this->current_cc][$node_to_update_id] = $pretty_answer;
+                        if (array_key_exists($node_to_update_id, $this->current_nodes['consultation'][$this->current_cc])) {
+                            $this->current_nodes['consultation'][$this->current_cc][$node_to_update_id] = $pretty_answer;
                         }
                     }
 
@@ -1267,7 +1296,7 @@ class Algorithm extends Component
         }
     }
 
-    public function setNextNode($next_node_id)
+    public function setNextNode($next_node_id, $node_id)
     {
         $cached_data = Cache::get($this->cache_key);
         $full_nodes = $cached_data['full_nodes'];
@@ -1307,7 +1336,15 @@ class Algorithm extends Component
                 }
             } else {
                 if (!isset($this->current_nodes[$this->current_step][$this->current_cc][$next_node_id])) {
-                    $this->current_nodes[$this->current_step][$this->current_cc][$next_node_id] = '';
+                    $found = false;
+                    foreach ($this->current_nodes[$this->current_step] as $nodes_per_cc) {
+                        if (array_key_exists($next_node_id, $nodes_per_cc)) {
+                            $found = true;
+                        }
+                    }
+                    if (!$found) {
+                        $this->current_nodes['consultation'][$this->current_cc] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$this->current_cc], [$next_node_id => ''], $node_id);
+                    }
                 }
             }
         }
@@ -1337,8 +1374,10 @@ class Algorithm extends Component
     public function goToStep(string $step): void
     {
         $cached_data = Cache::get($this->cache_key);
+        $full_nodes = $cached_data['full_nodes'];
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
+        $this->validate();
 
         if ($this->algorithm_type === 'dynamic') {
             if ($step === 'first_look_assessment') {
@@ -1353,6 +1392,7 @@ class Algorithm extends Component
         }
 
         if ($step === 'consultation') {
+            $this->validate();
             if ($this->saved_step === 2) {
                 $cc_order = array_flip($cached_data['complaint_categories_steps']);
 
@@ -1368,12 +1408,16 @@ class Algorithm extends Component
                 foreach ($current_nodes_per_step as $step_name => $step_systems) {
                     foreach ($step_systems as $system_name => $system_data) {
                         foreach ($system_data as $cc_id => $nodes) {
-
                             if (isset($this->chosen_complaint_categories[$cc_id])) {
                                 if ($this->algorithm_type === 'dynamic') {
                                     $consultation_nodes[$step_name][$system_name] = $system_data[$cc_id];
                                 } elseif ($this->algorithm_type === 'prevention') {
-                                    $consultation_nodes[$cc_id] = $system_data[$cc_id];
+                                    foreach ($nodes as $node_id => $value) {
+                                        //Respect cut off
+                                        if (!empty(array_intersect_key(array_flip($full_nodes[$node_id]['dd']), $this->diagnoses_per_cc[$cc_id]))) {
+                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                        }
+                                    }
                                 } else {
                                     if (isset($consultation_nodes[$cc_id])) {
                                         $consultation_nodes[$cc_id] += $system_data[$cc_id];
@@ -1547,6 +1591,28 @@ class Algorithm extends Component
 
         flash()->addSuccess('Patient updated successfully');
         return redirect()->route("home.hidden");
+    }
+
+    private function appendOrInsertAtPos(array $input_array, array $insert, int $target_key)
+    {
+        $output = array();
+        $new_value = reset($insert);
+        $new_key = key($insert);
+
+        foreach ($input_array as $key => $value) {
+            if ($key === $target_key) {
+                $output[$key] = $value;
+                $output[$new_key] = $new_value;
+            } else {
+                $output[$key] = $value;
+            }
+        }
+
+        if (!isset($output[$new_key])) {
+            $output[$new_key] = $new_value;
+        }
+
+        return $output;
     }
 
     public function render()

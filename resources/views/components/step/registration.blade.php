@@ -6,8 +6,12 @@
   <div wire:key="{{ 'registration-' . $node_id }}" class="mb-2">
     @if ($node_id === 'birth_date')
       <label class="form-label" for="birth_date">Date of birth</label>
-      <input class="form-control" wire:model.live="current_nodes.registration.birth_date" type="date"
-        pattern="\d{4}-\d{2}-\d{2}" id="birth_date" name="birth_date">
+      <input class="form-control @error('current_nodes.registration.birth_date') is-invalid @enderror"
+        wire:model.blur="current_nodes.registration.birth_date" type="date" pattern="\d{4}-\d{2}-\d{2}" id="birth_date"
+        name="birth_date" required>
+      @error('current_nodes.registration.birth_date')
+        <span class="invalid-feedback" role="alert">{{ $message }}</span>
+      @enderror
     @elseif ($node_id === 'first_name')
       <div>
         <label class="form-label" for="first_name">First name</label>

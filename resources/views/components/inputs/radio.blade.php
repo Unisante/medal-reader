@@ -1,15 +1,7 @@
 @props(['step', 'node_id', 'full_nodes'])
 
 <div class="mb-2">
-  {{-- @php
-    $cache_data = Cache::get($cache_key);
-    $full_nodes = $cache_data['full_nodes'];
-    $villages = $cache_data['villages'];
-  @endphp --}}
-  {{-- @dd(
-$node_id,$full_nodes,$step
-    ) --}}
-  <label class="form-label" for="{{ $node_id }}">
+  <label class="form-label">
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])
       <div x-data="{ open: false }">

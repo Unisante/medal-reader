@@ -1,4 +1,4 @@
-@props(['step', 'node_id','full_nodes'])
+@props(['step', 'node_id', 'full_nodes'])
 @php
   $answers = collect($full_nodes[$node_id]['answers'])
       ->filter(function ($answer) {
@@ -25,10 +25,12 @@
     <option selected>Select an answer</option>
 
     @foreach ($answers as $answer)
-      <option value="{{ $answer['id'] }}">{{ $answer['label']['en'] }}</option>
+      <option wire:key="{{ 'answer-' . $answer['id'] }}" value="{{ $answer['id'] }}">
+        {{ $answer['label']['en'] }}
+      </option>
     @endforeach
   </select>
-  @error("{{ 'current_nodes.registration.' . $node_id }}")
+  {{-- @error("{{ 'current_nodes.registration.' . $node_id }}")
     <div class="invalid-feedback" role="alert">{{ $message }}</div>
-  @enderror
+  @enderror --}}
 </div>
