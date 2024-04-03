@@ -38,6 +38,7 @@ class Algorithm extends Component
     public object $complaint_categories_nodes;
     public array $chosen_complaint_categories;
     public array $df_to_display;
+    public array $diagnoses_per_cc;
     public array $drugs_to_display;
     public array $managements_to_display;
     public array $all_managements_to_display;
@@ -210,6 +211,7 @@ class Algorithm extends Component
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
                 'dd_hash_map' => [],
+                'df_dd_mapping' => [],
                 'drugs_hash_map' => [],
                 'conditioned_nodes_hash_map' => [],
                 'managements_hash_map' => [],
@@ -233,6 +235,7 @@ class Algorithm extends Component
         $managements_hash_map = [];
 
         foreach ($cached_data['final_diagnoses'] as $df) {
+            $df_dd_mapping[$df['diagnosis_id']][] = $df['id'];
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$condition['answer_id']][] = $df['id'];
             }
@@ -352,7 +355,12 @@ class Algorithm extends Component
             });
 
             foreach ($diagnosesForStep as $diag) {
-                $dd_hash_map[$diag['complaint_category']][] = $diag['label']['en'];
+
+                $dd_hash_map[$diag['complaint_category']][$diag['id']] = [
+                    'label' => $diag['label']['en'],
+                    'cut_off_start' => $diag['cut_off_start'],
+                    'cut_off_end' => $diag['cut_off_end'],
+                ];
 
                 foreach ($diag['instances'] as $instance_id => $instance) {
 
@@ -449,8 +457,9 @@ class Algorithm extends Component
         // We already know that every nodes inside $nodes_per_step are the one without condition
         $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
 
-        // dump($dependency_map);
-        // dump($max_length);
+        dump($nodes_per_step);
+        dump($dd_hash_map);
+        dump($df_dd_mapping);
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
@@ -461,6 +470,7 @@ class Algorithm extends Component
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
                 'dd_hash_map' => $dd_hash_map,
+                'df_dd_mapping' => $df_dd_mapping,
                 'drugs_hash_map' => $drugs_hash_map,
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
                 'managements_hash_map' => $managements_hash_map,
@@ -1073,6 +1083,7 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
         $full_nodes = $cached_data['full_nodes'];
+        $dd_hash_map = $cached_data['dd_hash_map'];
         $general_cc_id = $cached_data['general_cc_id'];
         $yi_general_cc_id = $cached_data['yi_general_cc_id'];
 
@@ -1090,6 +1101,19 @@ class Algorithm extends Component
                 //My eyes are burning....
                 //But no other way as the Age in days node id is not saved anywhere
                 if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
+
+                    foreach ($dd_hash_map as $complaint_category_id => $dds) {
+                        foreach ($dds as $dd_id => $dd) {
+                            if ($dd['cut_off_start'] <= $days && $dd['cut_off_end'] > $days) {
+                                $this->diagnoses_per_cc[$complaint_category_id][$dd_id] = $dd['label'];
+                            } else {
+                                if (isset($this->diagnoses_per_cc[$complaint_category_id][$dd_id])) {
+                                    unset($this->diagnoses_per_cc[$complaint_category_id][$dd_id]);
+                                }
+                            }
+                        }
+                    }
+
                     if ($days <= 59) {
                         if ($this->algorithm_type === 'dynamic') {
                             $this->age_key = 'neonat';
@@ -1344,8 +1368,8 @@ class Algorithm extends Component
                 foreach ($current_nodes_per_step as $step_name => $step_systems) {
                     foreach ($step_systems as $system_name => $system_data) {
                         foreach ($system_data as $cc_id => $nodes) {
-                            if (isset($this->chosen_complaint_categories[$cc_id])) {
 
+                            if (isset($this->chosen_complaint_categories[$cc_id])) {
                                 if ($this->algorithm_type === 'dynamic') {
                                     $consultation_nodes[$step_name][$system_name] = $system_data[$cc_id];
                                 } elseif ($this->algorithm_type === 'prevention') {

@@ -155,7 +155,6 @@ class FHIRService
             $handle = function (&$a) use (&$handle) {
                 foreach ($a as $key => &$value) {
                     if (gettype($key) === 'string' && $key[0] === '_') {
-                        // TODO - Contribute this change back.
                         unset($a[$key]);
                         continue;
                     }
@@ -189,7 +188,6 @@ class FHIRService
             $d->setTimestamp($mixed);
             return $d;
         } else {
-            // Assume this is already a DateTime object.
             return $mixed;
         }
     }

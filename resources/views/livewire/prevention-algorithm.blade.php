@@ -15,7 +15,6 @@
     $full_nodes = $cache['full_nodes'];
     $final_diagnoses = $cache['final_diagnoses'];
     $health_cares = $cache['health_cares'];
-    $diagnoses_per_cc = $cache['dd_hash_map'];
   @endphp
 
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
