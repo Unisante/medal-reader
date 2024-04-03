@@ -64,7 +64,7 @@
     </button>
   @else
     <button class="btn button-unisante mt-3" wire:click="goToStep('first_look_assessment')">
-      Choix des questionnaires
+      Choice of questionnaires
     </button>
   @endif
 </div>

@@ -58,10 +58,10 @@
       @endforeach
       <div class="d-flex justify-content-end">
         @if (!$loop->first)
-          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Précédant</button>
+          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous</button>
         @endif
         @if (!$loop->last)
-          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Suivant</button>
+          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next</button>
         @endif
         @if ($loop->last)
           <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Results</button>

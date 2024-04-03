@@ -590,7 +590,7 @@ class Algorithm extends Component
         }
         $cached_data = Cache::get($this->cache_key);
         $total = 0;
-
+        $current_nodes = [];
         // todo $current_nodes can contains background_calculation
 
         if ($this->current_step === 'registration') {
@@ -599,10 +599,18 @@ class Algorithm extends Component
         }
 
         if ($this->current_step === 'first_look_assessment') {
-            $current_nodes = array_diff_key($this->current_nodes[$this->current_step]['basic_measurements_nodes_id'], $cached_data['formula_hash_map']);
-            $total = count($current_nodes);
-            if ($total === 0) {
-                $current_nodes = 1;
+            if ($this->algorithm_type === 'dynamic') {
+                $current_nodes = array_diff_key($this->current_nodes[$this->current_step]['basic_measurements_nodes_id'], $cached_data['formula_hash_map']);
+                $total = count($current_nodes);
+
+                //Todo remove that if as $current_nodes cannot be array_filter after
+                if ($total === 0) {
+                    $current_nodes = 1;
+                    $total = 1;
+                }
+            }
+            if ($this->algorithm_type === 'prevention') {
+                $current_nodes = array_filter($this->chosen_complaint_categories);
                 $total = 1;
             }
         }
@@ -643,7 +651,6 @@ class Algorithm extends Component
         $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
 
         $total = $this->current_step === 'consultation' ? $total + $empty_nodes : $total;
-
         $completion_percentage = count($current_answers) / $total * 100;
 
         if ($this->current_step === 'consultation' && $this->algorithm_type === 'prevention') {
@@ -718,6 +725,14 @@ class Algorithm extends Component
         $old_answer_id = Arr::get($this->current_nodes, $key);
 
         $this->saveNode($node_id, $value, $value, $old_answer_id);
+    }
+
+
+    public function updatedChosenComplaintCategories()
+    {
+        if ($this->algorithm_type === 'prevention') {
+            $this->calculateCompletionPercentage();
+        }
     }
 
     public function updatingChosenComplaintCategories($key, int $modified_cc_id)

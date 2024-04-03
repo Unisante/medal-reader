@@ -30,7 +30,7 @@
 
       <div class="content">
         <span class="step-name">Step 1</span>
-        <span class="step-category">Informations générales</span>
+        <span class="step-category">Registration</span>
       </div>
     </div>
 
@@ -65,7 +65,7 @@
     </div>
     <div class="content">
       <span class="step-name">Step 2</span>
-      <span class="step-category">Choix des questionnaires</span>
+      <span class="step-category">Choice of questionnaires</span>
     </div>
   </div>
 
@@ -134,7 +134,7 @@
   </div>
   <div class="content">
     <span class="step-name">Step 4</span>
-    <span class="step-category">Résultat</span>
+    <span class="step-category">Results</span>
   </div>
   </div>
 </section>
