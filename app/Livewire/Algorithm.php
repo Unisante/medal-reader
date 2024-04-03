@@ -464,9 +464,9 @@ class Algorithm extends Component
         // We already know that every nodes inside $nodes_per_step are the one without condition
         $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
 
-        dump($nodes_per_step);
-        dump($dd_hash_map);
-        dump($df_dd_mapping);
+        // dump($nodes_per_step);
+        // dump($dd_hash_map);
+        // dump($df_dd_mapping);
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
@@ -522,8 +522,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration']['birth_date'] = '1970-10-05';
-            $this->updateLinkedNodesOfDob('1970-10-05');
+            $this->current_nodes['registration']['birth_date'] = '1950-10-05';
+            $this->updateLinkedNodesOfDob('1950-10-05');
         }
 
         //END TO REMOVE
@@ -1031,6 +1031,17 @@ class Algorithm extends Component
             $other_conditions_met = true;
             foreach ($df_hash_map[$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
+
+                    //Respect cut off
+                    if (array_key_exists('cut_off_start', $condition)) {
+                        $today = new DateTime('today');
+                        $dob = new DateTime($this->current_nodes['registration']['birth_date']);
+                        $interval = $today->diff($dob);
+                        $days = $interval->format('%a');
+                        if ($days < $condition['cut_off_start'] || $days >= $condition['cut_off_end']) {
+                            $other_conditions_met = false;
+                        }
+                    }
                     // We already know that this condition is met because it has been calulated
                     // And we skip the same question if it's the condition
                     if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
@@ -1039,14 +1050,21 @@ class Algorithm extends Component
                         // We need to find a way to do so as now the current_nodes is being changed depending on the step
                         // getTopConditions in react-native reader
 
-                        if (in_array($condition['node_id'], $this->current_nodes)) {
-                            // Need also to calculate if node is not in nodes_to_save like radio button
+                        // Need also to calculate if node is not in nodes_to_save like radio button
+                        foreach ($this->current_nodes['consultation'] ?? [] as $nodes_per_cc) {
                             if (
-                                array_key_exists($condition['node_id'], $this->nodes_to_save)
-                                && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
+                                array_key_exists($condition['node_id'], $nodes_per_cc)
+                                && $nodes_per_cc[$condition['node_id']] != $condition['answer_id']
                             ) {
                                 $other_conditions_met = false;
                             }
+                        }
+
+                        if (
+                            array_key_exists($condition['node_id'], $this->nodes_to_save)
+                            && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
+                        ) {
+                            $other_conditions_met = false;
                         }
                     }
                 }

@@ -15,7 +15,7 @@
         <h2 class="fw-normal pb-3">Questionnaire</h2>
       @endif
       @foreach ($cc as $node_id => $answer_id)
-        <div wire:key="{{ implode('-', array_keys($cc)) }}">
+        <div wire:key="{{ 'nodes-' . $node_id }}">
           @if (isset($full_nodes[$node_id]['display_format']))
             @switch($full_nodes[$node_id]['display_format'])
               @case('RadioButton')
