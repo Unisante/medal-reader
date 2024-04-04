@@ -125,6 +125,20 @@ class AlgorithmService
         $this->sortNodes($consultation_nodes[$step], $nodes, false);
     }
 
+    public function sortNodesPerCC(array &$nodes, string $cache_key)
+    {
+        $cached_data = Cache::get($cache_key);
+        $consultation_nodes = $cached_data['consultation_nodes'];
+
+        foreach ($nodes as &$nodes_per_cc) {
+            $order = array_flip($consultation_nodes['medical_history']['general']['data']);
+            uksort($nodes_per_cc, function ($a, $b) use ($order) {
+                if (!isset($order[$a]) || !isset($order[$b])) return;
+                return $order[$a] - $order[$b];
+            });
+        }
+    }
+
     public function sortSystems(array $consultation_nodes, array &$nodes)
     {
         $systems = array_keys($consultation_nodes);

@@ -4,6 +4,7 @@
   <label class="form-label">
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])
+      <button id="{{ 'desc-' . $node_id }}" onclick="toggleBtn(event)">Click Me</button>
       @markdown($full_nodes[$node_id]['description']['en'])
     @endif
   </label>
@@ -23,9 +24,3 @@
     </div>
   @endforeach
 </div>
-
-@script
-  <script type="text/javascript">
-    document.addEventListener('livewire:init', () => {});
-  </script>
-@endscript

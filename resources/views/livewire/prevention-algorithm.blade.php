@@ -17,7 +17,7 @@
     $health_cares = $cache['health_cares'];
   @endphp
 
-  <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step />
+  <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step :$chosen_complaint_categories />
 
   {{-- Registration --}}
   @if (array_key_exists('first_look_assessment', $current_nodes))
@@ -66,7 +66,8 @@
   @if ($current_step === 'consultation')
     <div class="row g-3 mt-3">
       <div class="col-8 border-end">
-        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$full_nodes :$nodes_to_save :$current_cc :$cache_key :$debug_mode />
+        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$chosen_complaint_categories :$full_nodes :$nodes_to_save :$current_cc
+          :$cache_key :$debug_mode />
       </div>
       <div class="col-4">
         <div style="position: -webkit-sticky; position: sticky; top: 128px;">
@@ -169,6 +170,14 @@
       Livewire.on("scrollTop", () => {
         window.scrollTo(0, 0);
       });
+
+      function toggleBtn(e) {
+        if (e.style.display === "none") {
+          e.style.display = "block";
+        } else {
+          e.style.display = "none";
+        }
+      }
     });
   </script>
 @endscript

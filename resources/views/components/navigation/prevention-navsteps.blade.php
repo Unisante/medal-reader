@@ -1,4 +1,4 @@
-@props(['current_step', 'saved_step', 'completion_per_step'])
+@props(['current_step', 'saved_step', 'completion_per_step', 'chosen_complaint_categories'])
 
 <section class="list-steps">
   <div class="steps">
@@ -70,12 +70,13 @@
   </div>
 
   {{-- Consultation --}}
-  @if ($saved_step >= 3)
+  @if ($saved_step >= 3 && !empty(array_filter($chosen_complaint_categories)))
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToStep('consultation')"
       class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 100 && $saved_step > 3 ? ' success' : '' }}">
     @else
-      <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
+      <div name="navstep"
+        style="{{ $saved_step >= 3 && !empty(array_filter($chosen_complaint_categories)) ? 'cursor:pointer;' : 'cursor:default;' }}"
         class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 100 && $saved_step > 3 ? ' success' : '' }}">
   @endif
 

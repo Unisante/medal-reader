@@ -1,11 +1,11 @@
-@props(['nodes', 'cache_key', 'current_cc', 'nodes_to_save', 'debug_mode'])
+@props(['nodes', 'chosen_complaint_categories', 'cache_key', 'current_cc', 'nodes_to_save', 'debug_mode'])
 
 @php
   $cache = Cache::get($cache_key);
   $full_nodes = $cache['full_nodes'];
 @endphp
 
-@foreach ($nodes as $cc_id => $cc)
+@foreach (array_filter($chosen_complaint_categories) as $cc_id => $chosen)
   <div wire:key="{{ 'chosen-cc-' . $cc_id }}">
 
     @if ($current_cc == $cc_id)
@@ -14,7 +14,7 @@
       @else
         <h2 class="fw-normal pb-3">Questionnaire</h2>
       @endif
-      @foreach ($cc as $node_id => $answer_id)
+      @foreach ($nodes[$cc_id] as $node_id => $answer_id)
         <div wire:key="{{ 'nodes-' . $node_id }}">
           @if (isset($full_nodes[$node_id]['display_format']))
             @switch($full_nodes[$node_id]['display_format'])
