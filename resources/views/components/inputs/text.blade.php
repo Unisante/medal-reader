@@ -1,6 +1,6 @@
 @props(['step', 'node_id', 'cache_key', 'is_background_calc', 'full_nodes'])
 
-<div class="mb-2">
+<div class="input-container mb-2">
   <label class="form-label" for="{{ $node_id }}">
     @if ($is_background_calc)
       {{ $node_id }}:

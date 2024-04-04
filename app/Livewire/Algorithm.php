@@ -526,8 +526,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration']['birth_date'] = '1950-10-05';
-            $this->updateLinkedNodesOfDob('1950-10-05');
+            // $this->current_nodes['registration']['birth_date'] = '1950-10-05';
+            // $this->updateLinkedNodesOfDob('1950-10-05');
         }
 
         //END TO REMOVE
@@ -578,8 +578,8 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['dd_hash_map']);
         // dump($cached_data['df_dd_mapping']);

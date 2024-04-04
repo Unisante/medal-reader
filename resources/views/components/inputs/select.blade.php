@@ -7,7 +7,7 @@
       ->sortBy('reference');
 @endphp
 
-<div class="mb-2">
+<div class="input-container mb-2">
   <label class="form-label" for="{{ $node_id }}">
     {{ $full_nodes[$node_id]['label']['en'] }}
     @if ($full_nodes[$node_id]['description']['en'])

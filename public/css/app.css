@@ -14455,6 +14455,9 @@ textarea.form-control-lg {
 .input-container > input {
   width: 50%;
 }
+.input-container > select {
+  width: 50%;
+}
 
 .button-unisante {
   display: block;
