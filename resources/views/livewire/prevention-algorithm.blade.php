@@ -84,8 +84,8 @@
   {{-- Diagnoses --}}
   @if ($current_step === 'diagnoses')
     <div class="row g-3 mt-3">
-      <div class="col-10">
-        <x-step.prevention-results :$df_to_display :$final_diagnoses :$cache_key />
+      <div class="col-12">
+        <x-step.prevention-results :$df_to_display :$final_diagnoses />
       </div>
     </div>
   @endif
