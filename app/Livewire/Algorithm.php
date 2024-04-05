@@ -1495,12 +1495,15 @@ class Algorithm extends Component
                             }
                         }
                         if (!in_array($answer_id, $answers_id_to_check ?? [])) {
-
                             //Respect cut off
                             if (isset($cut_off_hash_map['nodes'][$node])) {
                                 foreach ($cut_off_hash_map['nodes'][$node] as $answer_id => $condition) {
                                     if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
-                                        if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
+                                        if (isset($this->age_in_days)) {
+                                            if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
+                                                $next_nodes[$cc_id][] = $node;
+                                            }
+                                        } else {
                                             $next_nodes[$cc_id][] = $node;
                                         }
                                     }
