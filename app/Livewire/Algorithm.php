@@ -586,14 +586,14 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        dump($cached_data['nodes_per_step']);
+        // dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['answers_hash_map']);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['answers_hash_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
-        dump($cached_data['cut_off_hash_map']);
+        // dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
