@@ -169,18 +169,5 @@
     Livewire.on("scrollTop", () => {
       window.scrollTo(0, 0);
     });
-    document.addEventListener('livewire:init', () => {
-      Livewire.on("scrollTop", () => {
-        window.scrollTo(0, 0);
-      });
-
-      function toggleBtn(e) {
-        if (e.style.display === "none") {
-          e.style.display = "block";
-        } else {
-          e.style.display = "none";
-        }
-      }
-    });
   </script>
 @endscript

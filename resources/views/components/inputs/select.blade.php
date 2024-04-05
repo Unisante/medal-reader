@@ -10,19 +10,26 @@
 <div class="input-container mb-2">
   <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
-      <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
-        <div class="d-flex justify-content-between" style="align-items: flex-start;">
-          <label class="form-label">
-            {{ $full_nodes[$node_id]['label']['en'] }}
-          </label>
-          <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
-            <i class="bi bi-info-circle"></i>
-          </button>
+      @if (Str::contains($full_nodes[$node_id]['description']['en'], '[i]'))
+        <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
+          <div class="d-flex justify-content-between" style="align-items: flex-start;">
+            <label class="form-label">
+              {{ $full_nodes[$node_id]['label']['en'] }}
+            </label>
+            <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
+              <i class="bi bi-info-circle"></i>
+            </button>
+          </div>
+          <div x-show="open">
+            @markdown(Str::remove('[i]', $full_nodes[$node_id]['description']['en']))
+          </div>
         </div>
-        <div x-show="open">
-          @markdown($full_nodes[$node_id]['description']['en'])
-        </div>
-      </div>
+      @else
+        <label class="form-label">
+          {{ $full_nodes[$node_id]['label']['en'] }}
+        </label>
+        @markdown($full_nodes[$node_id]['description']['en'])
+      @endif
     @else
       <label class="form-label d-flex justify-content-between">
         {{ $full_nodes[$node_id]['label']['en'] }}
