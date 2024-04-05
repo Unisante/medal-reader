@@ -1717,6 +1717,8 @@ class Algorithm extends Component
 
     public function goToNextCc(): void
     {
+        $this->dispatch('scrollTop');
+
         $keys = array_keys($this->chosen_complaint_categories);
         $current_index = array_search($this->current_cc, $keys);
 
@@ -1732,6 +1734,8 @@ class Algorithm extends Component
 
     public function goToPreviousCc(): void
     {
+        $this->dispatch('scrollTop');
+
         $keys = array_keys($this->chosen_complaint_categories);
         $current_index = array_search($this->current_cc, $keys);
 
