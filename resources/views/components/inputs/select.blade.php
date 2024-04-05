@@ -8,12 +8,27 @@
 @endphp
 
 <div class="input-container mb-2">
-  <label class="form-label" for="{{ $node_id }}">
-    {{ $full_nodes[$node_id]['label']['en'] }}
+  <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
-      @markdown($full_nodes[$node_id]['description']['en'])
+      <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
+        <div class="d-flex justify-content-between" style="align-items: flex-start;">
+          <label class="form-label">
+            {{ $full_nodes[$node_id]['label']['en'] }}
+          </label>
+          <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
+            <i class="bi bi-info-circle"></i>
+          </button>
+        </div>
+        <div x-show="open">
+          @markdown($full_nodes[$node_id]['description']['en'])
+        </div>
+      </div>
+    @else
+      <label class="form-label d-flex justify-content-between">
+        {{ $full_nodes[$node_id]['label']['en'] }}
+      </label>
     @endif
-  </label>
+  </div>
   <select wire:model.live='{{ "current_nodes.$step.$node_id" }}' id="{{ $node_id }}" class="form-select">
     <option selected>Select an answer</option>
 

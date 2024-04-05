@@ -1,22 +1,27 @@
 @props(['step', 'node_id', 'cache_key', 'is_background_calc', 'full_nodes'])
 
 <div class="input-container mb-2">
-  <label class="form-label" for="{{ $node_id }}">
-    @if ($is_background_calc)
-      {{ $node_id }}:
-    @endif
-    {{ $full_nodes[$node_id]['label']['en'] }}
+  <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
-      <div x-data="{ open: false }">
-        <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-          <i class="bi bi-info-circle"> Description</i>
-        </button>
+      <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
+        <div class="d-flex justify-content-between" style="align-items: flex-start;">
+          <label class="form-label">
+            {{ $full_nodes[$node_id]['label']['en'] }}
+          </label>
+          <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
+            <i class="bi bi-info-circle"></i>
+          </button>
+        </div>
         <div x-show="open">
-          <p>{{ $full_nodes[$node_id]['description']['en'] }}</p>
+          @markdown($full_nodes[$node_id]['description']['en'])
         </div>
       </div>
+    @else
+      <label class="form-label d-flex justify-content-between">
+        {{ $full_nodes[$node_id]['label']['en'] }}
+      </label>
     @endif
-  </label>
+  </div>
   <input class="form-control" type="text" @if ($is_background_calc) disabled @endif
     wire:model.live='{{ "current_nodes.$step.$node_id" }}' name="{{ $node_id }}" id="{{ $node_id }}">
   @error("{{ 'current_nodes.registration.' . $node_id }}")

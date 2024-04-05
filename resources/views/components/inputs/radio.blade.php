@@ -1,12 +1,28 @@
 @props(['step', 'node_id', 'full_nodes'])
 
 <div class="input-container mb-2">
-  <label class="form-label">
-    {{ $full_nodes[$node_id]['label']['en'] }}
+
+  <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
-      @markdown($full_nodes[$node_id]['description']['en'])
+      <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
+        <div class="d-flex justify-content-between" style="align-items: flex-start;">
+          <label class="form-label">
+            {{ $full_nodes[$node_id]['label']['en'] }}
+          </label>
+          <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
+            <i class="bi bi-info-circle"></i>
+          </button>
+        </div>
+        <div x-show="open">
+          @markdown($full_nodes[$node_id]['description']['en'])
+        </div>
+      </div>
+    @else
+      <label class="form-label d-flex justify-content-between">
+        {{ $full_nodes[$node_id]['label']['en'] }}
+      </label>
     @endif
-  </label>
+  </div>
   @foreach ($full_nodes[$node_id]['answers'] as $answer)
     <div wire:key="{{ 'answer-' . $answer['id'] }}" class="form-check">
       <input class="form-check-input" type="radio"
