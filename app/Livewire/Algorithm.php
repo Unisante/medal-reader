@@ -1710,6 +1710,8 @@ class Algorithm extends Component
 
     public function goToCc($cc_id): void
     {
+        $this->dispatch('scrollTop');
+
         $this->current_cc = $cc_id;
     }
 
