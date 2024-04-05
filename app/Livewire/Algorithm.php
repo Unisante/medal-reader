@@ -591,7 +591,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         dump($cached_data['answers_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
         dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
@@ -1386,6 +1386,7 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
         $full_nodes = $cached_data['full_nodes'];
         $dependency_map = $cached_data['dependency_map'];
+        $answers_hash_map = $cached_data['answers_hash_map'];
 
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
@@ -1428,12 +1429,10 @@ class Algorithm extends Component
                         foreach ($this->current_nodes['consultation'] as $nodes_per_cc) {
                             if (array_key_exists($next_node_id, $nodes_per_cc)) {
                                 $value = $nodes_per_cc[$next_node_id];
-                                if (array_key_exists($value, $dependency_map)) {
-                                    foreach ($dependency_map[$value] as $node_to_display) {
-                                        if (isset($nodes_per_cc[$node_to_display]) && $nodes_per_cc[$node_to_display]) {
-                                            $value_linked_node = $nodes_per_cc[$node_to_display];
-                                            $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$cc_id], [$node_to_display => $value_linked_node], $node_id);
-                                        }
+                                if (isset($answers_hash_map[$this->current_cc][$next_node_id][$value])) {
+                                    $this->displayNextNode($next_node_id, $value, null);
+                                    foreach ($answers_hash_map[$this->current_cc][$next_node_id][$value] as $node_to_display) {
+                                        $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$cc_id], [$node_to_display => ''], $node_id);
                                     }
                                 }
                             }
@@ -1521,7 +1520,6 @@ class Algorithm extends Component
     public function goToStep(string $step): void
     {
         $cached_data = Cache::get($this->cache_key);
-        $full_nodes = $cached_data['full_nodes'];
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $cut_off_hash_map = $cached_data['cut_off_hash_map'];
@@ -1543,9 +1541,6 @@ class Algorithm extends Component
         }
 
         if ($step === 'consultation') {
-            if ($this->algorithm_type !== 'training') {
-                $this->validate();
-            }
             if ($this->saved_step === 2) {
 
                 $cc_order = array_flip($cached_data['complaint_categories_steps']);
