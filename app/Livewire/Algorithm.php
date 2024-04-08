@@ -539,8 +539,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration']['birth_date'] = '1970-10-05';
-            // $this->updateLinkedNodesOfDob('1950-10-05');
+            $this->current_nodes['registration']['birth_date'] = '2024-04-07';
+            $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -591,9 +591,9 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['answers_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['df_hash_map']);
-        // dump($cached_data['cut_off_hash_map']);
+        dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -1523,6 +1523,7 @@ class Algorithm extends Component
     public function goToStep(string $step): void
     {
         $cached_data = Cache::get($this->cache_key);
+        $full_nodes = $cached_data['full_nodes'];
         $nodes_per_step = $cached_data['nodes_per_step'];
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $cut_off_hash_map = $cached_data['cut_off_hash_map'];
@@ -1565,7 +1566,7 @@ class Algorithm extends Component
                                     $consultation_nodes[$step_name][$system_name] = $system_data[$cc_id];
                                 } elseif ($this->algorithm_type === 'prevention') {
                                     foreach ($nodes as $node_id => $value) {
-                                        //Respect cut off
+                                        //Respect cut off for the node
                                         if (isset($cut_off_hash_map['nodes'][$node_id])) {
                                             foreach ($cut_off_hash_map['nodes'][$node_id] as $answer_id => $condition) {
                                                 if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
@@ -1575,7 +1576,23 @@ class Algorithm extends Component
                                                 }
                                             }
                                         } else {
-                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                            //Respect cut off for dd. We need at least one dd valid
+                                            foreach ($full_nodes[$node_id]['dd'] as $dd) {
+                                                if (in_array($cc_id, array_filter($this->chosen_complaint_categories))) {
+                                                    if (isset($cut_off_hash_map['dd'][$cc_id][$dd])) {
+                                                        if (
+                                                            $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_start'] <= $this->age_in_days
+                                                            && $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_end'] > $this->age_in_days
+                                                        ) {
+                                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                                            dump("$dd $node_id yes");
+                                                        }
+                                                    } else {
+                                                        dump("$dd $node_id nop");
+                                                        $consultation_nodes[$cc_id][$node_id] = '';
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 } else {
@@ -1650,7 +1667,7 @@ class Algorithm extends Component
         //quick and dirty fix for training mode
         //todo actually calculate it and change from int to string and
         //search for the index in the array
-        if ($step === 'diagnoses') {
+        if ($this->algorithm_type === 'training' && $step === 'diagnoses') {
             $this->saved_step = 2;
             $this->completion_per_step[1] = 100;
         }
@@ -1667,7 +1684,7 @@ class Algorithm extends Component
         //Need to be on the future validateStep function, not here and remove the max
         $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
-        $this->dispatch('scrollTop');
+        // $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void

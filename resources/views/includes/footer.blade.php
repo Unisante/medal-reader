@@ -24,12 +24,6 @@
               <p>
                 <a class="text-reset" href="https://www.swisstph.ch/">{{ trans('footer.about2') }}</a>
               </p>
-              {{-- <p>
-                <a class="text-reset"
-                  href="{{ route('home.doc', 'Liste des documents et informations à préparer pour évaluation.docx') }}">
-                  {{ trans('footer.for_prep') }}
-                </a>
-              </p> --}}
             </div>
           </div>
         </div>
