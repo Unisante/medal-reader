@@ -388,7 +388,7 @@ class Algorithm extends Component
                     if ($instance_id === $cached_data['gender_question_id']) {
                         $female_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'female')->first()['id'];
                         $male_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'male')->first()['id'];
-                        continue;
+                        // continue;
                     }
 
                     $node = $cached_data['full_nodes'][$instance_id];
@@ -482,7 +482,7 @@ class Algorithm extends Component
         $no_condition_nodes = array_flip(
             array_unique(
                 array_reduce(
-                    array_map('array_keys', $consultation_nodes['medical_history']['general']),
+                    array_map('array_keys', $consultation_nodes['medical_history']['general'] ?? []),
                     'array_merge',
                     []
                 )
@@ -544,8 +544,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration']['birth_date'] = '2024-04-07';
-            $this->updateLinkedNodesOfDob('1950-10-05');
+            // $this->current_nodes['registration']['birth_date'] = '2024-04-08';
+            // $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -1115,31 +1115,32 @@ class Algorithm extends Component
                         }
                     }
 
-                    // We already know that this condition is met because it has been calulated
-                    // And we skip the same question if it's the condition
-                    if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
-                        //todo fix current nodes management. Should be the same for every step
-                        // We only check if the other conditions node has no condition
-                        // We need to find a way to do so as now the current_nodes is being changed depending on the step
-                        // getTopConditions in react-native reader
+                    // Removed that block as I think the conditions are always OR
+                    // // We already know that this condition is met because it has been calulated
+                    // // And we skip the same question if it's the condition
+                    // if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
+                    //     //todo fix current nodes management. Should be the same for every step
+                    //     // We only check if the other conditions node has no condition
+                    //     // We need to find a way to do so as now the current_nodes is being changed depending on the step
+                    //     // getTopConditions in react-native reader
 
-                        // Need also to calculate if node is not in nodes_to_save like radio button
-                        foreach ($this->current_nodes['consultation'] ?? [] as $nodes_per_cc) {
-                            if (
-                                array_key_exists($condition['node_id'], $nodes_per_cc)
-                                && $value != $condition['answer_id']
-                            ) {
-                                $other_conditions_met = false;
-                            }
-                        }
+                    //     // Need also to calculate if node is not in nodes_to_save like radio button
+                    //     foreach ($this->current_nodes['consultation'] ?? [] as $nodes_per_cc) {
+                    //         if (
+                    //             array_key_exists($condition['node_id'], $nodes_per_cc)
+                    //             && $value != $condition['answer_id']
+                    //         ) {
+                    //             $other_conditions_met = false;
+                    //         }
+                    //     }
 
-                        if (
-                            array_key_exists($condition['node_id'], $this->nodes_to_save)
-                            && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
-                        ) {
-                            $other_conditions_met = false;
-                        }
-                    }
+                    //     if (
+                    //         array_key_exists($condition['node_id'], $this->nodes_to_save)
+                    //         && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
+                    //     ) {
+                    //         $other_conditions_met = false;
+                    //     }
+                    // }
                 }
 
                 if ($other_conditions_met) {
@@ -1460,6 +1461,7 @@ class Algorithm extends Component
     public function getNextNodesId($node_id, $answer_id)
     {
         $cached_data = Cache::get($this->cache_key);
+        $full_nodes = $cached_data['full_nodes'];
         $answers_hash_map = $cached_data['answers_hash_map'];
         $cut_off_hash_map = $cached_data['cut_off_hash_map'];
 
@@ -1517,7 +1519,21 @@ class Algorithm extends Component
                                     }
                                 }
                             } else {
-                                $next_nodes[$cc_id][] = $node;
+                                $no_cut_off = true;
+                                foreach ($full_nodes[$node_id]['dd'] as $dd) {
+                                    if (isset($cut_off_hash_map['dd'][$cc_id][$dd])) {
+                                        $no_cut_off = false;
+                                        if (
+                                            $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_start'] <= $this->age_in_days
+                                            && $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_end'] > $this->age_in_days
+                                        ) {
+                                            $next_nodes[$cc_id][] = $node;
+                                        }
+                                    }
+                                }
+                                if ($no_cut_off) {
+                                    $next_nodes[$cc_id][] = $node;
+                                }
                             }
                         }
                     }
@@ -1593,10 +1609,8 @@ class Algorithm extends Component
                                                             && $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_end'] > $this->age_in_days
                                                         ) {
                                                             $consultation_nodes[$cc_id][$node_id] = '';
-                                                            dump("$dd $node_id yes");
                                                         }
                                                     } else {
-                                                        dump("$dd $node_id nop");
                                                         $consultation_nodes[$cc_id][$node_id] = '';
                                                     }
                                                 }
