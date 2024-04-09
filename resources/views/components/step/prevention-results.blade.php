@@ -28,8 +28,10 @@
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
               <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']))
+                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
                   @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+                @else
+                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
                 @endif
               </label>
             </div>
@@ -45,8 +47,10 @@
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
               <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']))
+                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
                   @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+                @else
+                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
                 @endif
               </label>
             </div>
@@ -62,8 +66,10 @@
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
               <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']))
+                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
                   @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+                @else
+                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
                 @endif
               </label>
             </div>
@@ -79,8 +85,10 @@
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
               <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']))
+                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
                   @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+                @else
+                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
                 @endif
               </label>
             </div>

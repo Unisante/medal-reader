@@ -8,32 +8,32 @@ use Illuminate\Support\Facades\Cache;
 class AlgorithmService
 {
 
-    public function calculateMaxChildLength($instances, $node_id, &$max_length, $diags)
+    public function calculateMaxChildLength($instances, $diag_id, $node_id, &$max_length, $diags)
     {
         if (!isset($instances[$node_id])) {
             return 0;
         }
 
         $instance = $instances[$node_id];
-        $max_length[$node_id] = 0;
+        $max_length[$diag_id][$node_id] = 0;
 
         foreach ($instance['conditions'] as $condition) {
             $child_max_length = 0;
             foreach ($instance['children'] as $child_node_id) {
                 if (isset($diags[$child_node_id])) {
-                    return $max_length[$node_id];
+                    return $max_length[$diag_id][$node_id];
                 }
-                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $child_node_id, $max_length, $diags));
+                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $diag_id, $child_node_id, $max_length, $diags));
             }
-            $max_length[$node_id] = max($max_length[$node_id], $child_max_length + 1);
+            $max_length[$diag_id][$node_id] = max($max_length[$diag_id][$node_id], $child_max_length + 1);
         }
-        return $max_length[$node_id];
+        return $max_length[$diag_id][$node_id];
     }
 
-    public function breadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length, $diags)
+    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, &$max_length, $diags)
     {
         // Calculate maximum path length for each node
-        $this->calculateMaxChildLength($instances, $start_node_id, $max_length, $diags);
+        $this->calculateMaxChildLength($instances, $diag_id, $start_node_id, $max_length, $diags);
 
         $stack = [[$start_node_id, 0]];
         $nodes_visited = [];
@@ -49,11 +49,11 @@ class AlgorithmService
 
             foreach ($instances as $instance_id => $instance) {
                 if ($instance_id === $node_id && $node_id !== $start_node_id) {
-                    if (!isset($dependency_map[$answer_id])) {
-                        $dependency_map[$answer_id] = [];
+                    if (!isset($dependency_map[$diag_id][$answer_id])) {
+                        $dependency_map[$diag_id][$answer_id] = [];
                     }
-                    if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
-                        $dependency_map[$answer_id][] = $instance_id;
+                    if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                        $dependency_map[$diag_id][$answer_id][] = $instance_id;
                     }
                 }
 
@@ -61,17 +61,17 @@ class AlgorithmService
                     if ($condition['node_id'] === $node_id) {
                         $length++;
 
-                        $length = max($max_length[$node_id] ?? 0, $length);
-                        if (!isset($max_length[$answer_id]) || $length > $max_length[$answer_id]) {
-                            $max_length[$answer_id] = $length;
+                        $length = max($max_length[$diag_id][$node_id] ?? 0, $length);
+                        if (!isset($max_length[$diag_id][$answer_id]) || $length > $max_length[$diag_id][$answer_id]) {
+                            $max_length[$diag_id][$answer_id] = $length;
                         }
 
-                        if (!isset($dependency_map[$answer_id])) {
-                            $dependency_map[$answer_id] = [];
+                        if (!isset($dependency_map[$diag_id][$answer_id])) {
+                            $dependency_map[$diag_id][$answer_id] = [];
                         }
 
-                        if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
-                            $dependency_map[$answer_id][] = $instance_id;
+                        if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                            $dependency_map[$diag_id][$answer_id][] = $instance_id;
                         }
 
                         foreach ($instance['children'] as $child_node_id) {
