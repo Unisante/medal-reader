@@ -1709,7 +1709,7 @@ class Algorithm extends Component
         //Need to be on the future validateStep function, not here and remove the max
         $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void
