@@ -65,7 +65,7 @@
     </div>
     <div class="content">
       <span class="step-name">Step 2</span>
-      <span class="step-category">Choice of questionnaires</span>
+      <span class="step-category">Survey selection</span>
     </div>
   </div>
 
@@ -101,7 +101,7 @@
   </div>
   <div class="content">
     <span class="step-name">Step 3</span>
-    <span class="step-category">Questionnaires</span>
+    <span class="step-category">Surveys</span>
   </div>
   </div>
 

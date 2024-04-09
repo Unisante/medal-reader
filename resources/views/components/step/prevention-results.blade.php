@@ -1,5 +1,6 @@
 @props(['df_to_display', 'final_diagnoses', 'cache_key'])
 
+{{-- In theory the view shouldn't do any logic BUT that would actually reduce the cache usage --}}
 @php
   $high_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
       return $final_diagnoses[$k]['level_of_urgency'] === 10;
@@ -11,7 +12,7 @@
       return $final_diagnoses[$k]['level_of_urgency'] === 8;
   });
   $other_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
-      return $final_diagnoses[$k]['level_of_urgency'] < 10;
+      return $final_diagnoses[$k]['level_of_urgency'] < 8;
   });
 @endphp
 

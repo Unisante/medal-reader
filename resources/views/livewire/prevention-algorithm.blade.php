@@ -35,7 +35,7 @@
   @if ($current_step === 'first_look_assessment')
     <div class="row g-3 mt-3">
       <div class="col-8 pe-5">
-        <h2 class="fw-normal pb-3">Choix des Questionnaires</h2>
+        <h2 class="fw-normal pb-3">Survey selection</h2>
         @foreach ($current_nodes['first_look_assessment']['complaint_categories_nodes_id'] as $node_id => $node_value)
           <div wire:key="{{ 'cc-' . $node_id }}">
             <x-inputs.checkbox step="complaint_categories_nodes_id" :$full_nodes :$node_id :$cache_key />
@@ -43,7 +43,7 @@
         @endforeach
         <div class="d-flex justify-content-end pe-3">
           <button class="btn button-unisante mt-3" @if (empty(array_filter($chosen_complaint_categories))) disabled @endif
-            wire:click="goToStep('consultation')">Questionnaires</button>
+            wire:click="goToStep('consultation')">Surveys</button>
         </div>
       </div>
       <div class="col-4">

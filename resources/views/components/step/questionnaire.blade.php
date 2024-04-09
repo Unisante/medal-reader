@@ -12,7 +12,7 @@
       @if (array_key_exists($cc_id, $full_nodes))
         <h2 class="fw-normal pb-3">{{ $full_nodes[$cc_id]['label']['en'] }}</h2>
       @else
-        <h2 class="fw-normal pb-3">Questionnaire</h2>
+        <h2 class="fw-normal pb-3">Survey</h2>
       @endif
       @foreach ($nodes[$cc_id] as $node_id => $answer_id)
         <div wire:key="{{ 'nodes-' . $node_id }}">

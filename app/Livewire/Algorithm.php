@@ -479,11 +479,16 @@ class Algorithm extends Component
         ];
 
         // We already know that every nodes inside $nodes_per_step are the one without condition
-        $no_condition_nodes = array_flip(array_unique(Arr::flatten($nodes_per_step)));
+        $no_condition_nodes = array_flip(
+            array_unique(
+                array_reduce(
+                    array_map('array_keys', $consultation_nodes['medical_history']['general']),
+                    'array_merge',
+                    []
+                )
+            )
+        );
 
-        // dump($nodes_per_step);
-        // dump($cut_off_hash_map);
-        // dump($df_dd_mapping);
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
@@ -592,7 +597,7 @@ class Algorithm extends Component
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['answers_hash_map']);
         dump($cached_data['dependency_map']);
-        // dump($cached_data['df_hash_map']);
+        dump($cached_data['df_hash_map']);
         dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
         // dump($cached_data['consultation_nodes']);
@@ -1009,6 +1014,7 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $dependency_map = $cached_data['dependency_map'];
+        $no_condition_nodes = $cached_data['no_condition_nodes'];
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
@@ -1097,6 +1103,8 @@ class Algorithm extends Component
             $other_conditions_met = true;
             foreach ($df_hash_map[$value] as $df) {
                 foreach ($final_diagnoses[$df]['conditions'] as $condition) {
+
+                    if (array_key_exists($condition['node_id'], $no_condition_nodes)) continue;
 
                     //Respect cut off
                     if (array_key_exists('cut_off_start', $condition)) {
@@ -1625,7 +1633,7 @@ class Algorithm extends Component
                         }
                     }
                     if ($this->algorithm_type === 'prevention') {
-                        $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes);
+                        $this->current_nodes['consultation'] = array_replace_recursive($this->current_nodes['consultation'], $consultation_nodes ?? []);
 
                         foreach ($this->current_nodes['consultation'] as $cc_id => $nodes) {
                             foreach ($nodes as $node_id => $value) {

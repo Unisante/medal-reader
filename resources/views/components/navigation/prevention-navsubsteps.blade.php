@@ -25,7 +25,7 @@
         </svg>
       </div>
       <div class="content">
-        <span class="step-name">Questionnaire {{ $index + 1 }}</span>
+        <span class="step-name">Survey {{ $index + 1 }}</span>
         <span class="step-category" style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
           {{ $full_nodes[$cc]['label']['en'] }}
         </span>

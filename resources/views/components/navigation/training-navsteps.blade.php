@@ -27,7 +27,7 @@
 
       <div class="content">
         <span class="step-name">Step 1</span>
-        <span class="step-category">Questionnaire</span>
+        <span class="step-category">Survey</span>
       </div>
     </div>
 
