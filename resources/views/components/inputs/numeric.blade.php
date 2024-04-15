@@ -6,7 +6,7 @@
       @if (Str::contains($full_nodes[$node_id]['description']['en'], '[i]'))
         <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
           <div class="d-flex justify-content-between" style="align-items: flex-start;">
-            <label class="form-label">
+            <label class="form-label required">
               {{ $full_nodes[$node_id]['label']['en'] }}
             </label>
             <button class="btn btn-sm btn-outline-primary" @click="open = ! open">
@@ -18,23 +18,23 @@
           </div>
         </div>
       @else
-        <label class="form-label">
+        <label class="form-label required">
           {{ $full_nodes[$node_id]['label']['en'] }}
         </label>
         @markdown($full_nodes[$node_id]['description']['en'])
       @endif
     @else
-      <label class="form-label d-flex justify-content-between">
+      <label class="form-label required">
         {{ $full_nodes[$node_id]['label']['en'] }}
       </label>
     @endif
   </div>
-  <input class="form-control @error('value') is-invalid @enderror" type="text"
+  <input class="form-control @error('current_nodes.' . $step . '.' . $node_id) is-invalid @enderror" type="text"
     wire:model.live.debounce.300ms.number='{{ "current_nodes.$step.$node_id" }}' name="{{ $node_id }}"
     id="{{ $node_id }}">
-  {{-- @error("{{ 'current_nodes.registration.' . $node_id }}")
+  @error('current_nodes.' . $step . '.' . $node_id)
     <div class="invalid-feedback" role="alert">{{ $message }}</div>
-  @enderror --}}
+  @enderror
   @if ($debug_mode)
     <p style="font-size: smaller;" class="fst-italic">{{ $label }}</p>
   @endif

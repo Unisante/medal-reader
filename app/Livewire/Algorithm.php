@@ -47,8 +47,10 @@ class Algorithm extends Component
     public int $age_in_days;
     #[Validate([
         'current_nodes.registration.birth_date' => 'required:date',
+        'current_nodes.registration.*' => 'required',
+        // 'current_nodes.consultation.*.*' => 'required',
     ], message: [
-        'required' => 'The date of birth is required to continue',
+        'required' => 'This field is required',
         'date' => 'The date of birth is required to continue',
     ])]
     public array $current_nodes;
@@ -419,7 +421,7 @@ class Algorithm extends Component
                             }
 
                             if (isset($condition['cut_off_start']) || isset($condition['cut_off_end'])) {
-                                $cut_off_hash_map['nodes'][$instance_id][$answer_id] = [
+                                $cut_off_hash_map['nodes'][$diag['id']][$instance_id][$answer_id] = [
                                     'cut_off_start' => $condition['cut_off_start'],
                                     'cut_off_end' => $condition['cut_off_end'],
                                 ];
@@ -544,8 +546,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
-            // $this->updateLinkedNodesOfDob('1950-10-05');
+            $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -594,14 +596,14 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        // dump($cached_data['nodes_per_step']);
+        dump($cached_data['nodes_per_step']);
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
-        // dump($cached_data['cut_off_hash_map']);
+        dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
@@ -1523,8 +1525,8 @@ class Algorithm extends Component
                         foreach ($answers_hash_map[$cc_id][$dd_id][$answer_id] as $node) {
 
                             //Respect cut off
-                            if (isset($cut_off_hash_map['nodes'][$node])) {
-                                foreach ($cut_off_hash_map['nodes'][$node] as $answer_id => $condition) {
+                            if (isset($cut_off_hash_map['nodes'][$dd_id][$node])) {
+                                foreach ($cut_off_hash_map['nodes'][$dd_id][$node] as $answer_id => $condition) {
                                     if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                         if (isset($this->age_in_days)) {
                                             if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
@@ -1752,6 +1754,14 @@ class Algorithm extends Component
 
     public function goToCc($cc_id): void
     {
+        $this->validate(
+            [
+                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+            ],
+            [
+                'required' => 'This field is required',
+            ]
+        );
         $this->dispatch('scrollTop');
 
         $this->current_cc = $cc_id;
@@ -1759,6 +1769,14 @@ class Algorithm extends Component
 
     public function goToNextCc(): void
     {
+        $this->validate(
+            [
+                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+            ],
+            [
+                'required' => 'This field is required',
+            ]
+        );
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
@@ -1776,6 +1794,14 @@ class Algorithm extends Component
 
     public function goToPreviousCc(): void
     {
+        $this->validate(
+            [
+                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+            ],
+            [
+                'required' => 'This field is required',
+            ]
+        );
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
