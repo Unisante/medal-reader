@@ -1,5 +1,6 @@
 <?php
 
+
 return [
     'code_highlighting' => [
         /*
@@ -33,7 +34,11 @@ return [
      *
      * More info: https://spatie.be/docs/laravel-markdown/v1/using-the-blade-component/passing-options-to-commonmark
      */
-    'commonmark_options' => [],
+    'commonmark_options' => [
+        'external_link' => [
+            'open_in_new_window' => true,
+        ],
+    ],
 
     /*
      * Rendering markdown to HTML can be resource intensive. By default
@@ -62,7 +67,7 @@ return [
      * More info: https://commonmark.thephpleague.com/2.4/extensions/overview/
      */
     'extensions' => [
-        //
+        League\CommonMark\Extension\ExternalLink\ExternalLinkExtension::class
     ],
 
     /*

@@ -47,7 +47,7 @@ class Algorithm extends Component
     public int $age_in_days;
     #[Validate([
         'current_nodes.registration.birth_date' => 'required:date',
-        'current_nodes.registration.*' => 'required',
+        // 'current_nodes.registration.*' => 'required',
         // 'current_nodes.consultation.*.*' => 'required',
     ], message: [
         'required' => 'This field is required',
@@ -421,7 +421,7 @@ class Algorithm extends Component
                             }
 
                             if (isset($condition['cut_off_start']) || isset($condition['cut_off_end'])) {
-                                $cut_off_hash_map['nodes'][$diag['id']][$instance_id][$answer_id] = [
+                                $cut_off_hash_map['nodes'][$step][$instance_id][$answer_id] = [
                                     'cut_off_start' => $condition['cut_off_start'],
                                     'cut_off_end' => $condition['cut_off_end'],
                                 ];
@@ -601,7 +601,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
@@ -797,8 +797,8 @@ class Algorithm extends Component
                         if ($modified_cc_id === $system_name) {
                             foreach ($system_data as $node_id => $value) {
                                 // Respect Cut Off
-                                if (isset($cut_off_hash_map['nodes'][$node_id])) {
-                                    foreach ($cut_off_hash_map['nodes'][$node_id] as $answer_id => $condition) {
+                                if (isset($cut_off_hash_map['nodes'][$modified_cc_id][$node_id])) {
+                                    foreach ($cut_off_hash_map['nodes'][$modified_cc_id][$node_id] as $answer_id => $condition) {
                                         if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                             if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
                                                 $this->current_nodes['consultation'][$modified_cc_id][$node_id] = '';
@@ -1011,6 +1011,19 @@ class Algorithm extends Component
             foreach ($drugs_hash_map[$answer_id] as $drug_id) {
                 if (!array_key_exists($drug_id, $this->drugs_to_display)) {
                     $this->drugs_to_display[$drug_id] = false;
+                }
+            }
+        }
+
+        //if node is displayed in another tree we save it
+        if ($this->algorithm_type === 'prevention') {
+            if (isset($this->current_nodes['consultation'])) {
+                foreach ($this->current_nodes['consultation'] as $cc_id => $nodes_per_cc) {
+                    if ($cc_id !== $this->current_cc) {
+                        if (array_key_exists($node_id, $nodes_per_cc)) {
+                            unset($this->current_nodes['consultation'][$cc_id][$node_id]);
+                        }
+                    }
                 }
             }
         }
@@ -1512,21 +1525,13 @@ class Algorithm extends Component
 
 
         if ($this->algorithm_type === 'prevention') {
-            if ($this->current_step !== 'registration') {
-                $answers_hash_map = [
-                    $this->current_cc =>
-                    $answers_hash_map[$this->current_cc]
-                ];
-            }
-
             foreach ($this->diagnoses_per_cc as $cc_id => $dds) {
                 foreach ($dds as $dd_id => $label) {
                     if (isset($answers_hash_map[$cc_id][$dd_id][$answer_id])) {
                         foreach ($answers_hash_map[$cc_id][$dd_id][$answer_id] as $node) {
-
                             //Respect cut off
-                            if (isset($cut_off_hash_map['nodes'][$dd_id][$node])) {
-                                foreach ($cut_off_hash_map['nodes'][$dd_id][$node] as $answer_id => $condition) {
+                            if (isset($cut_off_hash_map['nodes'][$cc_id][$node])) {
+                                foreach ($cut_off_hash_map['nodes'][$cc_id][$node] as $answer_id => $condition) {
                                     if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                         if (isset($this->age_in_days)) {
                                             if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
@@ -1557,7 +1562,7 @@ class Algorithm extends Component
         $conditioned_nodes_hash_map = $cached_data['conditioned_nodes_hash_map'];
         $cut_off_hash_map = $cached_data['cut_off_hash_map'];
 
-        if ($this->algorithm_type !== 'training') {
+        if ($this->algorithm_type === 'prevention') {
             $this->validate();
         }
 
@@ -1596,8 +1601,9 @@ class Algorithm extends Component
                                 } elseif ($this->algorithm_type === 'prevention') {
                                     foreach ($nodes as $node_id => $value) {
                                         //Respect cut off for the node
-                                        if (isset($cut_off_hash_map['nodes'][$node_id])) {
-                                            foreach ($cut_off_hash_map['nodes'][$node_id] as $answer_id => $condition) {
+                                        if (isset($cut_off_hash_map['nodes'][$cc_id][$node_id])) {
+                                            dump($node_id);
+                                            foreach ($cut_off_hash_map['nodes'][$cc_id][$node_id] as $answer_id => $condition) {
                                                 if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                                     if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
                                                         $consultation_nodes[$cc_id][$node_id] = '';
@@ -1657,8 +1663,8 @@ class Algorithm extends Component
                         foreach ($this->current_nodes['consultation'] as $cc_id => $nodes) {
                             foreach ($nodes as $node_id => $value) {
                                 // Respect Cut Off
-                                if (isset($cut_off_hash_map['nodes'][$node_id])) {
-                                    foreach ($cut_off_hash_map['nodes'][$node_id] as $answer_id => $condition) {
+                                if (isset($cut_off_hash_map['nodes'][$cc_id][$node_id])) {
+                                    foreach ($cut_off_hash_map['nodes'][$cc_id][$node_id] as $answer_id => $condition) {
                                         if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                             if ($condition['cut_off_start'] >= $this->age_in_days || $condition['cut_off_end'] < $this->age_in_days) {
                                                 unset($this->current_nodes['consultation'][$cc_id][$node_id]);
@@ -1754,14 +1760,16 @@ class Algorithm extends Component
 
     public function goToCc($cc_id): void
     {
-        $this->validate(
-            [
-                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-            ],
-            [
-                'required' => 'This field is required',
-            ]
-        );
+        // if ($this->algorithm_type === 'prevention') {
+        //     $this->validate(
+        //         [
+        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+        //         ],
+        //         [
+        //             'required' => 'This field is required',
+        //         ]
+        //     );
+        // }
         $this->dispatch('scrollTop');
 
         $this->current_cc = $cc_id;
@@ -1769,14 +1777,16 @@ class Algorithm extends Component
 
     public function goToNextCc(): void
     {
-        $this->validate(
-            [
-                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-            ],
-            [
-                'required' => 'This field is required',
-            ]
-        );
+        // if ($this->algorithm_type === 'prevention') {
+        //     $this->validate(
+        //         [
+        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+        //         ],
+        //         [
+        //             'required' => 'This field is required',
+        //         ]
+        //     );
+        // }
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
@@ -1794,14 +1804,16 @@ class Algorithm extends Component
 
     public function goToPreviousCc(): void
     {
-        $this->validate(
-            [
-                "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-            ],
-            [
-                'required' => 'This field is required',
-            ]
-        );
+        // if ($this->algorithm_type === 'prevention') {
+        //     $this->validate(
+        //         [
+        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
+        //         ],
+        //         [
+        //             'required' => 'This field is required',
+        //         ]
+        //     );
+        // }
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
