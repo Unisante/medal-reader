@@ -4,44 +4,21 @@ namespace App\Services;
 
 use DateTime;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AlgorithmService
 {
 
-    public function calculateMaxChildLength($instances, $diag_id, $node_id, &$max_length, $diags)
+    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, &$max_length)
     {
-        if (!isset($instances[$node_id])) {
-            return 0;
-        }
-
-        $instance = $instances[$node_id];
-        $max_length[$diag_id][$node_id] = 0;
-
-        foreach ($instance['conditions'] as $condition) {
-            $child_max_length = 0;
-            foreach ($instance['children'] as $child_node_id) {
-                if (isset($diags[$child_node_id])) {
-                    return $max_length[$diag_id][$node_id];
-                }
-                $child_max_length = max($child_max_length, $this->calculateMaxChildLength($instances, $diag_id, $child_node_id, $max_length, $diags));
-            }
-            $max_length[$diag_id][$node_id] = max($max_length[$diag_id][$node_id], $child_max_length + 1);
-        }
-        return $max_length[$diag_id][$node_id];
-    }
-
-    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, &$max_length, $diags)
-    {
-        // Calculate maximum path length for each node
-        $this->calculateMaxChildLength($instances, $diag_id, $start_node_id, $max_length, $diags);
-
         $stack = [[$start_node_id, 0]];
         $nodes_visited = [];
-
+        Log::info("START Node : $start_node_id");
         while (!empty($stack)) {
             [$node_id, $length] = array_shift($stack);
-
+            Log::info("Node : $node_id");
             if (isset($nodes_visited[$node_id])) {
+                Log::info("Skipped : $node_id");
                 continue;
             }
 
@@ -52,13 +29,18 @@ class AlgorithmService
                     if (!isset($dependency_map[$diag_id][$answer_id])) {
                         $dependency_map[$diag_id][$answer_id] = [];
                     }
+
                     if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                        Log::info("Answer : $answer_id = $instance_id");
                         $dependency_map[$diag_id][$answer_id][] = $instance_id;
                     }
                 }
 
                 foreach ($instance['conditions'] as $condition) {
-                    if ($condition['node_id'] === $node_id) {
+                    // $condition['node_id'] === $node_id ||
+                    $children_answer_id = $condition['answer_id'];
+                    if ($condition['node_id'] === $node_id || $answer_id === $children_answer_id) {
+                        // $answer_id = $condition['answer_id'];
                         $length++;
 
                         $length = max($max_length[$diag_id][$node_id] ?? 0, $length);
@@ -71,6 +53,7 @@ class AlgorithmService
                         }
 
                         if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                            Log::info("Children_answer_id : $answer_id = $instance_id");
                             $dependency_map[$diag_id][$answer_id][] = $instance_id;
                         }
 
