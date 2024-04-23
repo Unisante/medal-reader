@@ -27,13 +27,11 @@
         @foreach ($high_dfs as $diagnosis_id => $drugs)
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
-              <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
-                  @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
-                @else
-                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                @endif
-              </label>
+              @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
+                @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+              @else
+                {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+              @endif
             </div>
           </div>
         @endforeach
@@ -46,13 +44,11 @@
         @foreach ($moderate_dfs as $diagnosis_id => $drugs)
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
-              <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
-                  @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
-                @else
-                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                @endif
-              </label>
+              @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
+                @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+              @else
+                {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+              @endif
             </div>
           </div>
         @endforeach
@@ -65,13 +61,11 @@
         @foreach ($light_dfs as $diagnosis_id => $drugs)
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
-              <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
-                  @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
-                @else
-                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                @endif
-              </label>
+              @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
+                @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+              @else
+                {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+              @endif
             </div>
           </div>
         @endforeach
@@ -84,13 +78,11 @@
         @foreach ($other_dfs as $diagnosis_id => $drugs)
           <div wire:key="{{ 'df-' . $diagnosis_id }}">
             <div class="input-container mb-3">
-              <label class="form-check-label" for="{{ $diagnosis_id }}">
-                @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
-                  @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
-                @else
-                  {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                @endif
-              </label>
+              @if (isset($final_diagnoses[$diagnosis_id]['description']['en']) && $final_diagnoses[$diagnosis_id]['description']['en'])
+                @markdown($final_diagnoses[$diagnosis_id]['description']['en'])
+              @else
+                {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
+              @endif
             </div>
           </div>
         @endforeach

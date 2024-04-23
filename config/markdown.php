@@ -37,6 +37,7 @@ return [
     'commonmark_options' => [
         'external_link' => [
             'open_in_new_window' => true,
+            'html_class' => 'external-link',
         ],
     ],
 
