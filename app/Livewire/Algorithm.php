@@ -617,7 +617,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        // dump($cached_data['answers_hash_map']);
+        dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
@@ -1590,18 +1590,20 @@ class Algorithm extends Component
         if ($this->algorithm_type !== 'prevention') {
             foreach ($this->chosen_complaint_categories as $category => $chosen) {
                 if ($chosen) {
-                    foreach ($answers_hash_map[$category] as $dd_id => $nodes) {
-                        foreach ($nodes as $node) {
-                            if (isset($answers_hash_map[$category][$dd_id][$answer_id])) {
-                                $next_nodes[$category] = [
-                                    ...$next_nodes[$category] ?? [],
-                                    ...$answers_hash_map[$category][$dd_id][$answer_id]
-                                ];
+                    if (isset($answers_hash_map[$category])) {
+                        foreach ($answers_hash_map[$category] as $dd_id => $nodes) {
+                            foreach ($nodes as $node) {
+                                if (isset($answers_hash_map[$category][$dd_id][$answer_id])) {
+                                    $next_nodes[$category] = [
+                                        ...$next_nodes[$category] ?? [],
+                                        ...$answers_hash_map[$category][$dd_id][$answer_id]
+                                    ];
+                                }
                             }
                         }
-                    }
-                    if (isset($next_nodes[$category])) {
-                        $next_nodes[$category] = array_unique($next_nodes[$category]);
+                        if (isset($next_nodes[$category])) {
+                            $next_nodes[$category] = array_unique($next_nodes[$category]);
+                        }
                     }
                 }
             }
