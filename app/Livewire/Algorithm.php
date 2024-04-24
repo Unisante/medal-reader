@@ -407,13 +407,12 @@ class Algorithm extends Component
                         $system = $node['category'] !== 'background_calculation' ? $node['system'] ?? 'others' : 'others';
                         $consultation_nodes[$substep][$system][$step][$instance_id] = '';
 
-                        Log::info("STAAAAAAAAAAAART" . $diag['id']);
                         if (!isset($dependency_map[$diag['id']])) {
                             $dependency_map[$diag['id']] = [];
                         }
-                        // $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $instance_id, $dependency_map, $max_path_length);
-                        Log::info("FINIIIIIIIIIIIIIIIISH" . $diag['id']);
                     }
+
+
 
                     if (!empty($instance['conditions'])) {
                         foreach ($instance['conditions'] as $condition) {
@@ -433,8 +432,11 @@ class Algorithm extends Component
                                     'cut_off_end' => $condition['cut_off_end'],
                                 ];
                             }
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, $max_path_length, true);
 
-                            $this->algorithmService->oldBreadthFirstSearch($diag['instances'], $node_id, $answer_id, $dependency_map, $max_path_length);
+                            foreach ($instance['children'] as $child_node) {
+                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node, $answer_id, $dependency_map, $max_path_length);
+                            }
 
                             $node = $cached_data['full_nodes'][$node_id];
                             if ($node['type'] === 'QuestionsSequence') {
@@ -607,7 +609,7 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        dump($cached_data['dependency_map']);
+        // dump($cached_data['dependency_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
@@ -615,7 +617,7 @@ class Algorithm extends Component
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
-        dump($cached_data['max_path_length']);
+        // dump($cached_data['max_path_length']);
     }
 
     public function calculateCompletionPercentage($other_cc = null)

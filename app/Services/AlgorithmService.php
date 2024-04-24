@@ -4,11 +4,10 @@ namespace App\Services;
 
 use DateTime;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 class AlgorithmService
 {
-    public function oldBreadthFirstSearch($instances, $start_node_id, $answer_id, &$dependency_map, &$max_length)
+    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, &$max_length, $filter_answer = false)
     {
         // Implement breadth-first search using $max_length
         $stack = [[$start_node_id, 0]];
@@ -25,11 +24,11 @@ class AlgorithmService
 
             foreach ($instances as $instance_id => $instance) {
                 if ($instance_id === $node_id && $node_id !== $start_node_id) {
-                    if (!isset($dependency_map[$answer_id])) {
-                        $dependency_map[$answer_id] = [];
+                    if (!isset($dependency_map[$diag_id][$answer_id])) {
+                        $dependency_map[$diag_id][$answer_id] = [];
                     }
-                    if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
-                        $dependency_map[$answer_id][] = $instance_id;
+                    if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                        $dependency_map[$diag_id][$answer_id][] = $instance_id;
                     }
                 }
 
@@ -42,12 +41,24 @@ class AlgorithmService
                             $max_length[$answer_id] = $length;
                         }
 
-                        if (!isset($dependency_map[$answer_id])) {
-                            $dependency_map[$answer_id] = [];
-                        }
+                        if ($filter_answer) {
+                            if ($answer_id === $condition['answer_id']) {
+                                if (!isset($dependency_map[$diag_id][$answer_id])) {
+                                    $dependency_map[$diag_id][$answer_id] = [];
+                                }
 
-                        if (!isset(array_flip($dependency_map[$answer_id])[$instance_id])) {
-                            $dependency_map[$answer_id][] = $instance_id;
+                                if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                                    $dependency_map[$diag_id][$answer_id][] = $instance_id;
+                                }
+                            }
+                        } else {
+                            if (!isset($dependency_map[$diag_id][$answer_id])) {
+                                $dependency_map[$diag_id][$answer_id] = [];
+                            }
+
+                            if (!isset(array_flip($dependency_map[$diag_id][$answer_id])[$instance_id])) {
+                                $dependency_map[$diag_id][$answer_id][] = $instance_id;
+                            }
                         }
 
                         foreach ($instance['children'] as $child_node_id) {
@@ -58,68 +69,6 @@ class AlgorithmService
             }
         }
     }
-
-
-    public function breadthFirstSearch($instances, $diag_id, $start_node_id, &$dependency_map, &$max_length)
-    {
-        $queue = [[$start_node_id, null, 0]];
-        $nodes_visited = [];
-        Log::info("START Node : $start_node_id");
-
-        while (!empty($queue)) {
-            [$node_id, $parent_answer_id, $length] = array_shift($queue);
-            Log::info("First in Queue : $node_id");
-
-            if (isset($nodes_visited[$node_id . $parent_answer_id])) {
-                Log::info("Skipped : $node_id - $parent_answer_id");
-                continue;
-            }
-
-            $nodes_visited[$node_id . $parent_answer_id] = true;
-
-            // foreach ($instances as $instance_id => $instance) {
-            if ($instances[$node_id]['id'] === $node_id && $node_id !== $start_node_id && $parent_answer_id) {
-                if (!isset($dependency_map[$diag_id][$parent_answer_id])) {
-                    $dependency_map[$diag_id][$parent_answer_id] = [];
-                }
-                if (!in_array($instances[$node_id]['id'], $dependency_map[$diag_id][$parent_answer_id])) {
-                    // Log::info("Parent_answer_id : $parent_answer_id = $instance_id");
-                    $dependency_map[$diag_id][$parent_answer_id][] = $instances[$node_id]['id'];
-                }
-            }
-
-            foreach ($instances[$node_id]['conditions'] as $condition) {
-                // $condition['node_id'] === $node_id ||
-                $answer_id = $condition['answer_id'];
-                if ($node_id === $condition['node_id']) {
-                    // $answer_id = $condition['answer_id'];
-                    // $length++;
-
-                    // $length = max($max_length[$diag_id][$node_id] ?? 0, $length);
-                    // if (!isset($max_length[$diag_id][$answer_id]) || $length > $max_length[$diag_id][$answer_id]) {
-                    //     $max_length[$diag_id][$answer_id] = $length;
-                    // }
-
-                    if (!isset($dependency_map[$diag_id][$answer_id])) {
-                        $dependency_map[$diag_id][$answer_id] = [];
-                    }
-
-                    if (!in_array($node_id, $dependency_map[$diag_id][$answer_id])) {
-                        Log::info("added : $answer_id = $node_id");
-                        $dependency_map[$diag_id][$answer_id][] = $node_id;
-                    }
-                }
-                // }
-            }
-            foreach ($instances[$node_id]['children'] as $child_node_id) {
-                //We only add nodes. !isset means it's a df
-                if (isset($instances[$child_node_id])) {
-                    $queue[] = [$child_node_id, $parent_answer_id, $length];
-                }
-            }
-        }
-    }
-
 
     public function handleNodesToUpdate($node, &$nodes_to_update)
     {
