@@ -27,7 +27,7 @@
           name="last_name">
       </div>
     @else
-      @if ($this->current_nodes['registration']['birth_date'] !== '')
+      @if ($this->current_nodes['registration']['birth_date'] !== '' || $this->algorithm_type === 'dynamic')
         @switch($full_nodes[$node_id]['display_format'])
           @case('RadioButton')
             <x-inputs.radio step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />

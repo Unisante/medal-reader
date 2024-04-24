@@ -3,7 +3,7 @@
 <div class="input-container mb-2">
   <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
-      @if (Str::contains($full_nodes[$node_id]['description']['en'], '[i]'))
+      @if (Str::contains($full_nodes[$node_id]['description']['en'], '[i]') || $this->algorithm_type === 'dynamic')
         <div x-data="{ open: false }" wire:key="{{ 'desc' . $node_id }}">
           <div class="d-flex justify-content-between" style="align-items: flex-start;">
             <label class="form-label required">
