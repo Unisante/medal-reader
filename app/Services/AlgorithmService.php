@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class AlgorithmService
 {
-    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, &$max_length, $filter_answer = false)
+    public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, $filter_answer = false)
     {
         // Implement breadth-first search using $max_length
         $stack = [[$start_node_id, 0]];
@@ -34,12 +34,7 @@ class AlgorithmService
 
                 foreach ($instance['conditions'] as $condition) {
                     if ($condition['node_id'] === $node_id) {
-                        $length++;
 
-                        $length = max($max_length[$node_id] ?? 0, $length);
-                        if (!isset($max_length[$answer_id]) || $length > $max_length[$answer_id]) {
-                            $max_length[$answer_id] = $length;
-                        }
 
                         if ($filter_answer) {
                             if ($answer_id === $condition['answer_id']) {

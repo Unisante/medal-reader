@@ -432,10 +432,10 @@ class Algorithm extends Component
                                     'cut_off_end' => $condition['cut_off_end'],
                                 ];
                             }
-                            $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, $max_path_length, true);
+                            $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
 
                             foreach ($instance['children'] as $child_node) {
-                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node, $answer_id, $dependency_map, $max_path_length);
+                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node, $answer_id, $dependency_map);
                             }
 
                             $node = $cached_data['full_nodes'][$node_id];
@@ -463,7 +463,7 @@ class Algorithm extends Component
                                             // Need to find the good if because if we just filter priority_sign it will then not remove
                                             // if (isset($cached_data['full_nodes'][$qs_instance['id']]['system']) && $cached_data['full_nodes'][$qs_instance['id']]['system'] !== 'priority_sign') {
                                             $answers_hash_map[$step][$diag['id']][$qs_condition['answer_id']][] = $qs_instance['id'];
-                                            $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map, $max_path_length, $cached_data['final_diagnoses']);
+                                            $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map);
                                             // }
                                         }
                                     }
@@ -478,6 +478,12 @@ class Algorithm extends Component
         if (empty($consultation_nodes)) {
             flash()->addError('Aucune question à afficher. Algorithme vide ou uniquement des questions de type démographique configurées');
             return redirect()->route("home.index");
+        }
+
+        foreach ($dependency_map as $diag_id => $answers) {
+            foreach ($answers as $answer_id => $nodes) {
+                $max_path_length[$diag_id][$answer_id] = count($nodes);
+            }
         }
 
         $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
@@ -609,7 +615,7 @@ class Algorithm extends Component
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
-        // dump($cached_data['dependency_map']);
+        dump($cached_data['dependency_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
@@ -617,7 +623,7 @@ class Algorithm extends Component
         // dump($cached_data['consultation_nodes']);
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
-        // dump($cached_data['max_path_length']);
+        dump($cached_data['max_path_length']);
     }
 
     public function calculateCompletionPercentage($other_cc = null)
@@ -695,7 +701,6 @@ class Algorithm extends Component
                 }
             }
         }
-        dump($total);
 
         $current_answers = array_filter($current_nodes);
         $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
