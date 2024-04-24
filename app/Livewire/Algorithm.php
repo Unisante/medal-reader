@@ -848,7 +848,6 @@ class Algorithm extends Component
                     foreach ($this->current_nodes['consultation'] as $cc_id => $nodes) {
                         if ($modified_cc_id === $cc_id) continue;
                         foreach ($nodes as $node_id => $answer_id) {
-                            dump("saving $node_id");
                             if (array_key_exists($node_id, $this->nodes_to_save)) {
                                 $this->saveNode($node_id, $this->nodes_to_save[$node_id]['value'], $this->nodes_to_save[$node_id]['answer_id'], null);
                             } else {
@@ -1122,7 +1121,6 @@ class Algorithm extends Component
         }
 
         $next_nodes_per_cc = $this->getNextNodesId($value, $node_id);
-
         //if next node is background calc -> calc and directly show next <3
         if ($next_nodes_per_cc) {
             foreach ($next_nodes_per_cc as $cc_id => $next_nodes_id) {
@@ -1410,24 +1408,6 @@ class Algorithm extends Component
                         $this->current_nodes['registration'][$node_to_update_id] = $pretty_answer;
                         // }
                     }
-                    // if ($this->current_step === 'first_look_assessment') {
-                    //     if (array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id']) || $this->algorithm_type === 'dynamic') {
-                    //         $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node_to_update_id] = $pretty_answer;
-                    //     }
-                    // }
-                    // if ($this->current_step === 'consultation') {
-                    //     if ($this->algorithm_type === 'dynamic') {
-                    //         if (
-                    //             !array_key_exists($node_to_update_id, $this->current_nodes['registration'])
-                    //             && !array_key_exists($node_to_update_id, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
-                    //         ) {
-                    //             $this->current_nodes['consultation']['medical_history']['others'][$node_to_update_id] = $pretty_answer;
-                    //         }
-                    //     }
-                    //     if (array_key_exists($node_to_update_id, $this->current_nodes['consultation'][$this->current_cc])) {
-                    //         $this->current_nodes['consultation'][$this->current_cc][$node_to_update_id] = $pretty_answer;
-                    //     }
-                    // }
 
                     // If answer will set a drug, we add it to the drugs to display
                     if (array_key_exists($this->nodes_to_save[$node_to_update_id]['answer_id'], $drugs_hash_map)) {
@@ -1603,7 +1583,6 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $answers_hash_map = $cached_data['answers_hash_map'];
-        $no_condition_nodes = $cached_data['no_condition_nodes'];
         $cut_off_hash_map = $cached_data['cut_off_hash_map'];
 
         $next_nodes = [];
