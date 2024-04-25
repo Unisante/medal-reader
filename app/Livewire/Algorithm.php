@@ -562,8 +562,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
-            // $this->updateLinkedNodesOfDob('1950-10-05');
+            $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -1656,14 +1656,20 @@ class Algorithm extends Component
             $this->validate();
         }
 
-        if ($this->algorithm_type === 'dynamic') {
-            if ($step === 'first_look_assessment') {
+        if ($step === 'first_look_assessment') {
+            if ($this->algorithm_type === 'dynamic') {
                 if (!isset($this->current_nodes['first_look_assessment']['first_look_nodes_id'])) {
                     $this->current_nodes['first_look_assessment']['first_look_nodes_id'] =
                         $nodes_per_step['first_look_assessment']['first_look_nodes_id'];
 
                     $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] =
                         $nodes_per_step['first_look_assessment']['basic_measurements_nodes_id'];
+                }
+            }
+            if ($this->algorithm_type === 'prevention') {
+                if (empty(array_filter($this->diagnoses_per_cc, 'array_filter'))) {
+                    flash()->addError('There is no recommendation for this age range');
+                    return;
                 }
             }
         }
