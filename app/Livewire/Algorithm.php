@@ -562,8 +562,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration']['birth_date'] = '1970-04-08';
-            $this->updateLinkedNodesOfDob('1950-10-05');
+            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            // $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -1121,6 +1121,8 @@ class Algorithm extends Component
         }
 
         $next_nodes_per_cc = $this->getNextNodesId($value, $node_id);
+        // dump($next_nodes_per_cc);
+
         //if next node is background calc -> calc and directly show next <3
         if ($next_nodes_per_cc) {
             foreach ($next_nodes_per_cc as $cc_id => $next_nodes_id) {
@@ -1146,7 +1148,7 @@ class Algorithm extends Component
                                     }
                                 }
                                 if (!$found) {
-                                    $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$this->current_cc], [$node => $pretty_answer], $node_id);
+                                    $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$cc_id], [$node => $pretty_answer], $node_id);
                                 }
                             }
                             $this->displayNextNode($node, $this->nodes_to_save[$node]['answer_id'], null);
