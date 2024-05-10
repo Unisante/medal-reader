@@ -1623,15 +1623,15 @@ class Algorithm extends Component
                         foreach ($answers_hash_map[$category] as $dd_id => $nodes) {
                             foreach ($nodes as $node) {
                                 if (isset($answers_hash_map[$category][$dd_id][$answer_id])) {
-                                    $next_nodes[$category] = [
-                                        ...$next_nodes[$category] ?? [],
+                                    $next_nodes[$category][$dd_id] = [
+                                        ...$next_nodes[$category][$dd_id] ?? [],
                                         ...$answers_hash_map[$category][$dd_id][$answer_id]
                                     ];
                                 }
                             }
-                        }
-                        if (isset($next_nodes[$category])) {
-                            $next_nodes[$category] = array_unique($next_nodes[$category]);
+                            if (isset($next_nodes[$category][$dd_id])) {
+                                $next_nodes[$category][$dd_id] = array_unique($next_nodes[$category][$dd_id]);
+                            }
                         }
                     }
                 }
