@@ -562,8 +562,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
-            // $this->updateLinkedNodesOfDob('1950-10-05');
+            $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -606,7 +606,6 @@ class Algorithm extends Component
             }
         }
 
-        // dd($this->algorithmService->getReachableNodes($adjacency_list, 8619));
         // dd($this->registration_nodes_id);
         // dd($cached_data);
         // dd($cached_data['full_nodes']);
@@ -690,9 +689,17 @@ class Algorithm extends Component
                     $potential_total = $total;
                     $potential_totals = [];
                     foreach ($answers as $answer_id) {
-                        foreach ($this->diagnoses_per_cc[$other_cc ?? $this->current_cc] as $dd_id => $l) {
-                            $length = $max_path_length[$dd_id][$answer_id] ?? 0;
-                            $potential_totals[] = $length;
+                        if ($this->algorithm_type !== 'dynamic') {
+                            foreach ($this->diagnoses_per_cc[$other_cc ?? $this->current_cc] as $dd_id => $l) {
+                                $length = $max_path_length[$dd_id][$answer_id] ?? 0;
+                                $potential_totals[] = $length;
+                            }
+                        }
+                        if ($this->algorithm_type === 'dynamic') {
+                            foreach ($this->diagnoses_per_cc as $dd_id => $l) {
+                                $length = $max_path_length[$dd_id][$answer_id] ?? 0;
+                                $potential_totals[] = $length;
+                            }
                         }
                     }
                     $potential_total = max($potential_totals);
@@ -703,8 +710,16 @@ class Algorithm extends Component
             }
         }
 
-        $current_answers = array_filter($current_nodes);
-        $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
+        //We manage the case where after answering a node present in multiple tree
+        //The tree is now full empty
+        if ($this->algorithm_type === 'prevention' && empty($current_nodes)) {
+            $current_answers = [1];
+            $empty_nodes = 0;
+            $total = 1;
+        } else {
+            $current_answers = array_filter($current_nodes);
+            $empty_nodes = count($current_nodes) - count(array_filter($current_nodes));
+        }
 
         $total = $this->current_step === 'consultation' ? $total + $empty_nodes : $total;
         $completion_percentage = count($current_answers) / $total * 100;
@@ -1267,7 +1282,7 @@ class Algorithm extends Component
                     }
                 }
                 if ($this->algorithm_type === 'prevention') {
-                    if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories)) && count($this->current_nodes['consultation'][$cc_id])) {
+                    if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
                         $this->calculateCompletionPercentage($cc_id);
                     }
                 }
@@ -1538,6 +1553,7 @@ class Algorithm extends Component
                             //For the current node that is displayed in other tree
                             if ($consultation_cc_id !== $this->current_cc && array_key_exists($node_id, $nodes_per_cc)) {
                                 unset($this->current_nodes['consultation'][$consultation_cc_id][$node_id]);
+                                $this->calculateCompletionPercentage($consultation_cc_id);
                             }
                         }
 

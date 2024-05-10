@@ -14,7 +14,7 @@
       @else
         <h2 class="fw-normal pb-3">Survey</h2>
       @endif
-      @foreach ($nodes[$cc_id] as $node_id => $answer_id)
+      @forelse ($nodes[$cc_id] as $node_id => $answer_id)
         <div wire:key="{{ 'nodes-' . $node_id }}">
           @if (isset($full_nodes[$node_id]['display_format']))
             @switch($full_nodes[$node_id]['display_format'])
@@ -55,18 +55,20 @@
           @endif
 
         </div>
-      @endforeach
-      <div class="d-flex justify-content-end">
-        @if (!$loop->first)
-          <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous</button>
-        @endif
-        @if (!$loop->last)
-          <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next</button>
-        @endif
-        @if ($loop->last)
-          <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Results</button>
-        @endif
-      </div>
-    @endif
-  </div>
-@endforeach
+        @empty
+          <p>No questions left</p>
+        @endforelse
+        <div class="d-flex justify-content-end">
+          @if (!$loop->first)
+            <button class="btn button-unisante m-1" wire:click="goToPreviousCc()">Previous</button>
+          @endif
+          @if (!$loop->last)
+            <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next</button>
+          @endif
+          @if ($loop->last)
+            <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Results</button>
+          @endif
+        </div>
+      @endif
+    </div>
+  @endforeach
