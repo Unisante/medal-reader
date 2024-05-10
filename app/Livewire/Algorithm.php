@@ -562,8 +562,8 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration']['birth_date'] = '1970-04-08';
-            $this->updateLinkedNodesOfDob('1950-10-05');
+            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            // $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
 
@@ -616,7 +616,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        dump($cached_data['answers_hash_map']);
+        // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
@@ -1136,50 +1136,52 @@ class Algorithm extends Component
         }
 
         $next_nodes_per_cc = $this->getNextNodesId($value, $node_id);
-        dump($next_nodes_per_cc);
+        // dump($next_nodes_per_cc);
 
         //if next node is background calc -> calc and directly show next <3
         if ($next_nodes_per_cc) {
-            foreach ($next_nodes_per_cc as $cc_id => $next_nodes_id) {
-                foreach ($next_nodes_id as $node) {
-                    if (array_key_exists($node, $formula_hash_map)) {
-                        $pretty_answer = $this->handleFormula($node);
-                        if ($this->current_step === 'first_look_assessment') {
-                            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
-                        }
-                        if ($this->current_step === 'consultation') {
-                            if ($this->algorithm_type === 'dynamic') {
-                                if (
-                                    !array_key_exists($node, $this->current_nodes['registration'])
-                                    && !array_key_exists($node, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
-                                ) {
-                                    $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
-                                }
-                            } else {
-                                $found = false;
-                                foreach ($this->current_nodes[$this->current_step] as $nodes_per_cc) {
-                                    if (array_key_exists($node, $nodes_per_cc)) {
-                                        $found = true;
-                                    }
-                                }
-                                if (!$found) {
-                                    if (!array_key_exists($cc_id, $this->current_nodes['consultation'])) {
-                                        $this->current_nodes['consultation'][$cc_id] = [];
-                                    }
-                                    $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$cc_id], [$node => $pretty_answer], $node_id);
-                                }
+            foreach ($next_nodes_per_cc as $cc_id => $nodes_per_cc) {
+                foreach ($nodes_per_cc as $next_node_dd_id => $next_nodes_id) {
+                    foreach ($next_nodes_id as $node) {
+                        if (array_key_exists($node, $formula_hash_map)) {
+                            $pretty_answer = $this->handleFormula($node);
+                            if ($this->current_step === 'first_look_assessment') {
+                                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
                             }
-                            $this->displayNextNode($node, $this->nodes_to_save[$node]['answer_id'], null);
-                        }
-                        // $this->displayNextNode($node_to_update_id, $this->nodes_to_save[$node_to_update_id]['answer_id'] ?? $answer_id, $old_answer_id);
+                            if ($this->current_step === 'consultation') {
+                                if ($this->algorithm_type === 'dynamic') {
+                                    if (
+                                        !array_key_exists($node, $this->current_nodes['registration'])
+                                        && !array_key_exists($node, $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'])
+                                    ) {
+                                        $this->current_nodes['consultation']['medical_history']['others'][$node] = $pretty_answer;
+                                    }
+                                } else {
+                                    $found = false;
+                                    foreach ($this->current_nodes[$this->current_step] as $nodes_per_cc) {
+                                        if (array_key_exists($node, $nodes_per_cc)) {
+                                            $found = true;
+                                        }
+                                    }
+                                    if (!$found) {
+                                        if (!array_key_exists($cc_id, $this->current_nodes['consultation'])) {
+                                            $this->current_nodes['consultation'][$cc_id] = [];
+                                        }
+                                        $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos($this->current_nodes['consultation'][$cc_id], [$node => $pretty_answer], $node_id);
+                                    }
+                                }
+                                $this->displayNextNode($node, $this->nodes_to_save[$node]['answer_id'], null);
+                            }
+                            // $this->displayNextNode($node_to_update_id, $this->nodes_to_save[$node_to_update_id]['answer_id'] ?? $answer_id, $old_answer_id);
 
-                        // $next_nodes_per_cc_after_bc = $this->getNextNodesId($node, $this->nodes_to_save[$node]['answer_id']);
-                        // foreach ($next_nodes_per_cc_after_bc as $cc_id => $next_node) {
-                        //     $next_nodes_per_cc[$cc_id] = [
-                        //         ...$next_nodes_per_cc[$cc_id],
-                        //         ...$next_node
-                        //     ];
-                        // }
+                            // $next_nodes_per_cc_after_bc = $this->getNextNodesId($node, $this->nodes_to_save[$node]['answer_id']);
+                            // foreach ($next_nodes_per_cc_after_bc as $cc_id => $next_node) {
+                            //     $next_nodes_per_cc[$cc_id] = [
+                            //         ...$next_nodes_per_cc[$cc_id],
+                            //         ...$next_node
+                            //     ];
+                            // }
+                        }
                     }
                 }
             }
@@ -1278,15 +1280,17 @@ class Algorithm extends Component
         }
 
         if ($next_nodes_per_cc) {
-            foreach ($next_nodes_per_cc as $cc_id => $next_nodes_id) {
-                foreach ($next_nodes_id as $node) {
-                    if (!array_key_exists($node, $this->current_nodes['registration'])) {
-                        $this->setNextNode($node, $node_id, $cc_id);
+            foreach ($next_nodes_per_cc as $cc_id => $nodes_per_cc) {
+                foreach ($nodes_per_cc as $next_node_dd_id => $next_nodes_id) {
+                    foreach ($next_nodes_id as $node) {
+                        if (!array_key_exists($node, $this->current_nodes['registration'])) {
+                            $this->setNextNode($node, $node_id, $cc_id, $next_node_dd_id);
+                        }
                     }
-                }
-                if ($this->algorithm_type === 'prevention') {
-                    if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
-                        $this->calculateCompletionPercentage($cc_id);
+                    if ($this->algorithm_type === 'prevention') {
+                        if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
+                            $this->calculateCompletionPercentage($cc_id);
+                        }
                     }
                 }
             }
@@ -1464,15 +1468,15 @@ class Algorithm extends Component
         }
     }
 
-    public function setNextNode($next_node_id, $node_id, $cc_id)
+    public function setNextNode($next_node_id, $node_id, $cc_id, $dd_id)
     {
-        dump("cc $cc_id");
         $cached_data = Cache::get($this->cache_key);
         $full_nodes = $cached_data['full_nodes'];
         $nodes_per_step = $cached_data['nodes_per_step'];
+        $dependency_map = $cached_data['dependency_map'];
+        $answers_hash_map = $cached_data['answers_hash_map'];
         $current_nodes_per_step = $nodes_per_step['consultation']['medical_history']['general'] ?? $nodes_per_step['consultation']['medical_history'];
 
-        $answers_hash_map = $cached_data['answers_hash_map'];
 
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
@@ -1528,7 +1532,6 @@ class Algorithm extends Component
                                 foreach ($this->diagnoses_per_cc[$cc_id] as $dd_id => $label) {
                                     if (isset($answers_hash_map[$cc_id][$dd_id][$next_node_value])) {
                                         foreach ($answers_hash_map[$cc_id][$dd_id][$next_node_value] as $node_to_display) {
-                                            dump("appened $node_id");
                                             $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
                                                 $this->current_nodes['consultation'][$cc_id],
                                                 [$node_to_display => ''],
@@ -1538,7 +1541,6 @@ class Algorithm extends Component
                                                 $children_value = $nodes_per_cc[$node_to_display];
                                                 if (isset($answers_hash_map[$cc_id][$dd_id][$children_value])) {
                                                     foreach ($answers_hash_map[$cc_id][$dd_id][$children_value] as $children_node_to_display) {
-                                                        dump("appened $node_id");
                                                         $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
                                                             $this->current_nodes['consultation'][$cc_id],
                                                             [$children_node_to_display => ''],
@@ -1578,22 +1580,19 @@ class Algorithm extends Component
 
                         if (!$diverging_tree && $this->current_cc !== $cc_id) {
                             foreach ($this->current_nodes['consultation'][$cc_id] as $node => $answer) {
-                                foreach ($this->diagnoses_per_cc[$cc_id] as $dd_id => $label) {
-                                    if (isset($answers_hash_map[$cc_id][$dd_id][$answer])) {
-                                        dump("Parent answer $answer");
-                                        if (in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$answer]) || in_array($answer, $this->current_nodes['consultation'][$cc_id])) {
-                                            dump("appened parent $cc_id $dd_id from $node_id $next_node_id -> $answer");
-                                            $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
-                                                $this->current_nodes['consultation'][$cc_id],
-                                                [$next_node_id => ''],
-                                                $node_id
-                                            );
-                                        }
+                                if (isset($answers_hash_map[$cc_id][$dd_id][$answer])) {
+                                    // If it's a children, we get the parent and check if it suppose to be displayed
+                                    $node_to_check = $dependency_map[$dd_id][$answer][0] ?? 0;
+                                    if (in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$answer]) || in_array($node_to_check, $answers_hash_map[$cc_id][$dd_id][$answer])) {
+                                        $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
+                                            $this->current_nodes['consultation'][$cc_id],
+                                            [$next_node_id => ''],
+                                            $node_id
+                                        );
                                     }
                                 }
                             }
                             if (array_key_exists($node_id, $current_nodes_per_step[$cc_id])) {
-                                dump("appened $cc_id $next_node_id $diverging_tree");
                                 $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
                                     $this->current_nodes['consultation'][$cc_id],
                                     [$next_node_id => ''],
@@ -1652,17 +1651,17 @@ class Algorithm extends Component
                                         if ($this->current_step === 'registration' || array_key_exists($cc_id, $this->chosen_complaint_categories)) {
                                             if (isset($this->age_in_days)) {
                                                 if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
-                                                    $next_nodes[$cc_id][] = $node;
+                                                    $next_nodes[$cc_id][$dd_id][] = $node;
                                                 }
                                             } else {
-                                                $next_nodes[$cc_id][] = $node;
+                                                $next_nodes[$cc_id][$dd_id][] = $node;
                                             }
                                         }
                                     }
                                 }
                             } else {
                                 if ($this->current_step === 'registration' || array_key_exists($cc_id, $this->chosen_complaint_categories)) {
-                                    $next_nodes[$cc_id][] = $node;
+                                    $next_nodes[$cc_id][$dd_id][] = $node;
                                 }
                             }
                         }
@@ -1842,7 +1841,7 @@ class Algorithm extends Component
         //Need to be on the future validateStep function, not here and remove the max
         $this->saved_step = max($this->saved_step, array_search($this->current_step, array_keys($this->steps[$this->algorithm_type])) + 1);
 
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
     }
 
     public function goToSubStep(string $step, string $substep): void
@@ -1895,7 +1894,7 @@ class Algorithm extends Component
         //         ]
         //     );
         // }
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
 
         $this->current_cc = $cc_id;
     }
@@ -1912,7 +1911,7 @@ class Algorithm extends Component
         //         ]
         //     );
         // }
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
         $current_index = array_search($this->current_cc, $keys);
@@ -1939,7 +1938,7 @@ class Algorithm extends Component
         //         ]
         //     );
         // }
-        // $this->dispatch('scrollTop');
+        $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
         $current_index = array_search($this->current_cc, $keys);
