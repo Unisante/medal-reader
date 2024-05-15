@@ -46,7 +46,7 @@
           @break
 
           @case('Autocomplete')
-            @php $node_label=$full_nodes[$node_id]['label']['en'] @endphp
+            @php $node_label = $full_nodes[$node_id]['label']['en'] @endphp
             <x-inputs.datalist step="registration" :node_id="$node_id" :villages="$villages" :label="$node_label" />
           @break
 

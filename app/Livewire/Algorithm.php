@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Services\AlgorithmService;
 use App\Services\FHIRService;
 use App\Services\FormulationService;
+use App\Services\JsonExportService;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
@@ -20,7 +21,8 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
-use PhpParser\Node\Stmt\Continue_;
+use RecursiveArrayIterator;
+use RecursiveIteratorIterator;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 
 class Algorithm extends Component
@@ -63,6 +65,7 @@ class Algorithm extends Component
 
     private AlgorithmService $algorithmService;
     private FHIRService $fhirService;
+    private JsonExportService $jsonExportService;
     public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
@@ -127,10 +130,14 @@ class Algorithm extends Component
 
     public string $current_sub_step = '';
 
-    public function boot(AlgorithmService $algorithmService, FHIRService $fhirService)
-    {
+    public function boot(
+        AlgorithmService $algorithmService,
+        FHIRService $fhirService,
+        JsonExportService $jsonExportService,
+    ) {
         $this->algorithmService = $algorithmService;
         $this->fhirService = $fhirService;
+        $this->jsonExportService = $jsonExportService;
     }
 
     public function mount($id = null, $patient_id = null)
@@ -221,6 +228,7 @@ class Algorithm extends Component
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
                 'df_hash_map' => [],
+                'excluding_df_hash_map' => [],
                 'cut_off_hash_map' => [],
                 'df_dd_mapping' => [],
                 'drugs_hash_map' => [],
@@ -242,12 +250,14 @@ class Algorithm extends Component
         $cached_data = Cache::get($this->cache_key);
 
         $df_hash_map = [];
+        $excluding_df_hash_map = [];
         $drugs_hash_map = [];
         $managements_hash_map = [];
         $cut_off_hash_map = [];
 
         foreach ($cached_data['final_diagnoses'] as $df) {
             $df_dd_mapping[$df['diagnosis_id']][] = $df['id'];
+            $excluding_df_hash_map[$df['id']] = $df['excluding_final_diagnoses'];
             foreach ($df['conditions'] as $condition) {
                 $df_hash_map[$condition['answer_id']][] = $df['id'];
                 if (isset($condition['cut_off_start']) || isset($condition['cut_off_end'])) {
@@ -516,6 +526,7 @@ class Algorithm extends Component
                 'formula_hash_map' => $formula_hash_map,
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
+                'excluding_df_hash_map' => $excluding_df_hash_map,
                 'cut_off_hash_map' => $cut_off_hash_map,
                 'df_dd_mapping' => $df_dd_mapping,
                 'drugs_hash_map' => $drugs_hash_map,
@@ -618,6 +629,7 @@ class Algorithm extends Component
         // dump($cached_data['dependency_map']);
         // dump($cached_data['answers_hash_map']);
         // dump($cached_data['df_hash_map']);
+        // dump($cached_data['excluding_df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
         // dump($cached_data['df_dd_mapping']);
         // dump($cached_data['consultation_nodes']);
@@ -1638,7 +1650,6 @@ class Algorithm extends Component
             }
         }
 
-
         if ($this->algorithm_type === 'prevention') {
             foreach ($this->diagnoses_per_cc as $cc_id => $dds) {
                 foreach ($dds as $dd_id => $label) {
@@ -1956,6 +1967,29 @@ class Algorithm extends Component
 
     public function setConditionsToPatients()
     {
+
+        // We need to flatten nodes before
+        $current_nodes = new RecursiveIteratorIterator(new RecursiveArrayIterator($this->current_nodes));
+
+        foreach ($current_nodes as $key => $value) {
+            $nodes[$key] = $value;
+        }
+
+        $data = [
+            'nodes' => $nodes,
+            'nodes_to_save' => $this->nodes_to_save,
+            'df' => $this->df_to_display,
+            'df_status' => $this->diagnoses_status,
+            'drugs_status' => $this->drugs_status,
+            'drugs_formulation' => $this->drugs_formulation,
+            'complaint_categories' => $this->chosen_complaint_categories,
+            'patient_id' => $this->patient_id,
+            'version_id' => $this->id,
+        ];
+
+        $json = $this->jsonExportService->prepareJsonData($data);
+        dd($json);
+
         if (!$this->patient_id) {
             return flash()->addError('No current patient');
         }
