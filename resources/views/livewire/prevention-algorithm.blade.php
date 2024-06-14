@@ -15,6 +15,8 @@
     $full_nodes = $cache['full_nodes'];
     $final_diagnoses = $cache['final_diagnoses'];
     $health_cares = $cache['health_cares'];
+    $gender_question_id = $cache['gender_question_id'];
+    $female_gender_answer_id = $cache['female_gender_answer_id'];
   @endphp
 
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step :$chosen_complaint_categories />
@@ -50,10 +52,22 @@
         @foreach ($diagnoses_per_cc as $cc => $diagnoses)
           @foreach ($diagnoses as $diagnose)
             <div wire:key="{{ $diagnose }}">
-              @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
-                <p class="text-success mb-0">{{ $diagnose }}</p>
+              @if (intval($current_nodes['registration'][$gender_question_id]) === $female_gender_answer_id)
+                @if (!Str::contains($diagnose, '[M]'))
+                  @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
+                    <p class="text-success mb-0">{{ Str::replace('[F]', '', $diagnose) }}</p>
+                  @else
+                    <p class="mb-0">{{ Str::replace('[F]', '', $diagnose) }}</p>
+                  @endif
+                @endif
               @else
-                <p class="mb-0">{{ $diagnose }}</p>
+                @if (!Str::contains($diagnose, '[F]'))
+                  @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
+                    <p class="text-success mb-0">{{ Str::replace('[M]', '', $diagnose) }}</p>
+                  @else
+                    <p class="mb-0">{{ Str::replace('[M]', '', $diagnose) }}</p>
+                  @endif
+                @endif
               @endif
             </div>
           @endforeach

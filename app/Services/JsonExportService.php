@@ -52,6 +52,7 @@ class JsonExportService
             }
         }
 
+        //to remove
         $nodes[7521] = [
             'id' => 7521,
             'answer' => 5606,
@@ -116,9 +117,7 @@ class JsonExportService
             "closedAt" => 1682410950000,
             'activities' => [],
         ];
-        dd(json_encode($data));
-        // Use the resource to structure the JSON response
-        $resource = new JsonExportResource($data);
-        return $resource->toJson();
+
+        return json_encode($data);
     }
 }

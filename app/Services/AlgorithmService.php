@@ -35,7 +35,6 @@ class AlgorithmService
                 foreach ($instance['conditions'] as $condition) {
                     if ($condition['node_id'] === $node_id) {
 
-
                         if ($filter_answer) {
                             if ($answer_id === $condition['answer_id']) {
                                 if (!isset($dependency_map[$diag_id][$answer_id])) {

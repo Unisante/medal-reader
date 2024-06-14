@@ -50,7 +50,7 @@ class Algorithm extends Component
     public int $age_in_days;
     #[Validate([
         'current_nodes.registration.birth_date' => 'required:date',
-        // 'current_nodes.registration.*' => 'required',
+        'current_nodes.registration.*' => 'required',
         // 'current_nodes.consultation.*.*' => 'required',
     ], message: [
         'required' => 'This field is required',
@@ -498,6 +498,7 @@ class Algorithm extends Component
         }
 
         $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
+
         $nodes_per_step = [
             'registration' => $registration_nodes,
             'first_look_assessment' => $first_look_assessment_nodes ?? [],
@@ -573,7 +574,7 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration']['birth_date'] = '1970-04-08';
+            // $this->current_nodes['registration']['birth_date'] = '1980-04-08';
             // $this->updateLinkedNodesOfDob('1950-10-05');
         }
         //END TO REMOVE
@@ -1156,10 +1157,16 @@ class Algorithm extends Component
                 foreach ($nodes_per_cc as $next_node_dd_id => $next_nodes_id) {
                     foreach ($next_nodes_id as $node) {
                         if (array_key_exists($node, $formula_hash_map)) {
+                            $old_answer_id = $this->nodes_to_save[$node]['answer_id'] ?? null;
                             $pretty_answer = $this->handleFormula($node);
+                            if ($this->current_step === 'registration') {
+                                $this->saveNode($node, $this->nodes_to_save[$node]['value'], $this->nodes_to_save[$node]['answer_id'], $old_answer_id);
+                            }
+
                             if ($this->current_step === 'first_look_assessment') {
                                 $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$node] = $pretty_answer;
                             }
+
                             if ($this->current_step === 'consultation') {
                                 if ($this->algorithm_type === 'dynamic') {
                                     if (
@@ -1170,8 +1177,8 @@ class Algorithm extends Component
                                     }
                                 } else {
                                     $found = false;
-                                    foreach ($this->current_nodes[$this->current_step] as $nodes_per_cc) {
-                                        if (array_key_exists($node, $nodes_per_cc)) {
+                                    foreach ($this->current_nodes[$this->current_step] as $current_nodes_per_cc) {
+                                        if (array_key_exists($node, $current_nodes_per_cc)) {
                                             $found = true;
                                         }
                                     }
@@ -1184,15 +1191,6 @@ class Algorithm extends Component
                                 }
                                 $this->displayNextNode($node, $this->nodes_to_save[$node]['answer_id'], null);
                             }
-                            // $this->displayNextNode($node_to_update_id, $this->nodes_to_save[$node_to_update_id]['answer_id'] ?? $answer_id, $old_answer_id);
-
-                            // $next_nodes_per_cc_after_bc = $this->getNextNodesId($node, $this->nodes_to_save[$node]['answer_id']);
-                            // foreach ($next_nodes_per_cc_after_bc as $cc_id => $next_node) {
-                            //     $next_nodes_per_cc[$cc_id] = [
-                            //         ...$next_nodes_per_cc[$cc_id],
-                            //         ...$next_node
-                            //     ];
-                            // }
                         }
                     }
                 }
@@ -1488,7 +1486,6 @@ class Algorithm extends Component
         $dependency_map = $cached_data['dependency_map'];
         $answers_hash_map = $cached_data['answers_hash_map'];
         $current_nodes_per_step = $nodes_per_step['consultation']['medical_history']['general'] ?? $nodes_per_step['consultation']['medical_history'];
-
 
         if (isset($full_nodes[$next_node_id])) {
             $node = $full_nodes[$next_node_id];
@@ -1967,9 +1964,10 @@ class Algorithm extends Component
 
     public function setConditionsToPatients()
     {
-
         // We need to flatten nodes before
-        $current_nodes = new RecursiveIteratorIterator(new RecursiveArrayIterator($this->current_nodes));
+        $current_nodes = new RecursiveIteratorIterator(
+            new RecursiveArrayIterator($this->current_nodes)
+        );
 
         foreach ($current_nodes as $key => $value) {
             $nodes[$key] = $value;
