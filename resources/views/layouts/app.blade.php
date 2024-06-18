@@ -28,7 +28,7 @@
   <script type="text/javascript" src="{{ mix('js/app.js') }}"></script>
   @env('local')
   <script>
-    window.addEventListener("livewire-debug", e => console.log(e.detail));
+    window.addEventListener("livewire-debug", e => console.log(JSON.stringify((e.detail))));
   </script>
   @endenv
   @stack('scripts')

@@ -1,18 +1,71 @@
-@props(['df_to_display', 'final_diagnoses', 'cache_key'])
+@props(['gender_node', 'diagnoses_per_cc', 'df_to_display', 'final_diagnoses', 'cache_key'])
 
 {{-- In theory the view shouldn't do any logic BUT that would actually reduce the cache usage --}}
 @php
-  $high_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
-      return $final_diagnoses[$k]['level_of_urgency'] === 10;
+  $cache = Cache::get($cache_key);
+  $full_nodes = $cache['full_nodes'];
+  $final_diagnoses = $cache['final_diagnoses'];
+  $health_cares = $cache['health_cares'];
+  $female_gender_answer_id = $cache['female_gender_answer_id'];
+  $gender = $gender_node === $female_gender_answer_id ? 'f' : 'm';
+  $all_diag = [];
+
+  foreach ($diagnoses_per_cc as $diag_cc_id => $dd_per_cc) {
+      foreach ($dd_per_cc as $dd_id => $label) {
+          $all_diag[$dd_id] = $label;
+      }
+  }
+  // if () {
+  //       if (!Str::contains($diagnose, '[M]')) {
+
+  $high_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $all_diag, $gender) {
+      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+      $gender_is_ok = false;
+      if (
+          isset($all_diag[$dd_id]) &&
+          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
+              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+      ) {
+          $gender_is_ok = true;
+      }
+      return $final_diagnoses[$k]['level_of_urgency'] === 10 && $gender_is_ok;
   });
-  $moderate_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
-      return $final_diagnoses[$k]['level_of_urgency'] === 9;
+
+  $moderate_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $all_diag, $gender) {
+      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+      $gender_is_ok = false;
+      if (
+          isset($all_diag[$dd_id]) &&
+          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
+              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+      ) {
+          $gender_is_ok = true;
+      }
+      return $final_diagnoses[$k]['level_of_urgency'] === 9 && $gender_is_ok;
   });
-  $light_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
-      return $final_diagnoses[$k]['level_of_urgency'] === 8;
+  $light_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $all_diag, $gender) {
+      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+      $gender_is_ok = false;
+      if (
+          isset($all_diag[$dd_id]) &&
+          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
+              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+      ) {
+          $gender_is_ok = true;
+      }
+      return $final_diagnoses[$k]['level_of_urgency'] === 8 && $gender_is_ok;
   });
-  $other_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses) {
-      return $final_diagnoses[$k]['level_of_urgency'] < 8;
+  $other_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $all_diag, $gender) {
+      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+      $gender_is_ok = false;
+      if (
+          isset($all_diag[$dd_id]) &&
+          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
+              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+      ) {
+          $gender_is_ok = true;
+      }
+      return $final_diagnoses[$k]['level_of_urgency'] < 8 && $gender_is_ok;
   });
 @endphp
 

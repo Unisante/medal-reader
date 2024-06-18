@@ -27,38 +27,36 @@
           name="last_name">
       </div>
     @else
-      @if ($this->current_nodes['registration']['birth_date'] !== '' || $this->algorithm_type === 'dynamic')
-        @switch($full_nodes[$node_id]['display_format'])
-          @case('RadioButton')
-            <x-inputs.radio step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
-          @break
+      @switch($full_nodes[$node_id]['display_format'])
+        @case('RadioButton')
+          <x-inputs.radio step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
+        @break
 
-          @case('DropDownList')
-            <x-inputs.select step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
-          @break
+        @case('DropDownList')
+          <x-inputs.select step="registration" :node_id="$node_id" :full_nodes="$full_nodes" />
+        @break
 
-          @case('Input')
-            <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
-          @break
+        @case('Input')
+          <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
+        @break
 
-          @case('String')
-            <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="false" />
-          @break
+        @case('String')
+          <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="false" />
+        @break
 
-          @case('Autocomplete')
-            @php $node_label = $full_nodes[$node_id]['label']['en'] @endphp
-            <x-inputs.datalist step="registration" :node_id="$node_id" :villages="$villages" :label="$node_label" />
-          @break
+        @case('Autocomplete')
+          @php $node_label = $full_nodes[$node_id]['label']['en'] @endphp
+          <x-inputs.datalist step="registration" :node_id="$node_id" :villages="$villages" :label="$node_label" />
+        @break
 
-          @case('Formula')
-            @if ($debug_mode)
-              <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="true" />
-            @endif
-          @break
+        @case('Formula')
+          @if ($debug_mode)
+            <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="true" />
+          @endif
+        @break
 
-          @default
-        @endswitch
-      @endif
+        @default
+      @endswitch
     @endif
 
   </div>
