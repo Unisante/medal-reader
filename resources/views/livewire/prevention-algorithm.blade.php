@@ -99,7 +99,8 @@
   @if ($current_step === 'diagnoses')
     <div class="row g-3 mt-3">
       <div class="col-12">
-        <x-step.prevention-results :gender_node="intval($current_nodes['registration'][$gender_question_id])" :$diagnoses_per_cc :$df_to_display :$final_diagnoses :$cache_key />
+        <x-step.prevention-results :gender_node="intval($current_nodes['registration'][$gender_question_id])" :$diagnoses_per_cc :$df_to_display :$chosen_complaint_categories
+          :$final_diagnoses :$cache_key />
       </div>
     </div>
   @endif
