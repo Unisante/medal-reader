@@ -741,7 +741,7 @@ class Algorithm extends Component
         $total = $this->current_step === 'consultation' ? $total + $empty_nodes : $total;
         $completion_percentage = count($current_answers) / $total * 100;
 
-        if (isset($this->completion_per_substep[$other_cc ?? $this->current_cc]) && $this->algorithm_type === 'prevention' && $this->current_step !== 'registration') {
+        if (isset($this->completion_per_substep[$other_cc ?? $this->current_cc]) && $this->algorithm_type === 'prevention' && $this->current_step !== 'registration' && $this->current_step !== 'first_look_assessment') {
             //substep management
             $start_percentage_substep = $this->completion_per_substep[$other_cc ?? $this->current_cc]['end'];
             $this->completion_per_substep[$other_cc ?? $this->current_cc]['start'] = $start_percentage_substep;
@@ -913,29 +913,16 @@ class Algorithm extends Component
                         }
                     }
 
-                    foreach ($this->current_nodes['consultation'] as $cc_id => $nodes) {
-                        if ($modified_cc_id === $cc_id) continue;
-                        foreach ($nodes as $node_id => $answer_id) {
-                            if (array_key_exists($node_id, $this->nodes_to_save)) {
-                                $this->saveNode($node_id, $this->nodes_to_save[$node_id]['value'], $this->nodes_to_save[$node_id]['answer_id'], null);
+                    //We save all registration node again in case of modification or dob not answered before that trigger
+                    foreach ($this->current_nodes['registration'] as $registration_node_id => $a) {
+                        if ($registration_node_id !== 'birth_date') {
+                            if (array_key_exists($registration_node_id, $this->nodes_to_save)) {
+                                if (!empty($this->nodes_to_save[$registration_node_id]['answer_id'])) {
+                                    $this->displayNextNode($registration_node_id, $this->nodes_to_save[$registration_node_id]['answer_id'], null);
+                                }
                             } else {
-                                $this->saveNode($node_id, $answer_id, $answer_id, null);
-                            }
-                        }
-                    }
-
-                    if ($this->current_step === 'first_look_assessment') {
-                        //We save all registration node again in case of modification or dob not answered before that trigger
-                        foreach ($this->current_nodes['registration'] as $registration_node_id => $a) {
-                            if ($registration_node_id !== 'birth_date') {
-                                if (array_key_exists($registration_node_id, $this->nodes_to_save)) {
-                                    if (!empty($this->nodes_to_save[$registration_node_id]['answer_id'])) {
-                                        $this->displayNextNode($registration_node_id, $this->nodes_to_save[$registration_node_id]['answer_id'], null);
-                                    }
-                                } else {
-                                    if (!empty($a)) {
-                                        $this->displayNextNode($registration_node_id, $a, null);
-                                    }
+                                if (!empty($a)) {
+                                    $this->displayNextNode($registration_node_id, $a, null);
                                 }
                             }
                         }
@@ -990,6 +977,15 @@ class Algorithm extends Component
                         // if ($need_to_update && array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
                         //     $this->calculateCompletionPercentage($cc_id);
                         // }
+
+                        foreach ($this->chosen_complaint_categories as $cc_id => $nodes) {
+                            foreach ($this->current_nodes['consultation'][$cc_id] as $n => $a) {
+                                if (isset($present_node[$n])) {
+                                    unset($this->current_nodes['consultation'][$cc_id][$n]);
+                                }
+                                $present_node[$n] = '';
+                            }
+                        }
                     }
 
                     $this->completion_per_substep[$modified_cc_id] = [
@@ -997,7 +993,6 @@ class Algorithm extends Component
                         'end' => 0,
                     ];
                 }
-                $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
             } else {
                 // Meaning the complaint category has been changed to no
                 if ($old_value) {
@@ -1685,9 +1680,9 @@ class Algorithm extends Component
                             // If node is already shown on another tree
                             if (array_key_exists($next_node_id, $nodes_per_cc)) {
                                 $next_node_value = $nodes_per_cc[$next_node_id];
-                                foreach ($this->diagnoses_per_cc[$cc_id] as $dd_id => $label) {
-                                    if (isset($answers_hash_map[$cc_id][$dd_id][$next_node_value])) {
-                                        foreach ($answers_hash_map[$cc_id][$dd_id][$next_node_value] as $node_to_display) {
+                                foreach ($this->diagnoses_per_cc[$cc_id] as $dd_id_to_check => $label) {
+                                    if (isset($answers_hash_map[$cc_id][$dd_id_to_check][$next_node_value])) {
+                                        foreach ($answers_hash_map[$cc_id][$dd_id_to_check][$next_node_value] as $node_to_display) {
                                             $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
                                                 $this->current_nodes['consultation'][$cc_id],
                                                 [$node_to_display => ''],
@@ -1695,8 +1690,8 @@ class Algorithm extends Component
                                             );
                                             if (array_key_exists($node_to_display, $nodes_per_cc)) {
                                                 $children_value = $nodes_per_cc[$node_to_display];
-                                                if (isset($answers_hash_map[$cc_id][$dd_id][$children_value])) {
-                                                    foreach ($answers_hash_map[$cc_id][$dd_id][$children_value] as $children_node_to_display) {
+                                                if (isset($answers_hash_map[$cc_id][$dd_id_to_check][$children_value])) {
+                                                    foreach ($answers_hash_map[$cc_id][$dd_id_to_check][$children_value] as $children_node_to_display) {
                                                         $this->current_nodes['consultation'][$cc_id] = $this->appendOrInsertAtPos(
                                                             $this->current_nodes['consultation'][$cc_id],
                                                             [$children_node_to_display => ''],
@@ -1712,9 +1707,9 @@ class Algorithm extends Component
                                 unset($this->current_nodes['consultation'][$cc_id][$next_node_id]);
                                 $this->displayNextNode($next_node_id, $value, null);
                                 $diverging_tree = true;
-                                if (isset($this->current_nodes['registration'][$node_id])) {
-                                    $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
-                                }
+                                // if (isset($this->current_nodes['registration'][$node_id])) {
+                                //     $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
+                                // }
                             }
 
                             //For the current node that is displayed in other tree
@@ -1732,9 +1727,9 @@ class Algorithm extends Component
                                 [$next_node_id => $value],
                                 $node_id
                             );
-                            if (isset($this->current_nodes['registration'][$node_id])) {
-                                $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
-                            }
+                            // if (isset($this->current_nodes['registration'][$node_id])) {
+                            //     $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
+                            // }
                         }
 
                         if (!$diverging_tree && $this->current_cc !== $cc_id && $this->current_step !== 'registration' && $this->current_step !== 'first_look_assessment') {
@@ -1761,9 +1756,9 @@ class Algorithm extends Component
                                 );
                             }
 
-                            if (isset($this->current_nodes['registration'][$node_id])) {
-                                $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
-                            }
+                            // if (isset($this->current_nodes['registration'][$node_id])) {
+                            //     $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
+                            // }
                         }
                     }
 
@@ -1795,7 +1790,7 @@ class Algorithm extends Component
 
                         if (
                             array_intersect($needed_answer_to_show_that_node, $all_answers)
-                            || (isset($answers_hash_map[$cc_id][$dd_id]) && in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$answer_id]))
+                            || (isset($answers_hash_map[$cc_id][$dd_id][$answer_id]) && in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$answer_id]))
                             || !in_array($node_id, Arr::flatten($dependency_map[$dd_id]))
                         ) {
 
@@ -1926,19 +1921,6 @@ class Algorithm extends Component
                     }
                 }
             }
-            //We save all consultation node again to calculate the nodes to be displayed
-            foreach ($this->current_nodes['consultation'] as $cc_id => $nodes) {
-                foreach ($nodes as $node_id => $answer_id) {
-                    if (array_key_exists($node_id, $this->nodes_to_save)) {
-                        $this->displayNextNode($node_id, $this->nodes_to_save[$node_id]['answer_id'], null);
-                    } else {
-                        $this->displayNextNode($node_id, $answer_id, null);
-                    }
-                }
-            }
-            if (isset($this->current_nodes['consultation'])) {
-                $this->algorithmService->sortNodesPerCC($this->current_nodes['consultation'], $this->cache_key);
-            }
         }
 
         if ($step === 'first_look_assessment') {
@@ -1980,7 +1962,10 @@ class Algorithm extends Component
                                             foreach ($cut_off_hash_map['nodes'][$cc_id][$node_id] as $answer_id => $condition) {
                                                 if (in_array($answer_id, array_column($this->nodes_to_save, 'answer_id'))) {
                                                     if ($condition['cut_off_start'] <= $this->age_in_days && $condition['cut_off_end'] > $this->age_in_days) {
-                                                        $consultation_nodes[$cc_id][$node_id] = '';
+                                                        if (!isset($already_present_node[$node_id])) {
+                                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                                            $already_present_node[$node_id] = '';
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1993,10 +1978,15 @@ class Algorithm extends Component
                                                             $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_start'] <= $this->age_in_days
                                                             && $cut_off_hash_map['dd'][$cc_id][$dd]['cut_off_end'] > $this->age_in_days
                                                         ) {
-                                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                                            if (!isset($already_present_node[$node_id])) {
+                                                                $consultation_nodes[$cc_id][$node_id] = '';
+                                                            }
                                                         }
                                                     } else {
-                                                        $consultation_nodes[$cc_id][$node_id] = '';
+                                                        if (!isset($already_present_node[$node_id])) {
+                                                            $consultation_nodes[$cc_id][$node_id] = '';
+                                                        }
+                                                        $already_present_node[$node_id] = '';
                                                     }
                                                 }
                                             }
