@@ -66,6 +66,34 @@ class AlgorithmController extends Controller
         return view('algo')->with([
             'id' => $id,
             'patient_id' => $patient_id,
+            'data' =>  [],
+        ]);
+    }
+
+    /**
+     * @param  int  $id
+     * @param string $data
+     * @return Renderable
+     */
+    public function prefill(int $id, string $data)
+    {
+        $decoded = base64_decode($data, true);
+
+        if ($data === false) {
+            dd($data);
+            return back();
+        }
+
+        $values = json_decode($decoded, true);
+        if ($values === null) {
+            dd($values);
+            return back();
+        }
+
+        return view('algo')->with([
+            'id' => $id,
+            'data' => $values,
+            'patient_id' => null,
         ]);
     }
 

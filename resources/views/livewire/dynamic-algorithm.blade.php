@@ -327,9 +327,15 @@
           @endforeach
         </div>
         <div class="d-flex justify-content-end">
-          <button class="btn button-unisante mt-3" wire:click="setConditionsToPatients()">
-            Send data to FHIR
-          </button>
+          @if ($data)
+            <button class="btn button-unisante mt-3" wire:click="sendToErpNext()">
+              Send data to ERPNext
+            </button>
+          @else
+            <button class="btn button-unisante mt-3" wire:click="setConditionsToPatients()">
+              Send data to FHIR
+            </button>
+          @endif
         </div>
       @endif
     </div>

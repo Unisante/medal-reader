@@ -12,10 +12,13 @@ use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use DivisionByZeroError;
 use Exception;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
@@ -29,6 +32,7 @@ class Algorithm extends Component
 {
     public int $id;
     public $patient_id;
+    public array $data;
     public string $cache_key;
     public int $cache_expiration_time;
     public string $title;
@@ -69,7 +73,6 @@ class Algorithm extends Component
     public array $treatment_questions;
     // private array $diagnoses_formulation;
     // public array $drugs_formulations;
-
     public array $steps =  [
         'dynamic' => [
             'registration' => [],
@@ -140,10 +143,11 @@ class Algorithm extends Component
         $this->jsonExportService = $jsonExportService;
     }
 
-    public function mount($id = null, $patient_id = null)
+    public function mount($id = null, $patient_id = null, $data = [])
     {
         $this->id = $id;
         $this->patient_id = $patient_id;
+        $this->data = $data;
 
         $extract_dir = Config::get('medal.storage.json_extract_dir');
         $json = json_decode(Storage::get("$extract_dir/{$this->id}.json"), true);
@@ -592,6 +596,7 @@ class Algorithm extends Component
             $this->goToStep('consultation');
         }
 
+        //For FHIR serveur wip
         if ($this->patient_id) {
             $response = $this->fhirService->getPatientFromRemoteFHIRServer($patient_id);
             $parser = new PHPFHIRResponseParser();
@@ -619,6 +624,30 @@ class Algorithm extends Component
                 $this->updateLinkedNodesOfDob($date_of_birth);
                 $this->calculateCompletionPercentage();
             }
+        }
+
+        //For ERPNext wip
+        if ($this->data) {
+            $this->drugs_to_display = $this->drugs_to_display ?? [];
+            $this->df_to_display = $this->df_to_display ?? [];
+            $this->all_managements_to_display = $this->all_managements_to_display ?? [];
+            $this->managements_to_display = $this->managements_to_display ?? [];
+
+            $givenName = $this->data['first_name'];
+            $familyName = $this->data['last_name'];
+            $gender = $this->data['sex'];
+            $date_of_birth = $this->data['dob'];
+            $address = $this->data['__onload']['addr_list'][0] ?? '';
+            $city = $address['city'] ?? '';
+            $this->current_nodes['registration']['first_name'] = $givenName;
+            $this->current_nodes['registration']['last_name'] = $familyName;
+            $this->current_nodes['registration']['birth_date'] = $date_of_birth;
+            $this->current_nodes['registration'][$cached_data['gender_question_id']] = $gender === 'Female' ?
+                $cached_data['female_gender_answer_id'] :
+                $cached_data['male_gender_answer_id'];
+            $this->current_nodes['registration'][$cached_data['village_question_id']] = $city;
+            $this->updateLinkedNodesOfDob($date_of_birth);
+            $this->calculateCompletionPercentage();
         }
 
         // dd($this->registration_nodes_id);
@@ -2206,6 +2235,164 @@ class Algorithm extends Component
 
         $previous_key = $keys[$previous_index];
         $this->current_cc = $previous_key;
+    }
+
+    public function sendToErpNext()
+    {
+        if (!$this->data) {
+            return flash()->addError('No current patient');
+        }
+
+        $cached_data = Cache::get($this->cache_key);
+        $nodes = $cached_data['full_nodes'];
+        $df = $cached_data['final_diagnoses'];
+        $health_cares = $cached_data['health_cares'];
+
+        foreach (array_filter($this->diagnoses_status) as $diagnose_id => $accepted) {
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->post("http://development.localhost:8000/api/resource/Diagnosis", [
+                    'diagnosis' => $df[$diagnose_id]['label']['en'],
+                    'estimated_duration' => 259200
+                ])
+                ->throwUnlessStatus(409);
+
+            $data["diagnosis"][] = [
+                "docstatus" => 1,
+                "diagnosis" => $df[$diagnose_id]['label']['en'],
+            ];
+        }
+
+        foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->post("http://development.localhost:8000/api/resource/Complaint", [
+                    'complaints' => $nodes[$cc_id]['label']['en'],
+                ])
+                ->throwUnlessStatus(409);
+
+            $data["symptoms"][] = [
+                "docstatus" => 1,
+                "complaint" => $nodes[$cc_id]['label']['en']
+            ];
+        }
+
+        $response = Http::acceptJson()
+            ->withToken('354d0b462045526:7b87001c6800153', 'token')
+            ->post("http://development.localhost:8000/api/resource/Medication%20Class", ['medication_class' => 'Generic'])
+            ->throwUnlessStatus(409);
+
+        foreach (array_filter($this->drugs_status) as $drug_id => $agreed) {
+
+            $items[$drug_id] = [
+                'docstatus' => 1,
+                'item_code' => $health_cares[$drug_id]['label']['en'],
+                'item_name' => $health_cares[$drug_id]['label']['en'],
+                "item_group" => "Drug",
+                "stock_uom" => "Gram",
+            ];
+
+            //Leave that here in case of formulation needed later
+            // if (array_key_exists($drug_id, $this->df_to_display[$df_id])) {
+            // $formulation = collect($health_cares[$drug_id]['formulations'])->where('id', '=', $this->drugs_formulation[$drug_id])->first();
+            // }
+
+            $drugs[$drug_id] = [
+                "docstatus" => 1,
+                "generic_name" => $health_cares[$drug_id]['label']['en'],
+                "medication_class" => "Generic",
+                "strength" => 1.0,
+                "strength_uom" => "Gram",
+                "default_interval" => 0,
+                "default_interval_uom" => "Hour",
+                "change_in_item" => 0
+            ];
+
+            $data["drug_prescription"][] = [
+                "docstatus" => 1,
+                "medication" => $health_cares[$drug_id]['label']['en'],
+                "drug_code" => $health_cares[$drug_id]['label']['en'],
+                "drug_name" => $health_cares[$drug_id]['label']['en'],
+                "strength" => 1.0,
+                "strength_uom" => "Gram",
+                "dosage_form" => "Capsule",
+                "dosage_by_interval" => 0,
+                "dosage" => "1-0-0",
+                "interval" => 1,
+                "interval_uom" => "Day",
+                "period" => "1 Day",
+                "number_of_repeats_allowed" => 0.0,
+                "update_schedule" => 1
+            ];
+
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->post("http://development.localhost:8000/api/resource/Item", $items[$drug_id])
+                ->throwUnlessStatus(409);
+
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->post("http://development.localhost:8000/api/resource/Medication", $drugs[$drug_id])
+                ->throwUnlessStatus(409);
+        }
+
+        if (isset($this->data['existing']) && !$this->data['existing']) {
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->put("http://development.localhost:8000/api/resource/Patient%20Encounter/" . $this->data['name'], $data)
+                ->throwUnlessStatus(409)
+                ->json();
+        } else {
+
+            $data["practitioner"] = "Lui";
+            $data["patient"] = "{$this->data['first_name']} {$this->data['last_name']}";
+
+            $response = Http::acceptJson()
+                ->withToken('354d0b462045526:7b87001c6800153', 'token')
+                ->post("http://development.localhost:8000/api/resource/Patient%20Encounter", $data)
+                ->throwUnlessStatus(409)
+                ->json();
+        }
+
+        flash()->addSuccess('Patient updated successfully');
+        return Redirect::to('http://development.localhost:8000/app/patient-encounter/' . $response['data']['name']);
+    }
+
+    public function sendToMedalData()
+    {
+        // We need to flatten nodes before
+        $current_nodes = new RecursiveIteratorIterator(
+            new RecursiveArrayIterator($this->current_nodes)
+        );
+
+        foreach ($current_nodes as $key => $value) {
+            $nodes[$key] = $value;
+        }
+
+        $data = [
+            'nodes' => $nodes,
+            'nodes_to_save' => $this->nodes_to_save,
+            'df' => $this->df_to_display,
+            'df_status' => $this->diagnoses_status,
+            'drugs_status' => $this->drugs_status,
+            'drugs_formulation' => $this->drugs_formulation,
+            'complaint_categories' => $this->chosen_complaint_categories,
+            'patient_id' => $this->patient_id,
+            'version_id' => $this->id,
+        ];
+
+        $json = $this->jsonExportService->prepareJsonData($data);
+        dd($json);
+
+        // $response = $this->fhirService->setConditionsToPatient($this->patient_id, $conditions);
+
+        if (!$response) {
+            flash()->addError('An error occured while saving. Please try again');
+            return;
+        }
+
+        flash()->addSuccess('Patient updated successfully');
+        return redirect()->route("home.hidden");
     }
 
     public function setConditionsToPatients()
