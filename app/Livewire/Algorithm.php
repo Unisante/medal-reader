@@ -398,47 +398,50 @@ class Algorithm extends Component
 
                 foreach ($diag['instances'] as $instance_id => $instance) {
 
-                    if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id])) {
+                    if (!array_key_exists('display_format', $cached_data['full_nodes'][$instance_id]) && $cached_data['full_nodes'][$instance_id]['type'] !== 'QuestionsSequence') {
                         continue;
                     }
 
                     if ($instance_id === $cached_data['gender_question_id']) {
                         $female_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'female')->first()['id'];
                         $male_gender_answer_id = collect($cached_data['full_nodes'][$instance_id]['answers'])->where('value', 'male')->first()['id'];
-                        // continue;
                     }
 
-                    $node = $cached_data['full_nodes'][$instance_id];
-                    $age_key = $node['is_neonat'] ? 'neonat' : 'older';
+                    $instance_node = $cached_data['full_nodes'][$instance_id];
                     if (empty($instance['conditions'])) {
-
-                        // We don't care about background calculations
-                        if (!array_key_exists('system', $node) && $node['category'] !== 'unique_triage_question') {
-                            continue;
-                        }
-
-                        $substep = $node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
-
-                        $system = $node['category'] !== 'background_calculation' ? $node['system'] ?? 'others' : 'others';
-                        $consultation_nodes[$substep][$system][$step][$instance_id] = '';
 
                         if (!isset($dependency_map[$diag['id']])) {
                             $dependency_map[$diag['id']] = [];
                         }
+
+                        if ($instance_node['type'] === 'QuestionsSequence') {
+                            $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, true);
+                        }
+
+                        // We don't care about background calculations
+                        if (!array_key_exists('system', $instance_node) && $instance_node['category'] !== 'unique_triage_question') {
+                            continue;
+                        }
+
+                        $substep = $instance_node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
+
+                        $system = $instance_node['category'] !== 'background_calculation' ? $instance_node['system'] ?? 'others' : 'others';
+                        $consultation_nodes[$substep][$system][$step][$instance_id] = '';
                     }
-
-
 
                     if (!empty($instance['conditions'])) {
                         foreach ($instance['conditions'] as $condition) {
                             $answer_id = $condition['answer_id'];
                             $node_id = $condition['node_id'];
-                            if (!isset($answers_hash_map[$step][$diag['id']][$answer_id])) {
-                                $answers_hash_map[$step][$diag['id']][$answer_id] = [];
-                            }
 
-                            if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$answer_id])) {
-                                $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
+                            if ($instance_node['type'] !== 'QuestionsSequence') {
+                                if (!isset($answers_hash_map[$step][$diag['id']][$answer_id])) {
+                                    $answers_hash_map[$step][$diag['id']][$answer_id] = [];
+                                }
+
+                                if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$answer_id])) {
+                                    $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
+                                }
                             }
 
                             if (isset($condition['cut_off_start']) || isset($condition['cut_off_end'])) {
@@ -447,40 +450,21 @@ class Algorithm extends Component
                                     'cut_off_end' => $condition['cut_off_end'],
                                 ];
                             }
-                            $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
-
-                            foreach ($instance['children'] as $child_node) {
-                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node, $answer_id, $dependency_map);
-                            }
 
                             $node = $cached_data['full_nodes'][$node_id];
-                            if ($node['type'] === 'QuestionsSequence') {
-                                foreach ($node['instances'] as $qs_instance) {
-                                    if (empty($qs_instance['conditions'])) {
-                                        $qs_node = $cached_data['full_nodes'][$qs_instance['id']];
+                            if ($node['type'] !== 'QuestionsSequence') {
+                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
+                            } else {
+                                $this->manageQS($cached_data, $diag, $node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, false, $answer_id);
+                            }
 
-                                        // We don't care about background calculations
-                                        if (!array_key_exists('system', $qs_node)) {
-                                            continue;
-                                        }
-
-                                        $substep = $qs_node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
-
-                                        $system = $qs_node['category'] !== 'background_calculation' ? $qs_node['system'] : 'others';
-                                        $consultation_nodes[$substep][$system][$step][$qs_instance['id']] = '';
-                                    }
-                                    if (!empty($qs_instance['conditions'])) {
-                                        foreach ($qs_instance['conditions'] as $qs_condition) {
-                                            // We only add or treat nodes that have a system
-                                            //todo fix breadthFirstSearch children for questionSequence
-                                            // Example Vomiting everything -> no is linked to Unconscious or Lethargic (Unusually sleepy)
-                                            // which then remove it
-                                            // Need to find the good if because if we just filter priority_sign it will then not remove
-                                            // if (isset($cached_data['full_nodes'][$qs_instance['id']]['system']) && $cached_data['full_nodes'][$qs_instance['id']]['system'] !== 'priority_sign') {
-                                            $answers_hash_map[$step][$diag['id']][$qs_condition['answer_id']][] = $qs_instance['id'];
-                                            $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $qs_condition['node_id'], $qs_condition['answer_id'], $dependency_map);
-                                            // }
-                                        }
+                            foreach ($instance['children'] as $child_node_id) {
+                                $child_node = $cached_data['full_nodes'][$child_node_id] ?? null;
+                                if ($child_node) {
+                                    if ($child_node['type'] !== 'QuestionsSequence') {
+                                        $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node_id, $answer_id, $dependency_map);
+                                    } else {
+                                        $this->manageQS($cached_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, false, $answer_id);
                                     }
                                 }
                             }
@@ -502,7 +486,6 @@ class Algorithm extends Component
         }
 
         $this->algorithmService->sortSystemsAndNodesPerCCPerStep($consultation_nodes, $this->cache_key);
-
         $nodes_per_step = [
             'registration' => $registration_nodes,
             'first_look_assessment' => $first_look_assessment_nodes ?? [],
@@ -511,16 +494,14 @@ class Algorithm extends Component
             'diagnoses' => $diagnoses_nodes ?? [], // No diagnoses for non dynamic study
         ];
 
-        // We already know that every nodes inside $nodes_per_step are the one without condition
-        $no_condition_nodes = array_flip(
-            array_unique(
-                array_reduce(
-                    array_map('array_keys', $consultation_nodes['medical_history']['general'] ?? []),
-                    'array_merge',
-                    []
-                )
-            )
+        // We know that every nodes inside $nodes_per_step are the one without condition
+        $nodes_per_step_flatten = new RecursiveIteratorIterator(
+            new RecursiveArrayIterator($nodes_per_step)
         );
+
+        foreach ($nodes_per_step_flatten as $key => $value) {
+            $no_condition_nodes[$key] = $value;
+        }
 
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
@@ -568,6 +549,14 @@ class Algorithm extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
         }
+
+        $this->current_nodes['registration']['birth_date'] = '2024-01-01';
+        $this->chosen_complaint_categories = [];
+        $this->df_to_display = [];
+        $this->diagnoses_per_cc = [];
+        $this->drugs_to_display = [];
+        $this->all_managements_to_display = [];
+        $this->updateLinkedNodesOfDob('1950-10-05');
 
         if ($this->algorithm_type === 'prevention') {
             unset($this->current_nodes['registration']['first_name']);
@@ -660,7 +649,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        // dump($cached_data['answers_hash_map']);
+        // dump(json_encode($cached_data['answers_hash_map']));
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['excluding_df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
@@ -669,6 +658,47 @@ class Algorithm extends Component
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
         // dump($cached_data['max_path_length']);
+    }
+
+    private function manageQS($cached_data, $diag, $node, $step, &$consultation_nodes, &$answers_hash_map, &$dependency_map, $no_condition, $answer_id = null)
+    {
+        foreach ($node['instances'] as $instance_id => $instance) {
+            $instance_node = $cached_data['full_nodes'][$instance_id];
+            $substep = $instance_node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
+            $system = $instance_node['category'] !== 'background_calculation' ? $instance_node['system'] ?? 'others' : 'others';
+
+            if (empty($instance['conditions'])) {
+                // We don't care about background calculations
+                if (!array_key_exists('system', $instance_node) && $instance_node['category'] !== 'unique_triage_question') {
+                    continue;
+                }
+                if ($no_condition && $instance_node['type'] !== 'QuestionsSequence') {
+                    $consultation_nodes[$substep][$system][$step][$instance_id] = '';
+                }
+                if ($answer_id) {
+                    $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
+                }
+            }
+
+            if (!empty($instance['conditions'])) {
+                foreach ($instance['conditions'] as $condition) {
+
+                    if (!isset($answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
+                        $answers_hash_map[$step][$diag['id']][$condition['answer_id']] = [];
+                    }
+                    if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
+                        $answers_hash_map[$step][$diag['id']][$condition['answer_id']][] = $instance_id;
+                    }
+                    $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $condition['node_id'], $condition['answer_id'], $dependency_map);
+                }
+            }
+            foreach ($instance['children'] as $child_node_id) {
+                $child_node = $cached_data['full_nodes'][$child_node_id];
+                if ($child_node_id !== $node['id'] && $child_node['type'] === 'QuestionsSequence') {
+                    $this->manageQS($cached_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, $no_condition, $answer_id);
+                }
+            }
+        }
     }
 
     public function calculateCompletionPercentage($other_cc = null)
@@ -1225,7 +1255,6 @@ class Algorithm extends Component
         $final_diagnoses = $cached_data['final_diagnoses'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
-        $no_condition_nodes = $cached_data['no_condition_nodes'];
 
         // Modification behavior
         if ($old_value && $value !== $old_value) {
@@ -1301,7 +1330,6 @@ class Algorithm extends Component
         }
 
         $next_nodes_per_cc = $this->getNextNodesId($value);
-        // dump($next_nodes_per_cc);
 
         //if next node is background calc -> calc and directly show next <3
         if ($next_nodes_per_cc) {
@@ -1668,19 +1696,29 @@ class Algorithm extends Component
 
                 switch ($node['category']) {
                     case 'physical_exam':
-                        $this->current_nodes['consultation']['physical_exam'][$system][$node['id']] = '';
+                        if (!isset($this->current_nodes['consultation']['physical_exam'][$system][$node['id']])) {
+                            $this->current_nodes['consultation']['physical_exam'][$system][$node['id']] = '';
+                        }
                         break;
                     case 'symptom';
                     case 'predefined_syndrome';
                     case 'background_calculation';
+                    case 'observed_physical_sign';
                     case 'exposure';
-                        $this->current_nodes['consultation']['medical_history'][$system][$node['id']] = '';
+                    case 'chronic_condition';
+                        if (!isset($this->current_nodes['consultation']['medical_history'][$system][$node['id']])) {
+                            $this->current_nodes['consultation']['medical_history'][$system][$node['id']] = '';
+                        }
                         break;
                     case 'assessment_test':
-                        $this->current_nodes['tests'][$node['id']] = '';
+                        if (!isset($this->current_nodes['tests'][$node['id']])) {
+                            $this->current_nodes['tests'][$node['id']] = '';
+                        }
                         break;
                     case 'treatment_question':
-                        $this->current_nodes['diagnoses']['treatment_questions'][$node['id']] = false;
+                        if (!isset($this->current_nodes['diagnoses']['treatment_questions'][$node['id']])) {
+                            $this->current_nodes['diagnoses']['treatment_questions'][$node['id']] = false;
+                        }
                         break;
                 }
 
