@@ -231,6 +231,7 @@ class Algorithm extends Component
                 // All logics that will be calulated
                 'answers_hash_map' => [],
                 'formula_hash_map' => [],
+                'qs_hash_map' => [],
                 'df_hash_map' => [],
                 'excluding_df_hash_map' => [],
                 'cut_off_hash_map' => [],
@@ -337,16 +338,30 @@ class Algorithm extends Component
         }
 
         $formula_hash_map = [];
+        $qs_hash_map = [];
         $nodes_to_update = [];
         $conditioned_nodes_hash_map = [];
         $need_emergency = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency, &$qs_hash_map) {
                 foreach ($value as $node) {
-                    // We don't skip REF
-                    // if ($node['type'] === 'QuestionsSequence' || $node['display_format'] === 'Reference') {
+
                     if ($node['type'] === 'QuestionsSequence') {
+                        $this->nodes_to_save[$node['id']]  = [
+                            'value' => '',
+                            'answer_id' => '',
+                            'label' => $node['label']['en'],
+                        ];
+                        foreach ($node['conditions'] as $condition) {
+                            if (!isset($qs_hash_map[$condition['answer_id']])) {
+                                $qs_hash_map[$condition['answer_id']] = [];
+                            }
+                            $yes_answer = collect($node['answers'])->where('reference', 1)->first()['id'];
+                            if (!in_array($yes_answer, $qs_hash_map[$condition['answer_id']])) {
+                                $qs_hash_map[$condition['answer_id']][] = $yes_answer;
+                            }
+                        }
                         continue;
                     }
                     if ($node['emergency_status'] === 'emergency') {
@@ -451,6 +466,10 @@ class Algorithm extends Component
                                 ];
                             }
 
+                            if ($instance_node['type'] === 'QuestionsSequence') {
+                                $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, false, $answer_id);
+                            }
+
                             $node = $cached_data['full_nodes'][$node_id];
                             if ($node['type'] !== 'QuestionsSequence') {
                                 $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
@@ -510,6 +529,7 @@ class Algorithm extends Component
                 ...$cached_data,
                 'answers_hash_map' => $answers_hash_map,
                 'formula_hash_map' => $formula_hash_map,
+                'qs_hash_map' => $qs_hash_map,
                 'nodes_to_update' => $nodes_to_update,
                 'df_hash_map' => $df_hash_map,
                 'excluding_df_hash_map' => $excluding_df_hash_map,
@@ -649,6 +669,7 @@ class Algorithm extends Component
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
+        // dump($cached_data['qs_hash_map']);
         // dump(json_encode($cached_data['answers_hash_map']));
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['excluding_df_hash_map']);
@@ -669,27 +690,34 @@ class Algorithm extends Component
 
             if (empty($instance['conditions'])) {
                 // We don't care about background calculations
-                if (!array_key_exists('system', $instance_node) && $instance_node['category'] !== 'unique_triage_question') {
-                    continue;
-                }
                 if ($no_condition && $instance_node['type'] !== 'QuestionsSequence') {
-                    $consultation_nodes[$substep][$system][$step][$instance_id] = '';
+                    if (array_key_exists('system', $instance_node) || $instance_node['category'] === 'unique_triage_question') {
+                        $consultation_nodes[$substep][$system][$step][$instance_id] = '';
+                    }
                 }
                 if ($answer_id) {
-                    $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
+                    if (!isset($answers_hash_map[$step][$diag['id']][$answer_id])) {
+                        $answers_hash_map[$step][$diag['id']][$answer_id] = [];
+                    }
+                    if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$answer_id])) {
+                        $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
+                    }
                 }
             }
 
             if (!empty($instance['conditions'])) {
                 foreach ($instance['conditions'] as $condition) {
-
-                    if (!isset($answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
-                        $answers_hash_map[$step][$diag['id']][$condition['answer_id']] = [];
+                    if ($instance_node['type'] !== 'QuestionsSequence') {
+                        if (!isset($answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
+                            $answers_hash_map[$step][$diag['id']][$condition['answer_id']] = [];
+                        }
+                        if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
+                            $answers_hash_map[$step][$diag['id']][$condition['answer_id']][] = $instance_id;
+                        }
+                        $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $condition['node_id'], $condition['answer_id'], $dependency_map);
+                    } else {
+                        $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $dependency_map, false, $condition['answer_id']);
                     }
-                    if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
-                        $answers_hash_map[$step][$diag['id']][$condition['answer_id']][] = $instance_id;
-                    }
-                    $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $condition['node_id'], $condition['answer_id'], $dependency_map);
                 }
             }
             foreach ($instance['children'] as $child_node_id) {
@@ -1113,6 +1141,7 @@ class Algorithm extends Component
     {
         $cached_data = Cache::get($this->cache_key);
         $formula_hash_map = $cached_data['formula_hash_map'];
+        $qs_hash_map = $cached_data['qs_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
         $managements_hash_map = $cached_data['managements_hash_map'];
         $nodes_to_update = $cached_data['nodes_to_update'];
@@ -1233,6 +1262,13 @@ class Algorithm extends Component
             }
         }
 
+        //QS management
+        if (array_key_exists($answer_id, $qs_hash_map)) {
+            foreach ($qs_hash_map[$answer_id] as $yes_answer) {
+                $this->displayNextNode($node_id, $yes_answer, null);
+            }
+        }
+
         // If answer will set a drug, we add it to the drugs to display
         if (array_key_exists($answer_id, $drugs_hash_map)) {
             foreach ($drugs_hash_map[$answer_id] as $drug_id) {
@@ -1330,6 +1366,7 @@ class Algorithm extends Component
         }
 
         $next_nodes_per_cc = $this->getNextNodesId($value);
+        // dump($next_nodes_per_cc);
 
         //if next node is background calc -> calc and directly show next <3
         if ($next_nodes_per_cc) {
