@@ -23,8 +23,5 @@
         "sass": "^1.56.1",
         "sass-loader": "^12.6.0"
     },
-    "dependencies": {
-        "fhir.js": "^0.0.22"
-    },
     "name": "medal-reader"
 }
