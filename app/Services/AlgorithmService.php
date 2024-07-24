@@ -9,12 +9,11 @@ class AlgorithmService
 {
     public function breadthFirstSearch($instances, $diag_id, $start_node_id, $answer_id, &$dependency_map, $filter_answer = false)
     {
-        // Implement breadth-first search using $max_length
-        $stack = [[$start_node_id, 0]];
+        $stack = [$start_node_id];
         $nodes_visited = [];
 
         while (!empty($stack)) {
-            [$node_id, $length] = array_shift($stack);
+            $node_id = array_shift($stack);
 
             if (isset($nodes_visited[$node_id])) {
                 continue;
@@ -34,7 +33,6 @@ class AlgorithmService
 
                 foreach ($instance['conditions'] as $condition) {
                     if ($condition['node_id'] === $node_id) {
-
                         if ($filter_answer) {
                             if ($answer_id === $condition['answer_id']) {
                                 if (!isset($dependency_map[$diag_id][$answer_id])) {
@@ -56,7 +54,7 @@ class AlgorithmService
                         }
 
                         foreach ($instance['children'] as $child_node_id) {
-                            $stack[] = [$child_node_id, $length];
+                            $stack[] = $child_node_id;
                         }
                     }
                 }

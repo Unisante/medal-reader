@@ -428,6 +428,7 @@ class Algorithm extends Component
 
                         $system = $instance_node['category'] !== 'background_calculation' ? $instance_node['system'] ?? 'others' : 'others';
                         if ($instance['final_diagnosis_id'] === null) {
+                            if ($instance_id === 7886) dump($instance_node, $instance, $step);
                             $consultation_nodes[$substep][$system][$step][$instance_id] = '';
                         }
                     }
@@ -507,11 +508,30 @@ class Algorithm extends Component
 
         // We know that every nodes inside $nodes_per_step are the one without condition
         $nodes_per_step_flatten = new RecursiveIteratorIterator(
-            new RecursiveArrayIterator($nodes_per_step)
+            new RecursiveArrayIterator(
+                [
+                    ...array_filter(
+                        $nodes_per_step,
+                        fn ($key) => $key !== 'consultation' && $key !== 'first_look_assessment',
+                        ARRAY_FILTER_USE_KEY
+                    ),
+                    $first_look_assessment_nodes['basic_measurements_nodes_id']
+                ]
+            )
         );
 
         foreach ($nodes_per_step_flatten as $key => $value) {
-            $no_condition_nodes[$key] = $value;
+            $no_condition_nodes[$key] = '';
+        }
+
+        foreach ($consultation_nodes as $nodes_per_system) {
+            foreach ($nodes_per_system as $nodes_per_cc) {
+                foreach ($nodes_per_cc as $cc_id => $nodes) {
+                    foreach ($nodes as $node => $value) {
+                        $no_condition_nodes[$cc_id][$node] = '';
+                    }
+                }
+            }
         }
 
         //todo actually stop calulating again if cache found. Create function in service and
@@ -656,13 +676,16 @@ class Algorithm extends Component
         // dd($cached_data['full_nodes']);
         // dd($this->current_nodes);
         // dump($cached_data['full_order']);
-        dump(json_encode($cached_data['nodes_per_step']));
+        // dump(json_encode($cached_data['nodes_per_step']));
         // dump(array_unique(Arr::flatten($cached_data['nodes_per_step'])));
         // dump($cached_data['formula_hash_map']);
         // dump($cached_data['drugs_hash_map']);
         // dump($cached_data['dependency_map']);
-        dump($cached_data['qs_hash_map']);
+        dump(json_encode($cached_data['dependency_map']));
+        // dump($cached_data['qs_hash_map']);
         dump(json_encode($cached_data['answers_hash_map']));
+        dump($cached_data['no_condition_nodes']);
+        dump($consultation_nodes);
         // dump($cached_data['df_hash_map']);
         // dump($cached_data['excluding_df_hash_map']);
         // dump($cached_data['cut_off_hash_map']);
@@ -675,7 +698,6 @@ class Algorithm extends Component
 
     private function manageQS($cached_data, $diag, $node, $step, &$consultation_nodes, &$answers_hash_map, &$qs_hash_map, &$dependency_map, $no_condition, $answer_id = null)
     {
-
         $this->nodes_to_save[$node['id']]  = [
             'value' => '',
             'answer_id' => '',
@@ -709,9 +731,18 @@ class Algorithm extends Component
                         $answers_hash_map[$step][$diag['id']][$answer_id] = [];
                     }
                     if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$answer_id])) {
-                        if ($instance_id === 8447) dump($node);
                         $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
                     }
+                    if (!isset($dependency_map[$diag['id']][$answer_id])) {
+                        $dependency_map[$diag['id']][$answer_id] = [];
+                    }
+
+                    if (!isset(array_flip($dependency_map[$diag['id']][$answer_id])[$instance_id])) {
+                        $dependency_map[$diag['id']][$answer_id][] = $instance_id;
+                    }
+                }
+                if ($instance_node['type'] === 'QuestionsSequence') {
+                    $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, $no_condition, $answer_id);
                 }
             }
 
@@ -723,9 +754,14 @@ class Algorithm extends Component
                         }
                         if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
                             $answers_hash_map[$step][$diag['id']][$condition['answer_id']][] = $instance_id;
-                            if ($instance_id === 8447) dump($node);
                         }
-                        $this->algorithmService->breadthFirstSearch($node['instances'], $diag['id'], $condition['node_id'], $condition['answer_id'], $dependency_map);
+                        if (!isset($dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']])) {
+                            $dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']] = [];
+                        }
+
+                        if (!isset(array_flip($dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']])[$instance_id])) {
+                            $dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']][] = $instance_id;
+                        }
                     } else {
                         $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $condition['answer_id']);
                     }
@@ -1332,8 +1368,21 @@ class Algorithm extends Component
                                         }
                                     }
                                     if ($this->algorithm_type !== 'prevention') {
-                                        if (!isset($no_condition_nodes[$node_id_to_unset])) {
+                                        $to_unset = true;
+                                        foreach (array_keys(array_filter($this->chosen_complaint_categories)) as $chosen_cc_id) {
+                                            if (isset($no_condition_nodes[$chosen_cc_id][$node_id_to_unset]) || isset($no_condition_nodes[$node_id_to_unset])) {
+                                                $to_unset = false;
+                                            }
+                                        }
+                                        if ($to_unset) {
                                             unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id_to_unset]);
+                                            if (array_key_exists($node_id_to_unset, $this->nodes_to_save)) {
+                                                $this->nodes_to_save[$node_id_to_unset] = [
+                                                    'value' => '',
+                                                    'answer_id' => '',
+                                                    'label' => '',
+                                                ];
+                                            }
                                         }
                                     }
                                     if ($this->algorithm_type === 'training') {
@@ -1776,12 +1825,12 @@ class Algorithm extends Component
                     ...array_column($this->nodes_to_save, 'answer_id'),
                 ];
 
-                $system = isset($node['system']) ? $node['system'] : 'others';
                 if (
                     array_intersect($needed_answer_to_show_that_node, $all_answers)
                     || (isset($answers_hash_map[$cc_id][$dd_id][$answer_id]) && in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$answer_id]))
                     || !in_array($node_id, Arr::flatten($dependency_map[$dd_id]))
                 ) {
+                    $system = isset($node['system']) ? $node['system'] : 'others';
                     switch ($node['category']) {
                         case 'physical_exam':
                             if (!isset($this->current_nodes['consultation']['physical_exam'][$system][$node['id']])) {
