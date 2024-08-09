@@ -34,7 +34,6 @@ class Algorithm extends Component
     public $patient_id;
     public array $data;
     public string $cache_key;
-    public int $cache_expiration_time;
     public string $title;
     public string $algorithm_type;
     public bool $debug_mode = false;
@@ -164,8 +163,6 @@ class Algorithm extends Component
 
         $this->algorithm_type = $matching_projects ? key($matching_projects) : 'training';
         $this->cache_key = "json_data_{$this->id}_$json_version";
-        //todo set the update cache behovior on json update and set it indefinitely
-        $this->cache_expiration_time = 86400; // 24 hours
 
         //todo set that up in redis when in prod
         if (config('app.debug')) {
@@ -250,7 +247,7 @@ class Algorithm extends Component
                 'male_gender_answer_id' => '',
                 'registration_total' => '',
                 'first_look_assessment_total' => '',
-            ], $this->cache_expiration_time);
+            ]);
         }
 
         $cached_data = Cache::get($this->cache_key);
@@ -564,7 +561,7 @@ class Algorithm extends Component
                 'male_gender_answer_id' => $male_gender_answer_id,
                 'registration_total' => count($cached_data['registration_nodes_id']),
                 'first_look_assessment_total' =>  count($cached_data['first_look_assessment_nodes_id']),
-            ], $this->cache_expiration_time);
+            ]);
             $cached_data = Cache::get($this->cache_key);
         }
 
