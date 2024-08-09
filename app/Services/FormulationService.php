@@ -87,7 +87,7 @@ class FormulationService
             $unit = $this->current_formulation['medication_form'];
             $value = floatval($this->current_formulation['unique_dose']) . ' ' . $unit;
         }
-        $string_0 = "Fixed dose " . $value . " " . $unit . "  per administration";
+        $string_0 = "Fixed dose " . $value . " per administration";
         $string_1 = "Fixed dose $value application per administration";
 
         $callStrings = [
@@ -113,8 +113,8 @@ class FormulationService
             'gel', 'ointment', 'cream', 'lotion', 'patch' => $this->doseCalculationString("fixed_dose_indication_application"),
             'drops', 'spray', 'suppository', 'pessary', 'inhaler' => $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']),
             'capsule', 'tablet', 'dispersible_tablet' => call_user_func(function () use ($drug_dose) {
-                if ($drug_dose['unique']) {
-                    return $this->doseCalculationString("fixed_dose_indication_administration", ['medication_form' => 'medication_form']);
+                if ($drug_dose['uniqDose']) {
+                    return $this->doseCalculationString("fixed_dose_indication_administration");
                 }
                 if ($this->current_formulation['medication_form'] == 'capsule') {
                     $currentDosage = $this->roundSup(
@@ -209,7 +209,7 @@ class FormulationService
                         'doseResult' => $doseResult,
                         'doseResultNotRounded' => $doseResultNotRounded,
                         'recurrence' => $recurrence,
-                        'unique' => $uniqDose
+                        'uniqDose' => $uniqDose
                     ];
                 }),
                 default => [
@@ -439,10 +439,10 @@ class FormulationService
     public function getAmountGiven()
     {
         return match ($this->current_formulation['medication_form']) {
-            'gel', 'ointment', 'cream', 'lotion', 'patch' => "Give " . floatval($this->current_drug['unique_dose']) . " application per administration",
-            'suppository', 'drops' => 'Give ' . floatval($this->current_drug['unique_dose']) . ' ' . $this->current_formulation['medication_form'],
-            'pessary', 'spray' => 'Give ' . floatval($this->current_drug['unique_dose']) . '' . $this->current_formulation['medication_form'] . ' per administration',
-            'inhaler' => 'Give ' . floatval($this->current_drug['unique_dose']) . ' inhalation per administration',
+            'gel', 'ointment', 'cream', 'lotion', 'patch' => "Give " . floatval($this->current_formulation['unique_dose']) . " application per administration",
+            'suppository', 'drops' => 'Give ' . floatval($this->current_formulation['unique_dose']) . ' ' . $this->current_formulation['medication_form'],
+            'pessary', 'spray' => 'Give ' . floatval($this->current_formulation['unique_dose']) . '' . $this->current_formulation['medication_form'] . ' per administration',
+            'inhaler' => 'Give ' . floatval($this->current_formulation['unique_dose']) . ' inhalation per administration',
             'suspension', 'powder_for_injection', 'solution' => $this->liquidAmountGiven(),
             'capsule', 'tablet', 'dispersible_tablet' => $this->oralAmountGiven(),
             'syrup' => $this->amountGivenSyrup(),
