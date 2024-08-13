@@ -128,7 +128,7 @@ class AlgorithmService
         });
     }
 
-    public function sortNodes(array $consultation_nodes, array &$nodes, $perCC)
+    public function sortNodes(array $consultation_nodes, array &$nodes, bool $perCC)
     {
         foreach ($nodes as $key => &$nodes_per_system) {
             $order = array_flip($consultation_nodes[$key]['data']);
