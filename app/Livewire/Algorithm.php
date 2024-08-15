@@ -6,6 +6,7 @@ use App\Services\AlgorithmService;
 use App\Services\FHIRService;
 use App\Services\FormulationService;
 use App\Services\JsonExportService;
+use App\Services\ReferenceCalculator;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
@@ -68,6 +69,7 @@ class Algorithm extends Component
     public array $nodes_to_treat;
 
     private AlgorithmService $algorithmService;
+    private ReferenceCalculator $referenceCalculator;
     private FHIRService $fhirService;
     private JsonExportService $jsonExportService;
     public array $treatment_questions;
@@ -135,10 +137,12 @@ class Algorithm extends Component
 
     public function boot(
         AlgorithmService $algorithmService,
+        ReferenceCalculator $referenceCalculator,
         FHIRService $fhirService,
         JsonExportService $jsonExportService,
     ) {
         $this->algorithmService = $algorithmService;
+        $this->referenceCalculator = $referenceCalculator;
         $this->fhirService = $fhirService;
         $this->jsonExportService = $jsonExportService;
     }
@@ -236,6 +240,7 @@ class Algorithm extends Component
                 'df_dd_mapping' => [],
                 'drugs_hash_map' => [],
                 'conditioned_nodes_hash_map' => [],
+                'reference_hash_map' => [],
                 'managements_hash_map' => [],
                 'dependency_map' => [],
                 'max_path_length' => [],
@@ -259,10 +264,9 @@ class Algorithm extends Component
         $cut_off_hash_map = [];
 
         foreach ($cached_data['final_diagnoses'] as $df) {
-            $df_dd_mapping[$df['diagnosis_id']][] = $df['id'];
             $excluding_df_hash_map[$df['id']] = $df['excluding_final_diagnoses'];
             foreach ($df['conditions'] as $condition) {
-                $df_hash_map[$condition['answer_id']][] = $df['id'];
+                $df_hash_map[$df['diagnosis_id']][$condition['answer_id']][] = $df['id'];
                 if (isset($condition['cut_off_start']) || isset($condition['cut_off_end'])) {
                     $cut_off_hash_map['df'][$df['id']][$condition['answer_id']] = [
                         'cut_off_start' => $condition['cut_off_start'],
@@ -336,16 +340,21 @@ class Algorithm extends Component
         }
 
         $formula_hash_map = [];
+        $reference_hash_map = [];
         $nodes_to_update = [];
         $conditioned_nodes_hash_map = [];
         $need_emergency = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency, &$qs_hash_map) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$nodes_to_update, &$conditioned_nodes_hash_map, &$need_emergency, &$reference_hash_map) {
                 foreach ($value as $node) {
 
                     if ($node['type'] === 'QuestionsSequence') {
                         continue;
+                    }
+
+                    if ($node['display_format'] === 'Reference') {
+                        $reference_hash_map[$node['id']] = true;
                     }
                     if ($node['emergency_status'] === 'emergency') {
                         $need_emergency[$node['emergency_answer_id']] = $node['id'];
@@ -548,9 +557,9 @@ class Algorithm extends Component
                 'df_hash_map' => $df_hash_map,
                 'excluding_df_hash_map' => $excluding_df_hash_map,
                 'cut_off_hash_map' => $cut_off_hash_map,
-                'df_dd_mapping' => $df_dd_mapping,
                 'drugs_hash_map' => $drugs_hash_map,
                 'conditioned_nodes_hash_map' => $conditioned_nodes_hash_map,
+                'reference_hash_map' => $reference_hash_map,
                 'managements_hash_map' => $managements_hash_map,
                 'dependency_map' => $dependency_map ?? [],
                 'max_path_length' => $max_path_length,
@@ -564,7 +573,6 @@ class Algorithm extends Component
             ]);
             $cached_data = Cache::get($this->cache_key);
         }
-
         $this->current_nodes['registration'] = $registration_nodes;
 
         //todo remove these when in prod
@@ -1355,9 +1363,13 @@ class Algorithm extends Component
 
         $cached_data = Cache::get($this->cache_key);
         $dependency_map = $cached_data['dependency_map'];
+        $answers_hash_map = $cached_data['answers_hash_map'];
         $no_condition_nodes = $cached_data['no_condition_nodes'];
+        $reference_hash_map = $cached_data['reference_hash_map'];
         $formula_hash_map = $cached_data['formula_hash_map'];
         $final_diagnoses = $cached_data['final_diagnoses'];
+        $gender_question_id = $cached_data['gender_question_id'];
+        $female_gender_answer_id = $cached_data['female_gender_answer_id'];
         $qs_hash_map = $cached_data['qs_hash_map'];
         $df_hash_map = $cached_data['df_hash_map'];
         $health_cares = $cached_data['health_cares'];
@@ -1378,69 +1390,76 @@ class Algorithm extends Component
 
             $old_values = [$old_value];
             foreach ($this->diagnoses_per_cc as $cc_id => $dd_per_cc) {
-                foreach ($dd_per_cc as $dd_id => $label) {
-                    // Remove every linked nodes to old answers
-                    if (isset($qs_hash_map[$cc_id][$dd_id][$old_value])) {
-                        $old_values = [
-                            ...$old_values,
-                            ...$qs_hash_map[$cc_id][$dd_id][$old_value]
-                        ];
-                    }
-                    foreach ($old_values as $old_value) {
-                        if (isset($dependency_map[$dd_id]) && array_key_exists($old_value, $dependency_map[$dd_id])) {
-                            foreach ($dependency_map[$dd_id][$old_value] as $node_id_to_unset) {
-                                $medical_history_nodes = $this->current_nodes['consultation']['medical_history'] ?? $this->current_nodes['consultation'] ?? [];
-                                $node_exists_in_other_system = false;
-                                foreach ($medical_history_nodes as $system_name => $nodes_per_system) {
-                                    if (isset($medical_history_nodes[$system_name][$node_id_to_unset])) {
-                                        // Remove every df and managements dependency of linked nodes
-                                        if (array_key_exists($medical_history_nodes[$system_name][$node_id_to_unset], $df_hash_map)) {
-                                            foreach ($df_hash_map[$medical_history_nodes[$system_name][$node_id_to_unset]] as $df) {
-                                                if (array_key_exists($df, $this->df_to_display)) {
-                                                    if (isset($final_diagnoses[$df]['managements'])) {
-                                                        unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
+                    foreach ($dd_per_cc as $dd_id => $label) {
+                        // Remove every linked nodes to old answers
+                        if (isset($qs_hash_map[$cc_id][$dd_id][$old_value])) {
+                            $old_values = [
+                                ...$old_values,
+                                ...$qs_hash_map[$cc_id][$dd_id][$old_value]
+                            ];
+                        }
+                        foreach ($old_values as $old_value) {
+                            if (isset($dependency_map[$dd_id]) && array_key_exists($old_value, $dependency_map[$dd_id])) {
+                                foreach ($dependency_map[$dd_id][$old_value] as $node_id_to_unset) {
+                                    $medical_history_nodes = $this->current_nodes['consultation']['medical_history'] ?? $this->current_nodes['consultation'] ?? [];
+                                    $node_exists_in_other_system = false;
+                                    foreach ($medical_history_nodes as $system_name => $nodes_per_system) {
+                                        if (isset($medical_history_nodes[$system_name][$node_id_to_unset])) {
+                                            // Remove every df and managements dependency of linked nodes
+                                            if (array_key_exists($medical_history_nodes[$system_name][$node_id_to_unset], $df_hash_map[$dd_id])) {
+                                                foreach ($df_hash_map[$dd_id][$medical_history_nodes[$system_name][$node_id_to_unset]] as $df) {
+                                                    if (array_key_exists($df, $this->df_to_display)) {
+                                                        if (isset($final_diagnoses[$df]['managements'])) {
+                                                            unset($this->all_managements_to_display[key($final_diagnoses[$df]['managements'])]);
+                                                        }
+                                                        unset($this->df_to_display[$df]);
                                                     }
-                                                    unset($this->df_to_display[$df]);
                                                 }
                                             }
-                                        }
-                                        if ($this->algorithm_type !== 'prevention') {
-                                            $to_unset = true;
-                                            foreach (array_keys(array_filter($this->chosen_complaint_categories)) as $chosen_cc_id) {
-                                                if (isset($no_condition_nodes[$chosen_cc_id][$node_id_to_unset]) || isset($no_condition_nodes[$node_id_to_unset])) {
-                                                    $to_unset = false;
+                                            if ($this->algorithm_type !== 'prevention') {
+                                                $to_unset = true;
+                                                foreach (array_keys(array_filter($this->chosen_complaint_categories)) as $chosen_cc_id) {
+                                                    if (isset($no_condition_nodes[$chosen_cc_id][$node_id_to_unset]) || isset($no_condition_nodes[$node_id_to_unset])) {
+                                                        $to_unset = false;
+                                                    }
+                                                }
+                                                if ($to_unset) {
+                                                    if (isset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id_to_unset])) {
+                                                        unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id_to_unset]);
+                                                    }
+                                                    if (isset($this->current_nodes['consultation']['physical_exam'][$system_name][$node_id_to_unset])) {
+                                                        unset($this->current_nodes['consultation']['physical_exam'][$system_name][$node_id_to_unset]);
+                                                    }
+                                                    if (array_key_exists($node_id_to_unset, $this->nodes_to_save)) {
+                                                        $this->nodes_to_save[$node_id_to_unset] = [
+                                                            'value' => '',
+                                                            'answer_id' => '',
+                                                            'label' => '',
+                                                        ];
+                                                    }
                                                 }
                                             }
-                                            if ($to_unset) {
-                                                unset($this->current_nodes['consultation']['medical_history'][$system_name][$node_id_to_unset]);
-                                                if (array_key_exists($node_id_to_unset, $this->nodes_to_save)) {
-                                                    $this->nodes_to_save[$node_id_to_unset] = [
-                                                        'value' => '',
-                                                        'answer_id' => '',
-                                                        'label' => '',
-                                                    ];
+                                            if ($this->algorithm_type === 'training') {
+                                                if (!isset($no_condition_nodes[$node_id_to_unset])) {
+                                                    unset($this->current_nodes['consultation'][$system_name][$node_id_to_unset]);
                                                 }
                                             }
-                                        }
-                                        if ($this->algorithm_type === 'training') {
-                                            if (!isset($no_condition_nodes[$node_id_to_unset])) {
-                                                unset($this->current_nodes['consultation'][$system_name][$node_id_to_unset]);
+                                            if ($system_name !== $cc_id) {
+                                                $node_exists_in_other_system = true;
                                             }
-                                        }
-                                        if ($system_name !== $cc_id) {
-                                            $node_exists_in_other_system = true;
                                         }
                                     }
-                                }
-                                //don't unset node is also in other tree
-                                if ($this->algorithm_type === 'prevention' && !$node_exists_in_other_system && !isset($no_condition_nodes[$node_id_to_unset])) {
-                                    unset($this->current_nodes['consultation'][$cc_id][$node_id_to_unset]);
-                                    if (array_key_exists($node_id_to_unset, $this->nodes_to_save)) {
-                                        $this->nodes_to_save[$node_id_to_unset] = [
-                                            'value' => '',
-                                            'answer_id' => '',
-                                            'label' => '',
-                                        ];
+                                    //don't unset node is also in other tree
+                                    if ($this->algorithm_type === 'prevention' && !$node_exists_in_other_system && !isset($no_condition_nodes[$node_id_to_unset])) {
+                                        unset($this->current_nodes['consultation'][$cc_id][$node_id_to_unset]);
+                                        if (array_key_exists($node_id_to_unset, $this->nodes_to_save)) {
+                                            $this->nodes_to_save[$node_id_to_unset] = [
+                                                'value' => '',
+                                                'answer_id' => '',
+                                                'label' => '',
+                                            ];
+                                        }
                                     }
                                 }
                             }
@@ -1468,6 +1487,31 @@ class Algorithm extends Component
                 foreach ($nodes_per_cc as $next_node_dd_id => $next_nodes_id) {
                     foreach ($next_nodes_id as $node) {
 
+                        //Reference table management
+                        if (isset($reference_hash_map[$node])) {
+                            $full_nodes = $cached_data['full_nodes'];
+
+                            $nodes['current'] = $full_nodes[$node];
+                            // Get X and Y
+                            $reference_table_x_id = $nodes['current']['reference_table_x_id'];
+                            $reference_table_y_id = $nodes['current']['reference_table_y_id'];
+                            $nodes['x'] = $full_nodes[$reference_table_x_id];
+                            $nodes['y'] = $full_nodes[$reference_table_y_id];
+                            $nodes['x']['value'] = $this->nodes_to_save[$reference_table_x_id]['value'];
+                            $nodes['y']['value'] = $this->nodes_to_save[$reference_table_y_id]['value'];
+
+                            // Get Z
+                            if ($nodes['current']['reference_table_z_id'] !== null) {
+                                $reference_table_z_id = $nodes['current']['reference_table_z_id'];
+                                $nodes['z'] = $full_nodes[$reference_table_z_id];
+                                $nodes['z']['value'] = $this->nodes_to_save[$reference_table_z_id]['value'];
+                            }
+
+                            $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
+                            $t = $this->referenceCalculator->calculateReference($node, $nodes, $gender, $this->cache_key);
+                            dump($t);
+                        }
+
                         //We use the nodes to treat array to check if nodes had already been calculated
                         if (isset($this->nodes_to_treat[$next_node_dd_id][$node])) {
                             continue;
@@ -1475,6 +1519,7 @@ class Algorithm extends Component
 
                         //if set then saveNode or save it and get next nodes 
                         if (isset($qs_hash_map[$cc_id][$next_node_dd_id][$value])) {
+                            //$qs_next_node_id is 0 1 2 ...
                             foreach ($qs_hash_map[$cc_id][$next_node_dd_id][$value] as $qs_next_node_id => $qs_yes_answer_id) {
                                 $this->displayNextNode($qs_next_node_id, $qs_yes_answer_id, null);
                             }
@@ -1531,76 +1576,59 @@ class Algorithm extends Component
             }
         }
 
-        //if next node is DF, add it to df_to_display <3
-        if (isset($df_hash_map[$value])) {
-            $other_conditions_met = true;
-            foreach ($df_hash_map[$value] as $df) {
-                foreach ($final_diagnoses[$df]['conditions'] as $condition) {
+        foreach ($this->diagnoses_per_cc as $cc_id => $dd_per_cc) {
+            if (array_key_exists($cc_id, array_filter($this->chosen_complaint_categories))) {
+                foreach ($dd_per_cc as $dd_id => $label) {
+                    //if next node is DF, add it to df_to_display <3
+                    if (isset($df_hash_map[$dd_id][$value])) {
+                        $respect_cut_off = true;
+                        foreach ($df_hash_map[$dd_id][$value] as $df) {
+                            foreach ($final_diagnoses[$df]['conditions'] as $condition) {
 
-                    if (array_key_exists($condition['node_id'], $no_condition_nodes)) continue;
+                                if (array_key_exists($condition['node_id'], $no_condition_nodes)) continue;
 
-                    //Respect cut off
-                    if (array_key_exists('cut_off_start', $condition)) {
-                        if (isset($this->age_in_days)) {
-                            if ($this->age_in_days < $condition['cut_off_start'] || $this->age_in_days >= $condition['cut_off_end']) {
-                                $other_conditions_met = false;
-                            }
-                        }
-                    }
-
-                    // Removed that block as I think the condition is always OR
-                    // // We already know that this condition is met because it has been calulated
-                    // // And we skip the same question if it's the condition
-                    // if ($condition['answer_id'] !== $value && $condition['node_id'] !== $node_id) {
-                    //     //todo fix current nodes management. Should be the same for every step
-                    //     // We only check if the other conditions node has no condition
-                    //     // We need to find a way to do so as now the current_nodes is being changed depending on the step
-                    //     // getTopConditions in react-native reader
-
-                    //     // Need also to calculate if node is not in nodes_to_save like radio button
-                    //     foreach ($this->current_nodes['consultation'] ?? [] as $nodes_per_cc) {
-                    //         if (
-                    //             array_key_exists($condition['node_id'], $nodes_per_cc)
-                    //             && $value != $condition['answer_id']
-                    //         ) {
-                    //             $other_conditions_met = false;
-                    //         }
-                    //     }
-
-                    //     if (
-                    //         array_key_exists($condition['node_id'], $this->nodes_to_save)
-                    //         && $this->nodes_to_save[$condition['node_id']]['answer_id'] != $condition['answer_id']
-                    //     ) {
-                    //         $other_conditions_met = false;
-                    //     }
-                    // }
-                }
-
-                if ($other_conditions_met) {
-                    if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
-                        $drugs = [];
-                        foreach ($final_diagnoses[$df]['drugs'] as $drug_id => $drug) {
-
-                            $conditions = $final_diagnoses[$df]['drugs'][$drug['id']]['conditions'];
-
-                            if (array_key_exists($drug_id, $drugs)) continue;
-                            if (empty($conditions)) {
-                                $drugs[$drug_id] = $drug_id;
-                            } else {
-                                if (array_key_exists($drug['id'], $this->drugs_to_display)) {
-                                    $drugs[$drug_id] = $drug_id;
+                                //Respect cut off
+                                if (array_key_exists('cut_off_start', $condition)) {
+                                    if (isset($this->age_in_days)) {
+                                        if ($this->age_in_days < $condition['cut_off_start'] || $this->age_in_days >= $condition['cut_off_end']) {
+                                            $respect_cut_off = false;
+                                        }
+                                    }
                                 }
                             }
-                        }
+                            if ($respect_cut_off) {
+                                if ((isset($answers_hash_map[$cc_id][$dd_id][$value]) && in_array($node_id, $answers_hash_map[$cc_id][$dd_id][$value]))
+                                    || !in_array($node_id, Arr::flatten($dependency_map[$dd_id]))
+                                ) {
+                                    if (!array_key_exists($final_diagnoses[$df]['id'], $this->df_to_display)) {
+                                        $drugs = [];
+                                        foreach ($final_diagnoses[$df]['drugs'] as $drug_id => $drug) {
 
-                        $this->df_to_display[$df] = $drugs;
-                        foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
-                            $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
-                            if (empty($conditions)) {
-                                $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
-                            } else {
-                                if (in_array($management_key, $this->all_managements_to_display)) {
-                                    $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
+                                            $conditions = $final_diagnoses[$df]['drugs'][$drug['id']]['conditions'];
+
+                                            if (array_key_exists($drug_id, $drugs)) continue;
+                                            if (empty($conditions)) {
+                                                $drugs[$drug_id] = $drug_id;
+                                            } else {
+                                                if (array_key_exists($drug['id'], $this->drugs_to_display)) {
+                                                    $drugs[$drug_id] = $drug_id;
+                                                }
+                                            }
+                                        }
+
+                                        $this->df_to_display[$df] = $drugs;
+                                        Log::info("$dd_id $node_id added $df");
+                                        foreach ($final_diagnoses[$df]['managements'] as $management_key => $management) {
+                                            $conditions = $final_diagnoses[$df]['managements'][$management_key]['conditions'];
+                                            if (empty($conditions)) {
+                                                $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
+                                            } else {
+                                                if (in_array($management_key, $this->all_managements_to_display)) {
+                                                    $this->managements_to_display[$management_key] = $final_diagnoses[$df]['id'];
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
