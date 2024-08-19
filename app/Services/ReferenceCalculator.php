@@ -20,11 +20,10 @@ class ReferenceCalculator
         $value = null;
 
         // Parse value in correct format
-        if ($nodes['x']['value'] !== '' && $nodes['y'] !== '') {
+        if ($nodes['x']['value'] !== '' && $nodes['y']['value'] !== '') {
             $x = $this->parseValue($nodes['current'], $nodes['x']);
             $y = $this->parseValue($nodes['current'], $nodes['y']);
             $z = isset($nodes['z']) ? $this->parseValue($nodes['current'], $nodes['z']) : null;
-
             $reference = $this->getReferenceTable($nodes['current'], $gender);
             if ($reference !== null && $z === null) {
                 $value = $this->processReferenceTable($reference, $x, $y);
@@ -32,8 +31,6 @@ class ReferenceCalculator
                 $value = $this->processReferenceTable3D($reference, $x, $y, $z);
             }
         }
-        dump($nodes['x']['value'] . " + " . $nodes['y']['value'] . " => " . $value);
-        dump($x . " + " . $y . " => " . $value);
         return $value;
     }
 
@@ -47,19 +44,15 @@ class ReferenceCalculator
     private function parseValue(array $current_node, array $reference_node)
     {
         if ($reference_node['value_format'] === "Integer") {
-            dump("Integer");
             return (int) $reference_node['value'];
         }
 
-        //todo herer
         if (isset($reference_node['round'])) {
-            dump("rounded");
-            $reference_node['round'] || ($reference_node['round'] = 1.0);
             $inv = 1.0 / $reference_node['round'];
-            return round($reference_node['value'] * $inv) / $inv;
+            $result = round($reference_node['value'] * $inv) / $inv;
+            return (fmod($result, 1) === 0.0) ? (int) $result : $result;
         }
-
-        return (float) $reference_node['value'];
+        return (fmod($reference_node['value'], 1) === 0.0) ? (int) $reference_node['value'] : $reference_node['value'];
     }
 
     /**
@@ -118,43 +111,52 @@ class ReferenceCalculator
      * @param int|float $reference
      * @return int|null
      */
-    private function findValueInReferenceTable(array $referenceTable, $reference)
+    function findValueInReferenceTable(array $referenceTable, $reference)
     {
         $previousKey = null;
         $value = null;
 
+        // Sort the keys of the reference table numerically
         $scopedRange = array_keys($referenceTable);
         sort($scopedRange, SORT_NUMERIC);
 
+        // If reference is the same value as the first element in the sorted range
         if ($reference == $referenceTable[$scopedRange[0]]) {
-            return (int)$scopedRange[1];
+            return (int) $scopedRange[1];
         }
 
+        // If reference is the same value as the last element in the sorted range
         if ($reference == $referenceTable[end($scopedRange)]) {
-            return (int)$scopedRange[count($scopedRange) - 2];
+            return (int) $scopedRange[count($scopedRange) - 2];
         }
 
+        // If reference is smaller than the smallest value in the reference table
         if ($reference < $referenceTable[$scopedRange[0]]) {
-            return (int)$scopedRange[0];
+            return (int) $scopedRange[0];
         }
 
+        // If reference is larger than the largest value in the reference table
         if ($reference > $referenceTable[end($scopedRange)]) {
-            return (int)end($scopedRange);
+            return (int) end($scopedRange);
         }
 
+        // Loop through the sorted keys to find the appropriate value
         foreach ($scopedRange as $key) {
-            if ($referenceTable[$key] === $reference) {
+            if ($referenceTable[$key] == $reference) {
                 $currentIndex = array_search($key, $scopedRange);
 
-                if ((int)$key === 0) {
-                    return (int)$scopedRange[$currentIndex];
+                if ((int) $key === 0) {
+                    $value = (int) $scopedRange[$currentIndex];
+                    break;
                 }
 
-                return (int)$key < 0 ? (int)$scopedRange[$currentIndex + 1] : (int)$scopedRange[$currentIndex - 1];
+                $value = ((int) $key < 0) ? (int) $scopedRange[$currentIndex + 1] : (int) $scopedRange[$currentIndex - 1];
+                break;
             }
 
             if ($referenceTable[$key] > $reference) {
-                return (int)$key <= 0 ? (int)$key : (int)$previousKey;
+                $value = ((int) $key <= 0) ? (int) $key : (int) $previousKey;
+                break;
             }
 
             $previousKey = $key;

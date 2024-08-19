@@ -354,7 +354,12 @@ class Algorithm extends Component
                     }
 
                     if ($node['display_format'] === 'Reference') {
-                        $reference_hash_map[$node['id']] = true;
+                        // $reference_hash_map[$node['id']] = true;
+                        $reference_hash_map[$node['reference_table_x_id']][] = $node['id'];
+                        $reference_hash_map[$node['reference_table_y_id']][] = $node['id'];
+                        if ($node['reference_table_z_id']) {
+                            $reference_hash_map[$node['reference_table_z_id']][] = $node['id'];
+                        }
                     }
                     if ($node['emergency_status'] === 'emergency') {
                         $need_emergency[$node['emergency_answer_id']] = $node['id'];
@@ -712,6 +717,7 @@ class Algorithm extends Component
         // dump($cached_data['nodes_to_update']);
         // dump($cached_data['managements_hash_map']);
         // dump($cached_data['max_path_length']);
+        dump($cached_data['reference_hash_map']);
     }
 
     private function manageQS($cached_data, $diag, $node, $step, &$consultation_nodes, &$answers_hash_map, &$qs_hash_map, &$dependency_map, $no_condition, $answer_id = null)
@@ -1476,6 +1482,41 @@ class Algorithm extends Component
             }
         }
 
+        //Reference table management
+        if (isset($reference_hash_map[$node_id])) {
+            foreach ($reference_hash_map[$node_id] as $ref_node_id) {
+                $full_nodes = $cached_data['full_nodes'];
+
+                $nodes['current'] = $full_nodes[$ref_node_id];
+                // Get X and Y
+                $reference_table_x_id = $nodes['current']['reference_table_x_id'];
+                $reference_table_y_id = $nodes['current']['reference_table_y_id'];
+                if (
+                    $this->nodes_to_save[$reference_table_x_id]['value']
+                    && $this->nodes_to_save[$reference_table_y_id]['value']
+                ) {
+                    $nodes['x'] = $full_nodes[$reference_table_x_id];
+                    $nodes['y'] = $full_nodes[$reference_table_y_id];
+                    $nodes['x']['value'] = $this->nodes_to_save[$reference_table_x_id]['value'];
+                    $nodes['y']['value'] = $this->nodes_to_save[$reference_table_y_id]['value'];
+
+                    // Get Z
+                    if ($nodes['current']['reference_table_z_id'] !== null) {
+                        $reference_table_z_id = $nodes['current']['reference_table_z_id'];
+                        $nodes['z'] = $full_nodes[$reference_table_z_id];
+                        $nodes['z']['value'] = $this->nodes_to_save[$reference_table_z_id]['value'];
+                    }
+
+                    $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
+                    $reference = $this->referenceCalculator->calculateReference($ref_node_id, $nodes, $gender, $this->cache_key);
+                    if (!is_null($reference)) {
+                        $this->handleAnswers($ref_node_id, $reference);
+                        $this->displayNextNode($ref_node_id, $this->nodes_to_save[$ref_node_id]['answer_id'], null);
+                    }
+                }
+            }
+        }
+
         if ($value) {
             $next_nodes_per_cc = $this->getNextNodesId($value);
             // dump($next_nodes_per_cc);
@@ -1487,34 +1528,44 @@ class Algorithm extends Component
                 foreach ($nodes_per_cc as $next_node_dd_id => $next_nodes_id) {
                     foreach ($next_nodes_id as $node) {
 
-                        //Reference table management
-                        if (isset($reference_hash_map[$node])) {
-                            $full_nodes = $cached_data['full_nodes'];
-
-                            $nodes['current'] = $full_nodes[$node];
-                            // Get X and Y
-                            $reference_table_x_id = $nodes['current']['reference_table_x_id'];
-                            $reference_table_y_id = $nodes['current']['reference_table_y_id'];
-                            $nodes['x'] = $full_nodes[$reference_table_x_id];
-                            $nodes['y'] = $full_nodes[$reference_table_y_id];
-                            $nodes['x']['value'] = $this->nodes_to_save[$reference_table_x_id]['value'];
-                            $nodes['y']['value'] = $this->nodes_to_save[$reference_table_y_id]['value'];
-
-                            // Get Z
-                            if ($nodes['current']['reference_table_z_id'] !== null) {
-                                $reference_table_z_id = $nodes['current']['reference_table_z_id'];
-                                $nodes['z'] = $full_nodes[$reference_table_z_id];
-                                $nodes['z']['value'] = $this->nodes_to_save[$reference_table_z_id]['value'];
-                            }
-
-                            $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
-                            $t = $this->referenceCalculator->calculateReference($node, $nodes, $gender, $this->cache_key);
-                            dump($t);
-                        }
-
                         //We use the nodes to treat array to check if nodes had already been calculated
                         if (isset($this->nodes_to_treat[$next_node_dd_id][$node])) {
                             continue;
+                        }
+
+                        //Reference table management
+                        if (isset($reference_hash_map[$node])) {
+                            foreach ($reference_hash_map[$node] as $ref_node_id) {
+                                $full_nodes = $cached_data['full_nodes'];
+
+                                $nodes['current'] = $full_nodes[$ref_node_id];
+                                // Get X and Y
+                                $reference_table_x_id = $nodes['current']['reference_table_x_id'];
+                                $reference_table_y_id = $nodes['current']['reference_table_y_id'];
+                                if (
+                                    $this->nodes_to_save[$reference_table_x_id]['value']
+                                    && $this->nodes_to_save[$reference_table_y_id]['value']
+                                ) {
+                                    $nodes['x'] = $full_nodes[$reference_table_x_id];
+                                    $nodes['y'] = $full_nodes[$reference_table_y_id];
+                                    $nodes['x']['value'] = $this->nodes_to_save[$reference_table_x_id]['value'];
+                                    $nodes['y']['value'] = $this->nodes_to_save[$reference_table_y_id]['value'];
+
+                                    // Get Z
+                                    if ($nodes['current']['reference_table_z_id'] !== null) {
+                                        $reference_table_z_id = $nodes['current']['reference_table_z_id'];
+                                        $nodes['z'] = $full_nodes[$reference_table_z_id];
+                                        $nodes['z']['value'] = $this->nodes_to_save[$reference_table_z_id]['value'];
+                                    }
+
+                                    $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
+                                    $reference = $this->referenceCalculator->calculateReference($ref_node_id, $nodes, $gender, $this->cache_key);
+                                    if (!is_null($reference)) {
+                                        $this->handleAnswers($ref_node_id, $reference);
+                                        $this->displayNextNode($ref_node_id, $this->nodes_to_save[$ref_node_id]['answer_id'], null);
+                                    }
+                                }
+                            }
                         }
 
                         //if set then saveNode or save it and get next nodes 
