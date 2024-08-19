@@ -1510,8 +1510,9 @@ class Algorithm extends Component
                     $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
                     $reference = $this->referenceCalculator->calculateReference($ref_node_id, $nodes, $gender, $this->cache_key);
                     if (!is_null($reference)) {
+                        $old_answer = $this->nodes_to_save[$ref_node_id]['answer_id'];
                         $this->handleAnswers($ref_node_id, $reference);
-                        $this->displayNextNode($ref_node_id, $this->nodes_to_save[$ref_node_id]['answer_id'], null);
+                        $this->displayNextNode($ref_node_id, $this->nodes_to_save[$ref_node_id]['answer_id'], $old_answer);
                     }
                 }
             }
