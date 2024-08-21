@@ -699,9 +699,9 @@ class Refacto extends Component
             'drugs' => [],
         ];
 
+        $this->medical_case['nodes'] = $this->generateNewNodes($json['medal_r_json']['nodes']);
         $nodes = $this->manageRegistrationStep();
         // dump($registration_nodes);
-        // dd($nodes);
         $this->current_nodes['registration'] = $nodes;
 
         // dd($this->registration_nodes_id);
@@ -1803,10 +1803,7 @@ class Refacto extends Component
             }
         }
 
-        $this->nodes_to_save[$node_id]['value'] = $value;
-        $this->medical_case['nodes'][$node_id]['value'] = $value;
-
-        return $value;
+        return null;
     }
 
     public function updateLinkedNodesOfDob($birth_date)
@@ -1826,14 +1823,16 @@ class Refacto extends Component
             }
 
             $new_value = $this->handleNumeric($this->medical_case['nodes'][$node_id], $nodes[$node_id], $value);
-            $new_nodes[$node_id] = array_merge($this->medical_case['nodes'][$node_id], $new_value);
-
+            $new_nodes[$node_id] = array_replace($this->medical_case['nodes'][$node_id], $new_value);
+            $this->medical_case['nodes'][$node_id] = $new_nodes[$node_id];
+            dump($new_nodes);
             // Update related questions based on the new value
-            $new_nodes = $this->update_related_question([
-                'node_id' => $node_id,
-                'new_nodes' => $new_nodes,
-                'mc_nodes' => $this->medical_case['nodes']
-            ]);
+            $new_nodes = $this->updateRelatedQuestion(
+                $cached_data,
+                $node_id,
+                $new_nodes,
+                $this->medical_case['nodes']
+            );
         }
 
         $this->medical_case['nodes'] = array_merge($this->medical_case['nodes'], $new_nodes);
@@ -2155,23 +2154,26 @@ class Refacto extends Component
         return array_filter($diagnoses, function ($diagnosis) use ($nodes, $mc_nodes) {
             return (
                 isset($mc_nodes[$diagnosis['complaint_category']]) &&
-                $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->get_yes_answer($nodes[$diagnosis['complaint_category']])['id'] &&
-                $this->respects_cut_off($diagnosis['cut_off_start'], $diagnosis['cut_off_end'])
+                $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->getYesAnswer($nodes[$diagnosis['complaint_category']])['id'] &&
+                $this->respectsCutOff($diagnosis)
             );
         });
     }
-    private function get_yes_answer($node)
+    private function getYesAnswer($node)
     {
         return collect($node['answers'])->where('reference', 1)->first()['id'];
     }
 
-    private function get_no_answer($node)
+    private function getNoAnswer($node)
     {
         return collect($node['answers'])->where('reference', 2)->first()['id'];
     }
 
-    public function respects_cut_off($cut_off_start, $cut_off_end)
+    public function respectsCutOff($condition)
     {
+        $cut_off_start = isset($condition['cut_off_start']) ? $condition['cut_off_start'] : null;
+        $cut_off_end = isset($condition['cut_off_end']) ? $condition['cut_off_end'] : null;
+
         if (is_null($cut_off_start) && is_null($cut_off_end)) {
             return true;
         }
@@ -2183,29 +2185,30 @@ class Refacto extends Component
         if (is_null($cut_off_end)) {
             return $cut_off_start <= $this->age_in_days;
         }
-
+        Log::info($this->age_in_days);
+        Log::info($cut_off_start <= $this->age_in_days && $cut_off_end > $this->age_in_days);
         return $cut_off_start <= $this->age_in_days && $cut_off_end > $this->age_in_days;
     }
 
-    public function get_top_conditions($instances, $is_final_diagnosis = false)
+    public function getTopConditions($instances, $is_final_diagnosis = false)
     {
         return array_filter($instances, function ($instance) use ($is_final_diagnosis) {
             return empty($instance['conditions']) && ($is_final_diagnosis || is_null($instance['final_diagnosis_id']));
         });
     }
 
-    public function handle_children($children, $source, &$questions_to_display, $instances, $categories, $diagram_id, $diagram_type, $system, &$current_systems, $system_order)
+    public function handleChildren($children, $source, &$questions_to_display, $instances, $categories, $diagram_id, $diagram_type, $system, &$current_systems, $system_order)
     {
-        $nodes = $this->nodes; // Assuming this contains all the nodes
+        $nodes = $this->algorithm['item']['nodes'];
 
         foreach ($children as $instance) {
             if (
-                (!$this->excluded_by_cc($instance['id']) && empty($instance['conditions'])) ||
+                (!$this->excludedByCc($instance['id']) && empty($instance['conditions'])) ||
                 $this->calculateCondition($instance, $source)
             ) {
                 if ($nodes[$instance['id']]['type'] === config('medal.node_types.questions_sequence')) {
-                    $top_conditions = $this->get_top_conditions($nodes[$instance['id']]['instances']);
-                    $this->handle_children(
+                    $top_conditions = $this->getTopConditions($nodes[$instance['id']]['instances']);
+                    $this->handleChildren(
                         $top_conditions,
                         $instance['id'],
                         $questions_to_display,
@@ -2219,7 +2222,7 @@ class Refacto extends Component
                     );
                 } else {
                     if ($system) {
-                        $this->add_question_to_system(
+                        $this->addQuestionToSystem(
                             $instance['id'],
                             $questions_to_display,
                             $categories,
@@ -2227,7 +2230,7 @@ class Refacto extends Component
                             $system_order
                         );
                     } else {
-                        $this->add_question($instance['id'], $questions_to_display, $categories);
+                        $this->addQuestion($instance['id'], $questions_to_display, $categories);
                     }
                 }
 
@@ -2244,7 +2247,7 @@ class Refacto extends Component
                 });
 
                 if (!empty($children_instances)) {
-                    $this->handle_children(
+                    $this->handleChildren(
                         $children_instances,
                         $instance['id'],
                         $questions_to_display,
@@ -2261,7 +2264,7 @@ class Refacto extends Component
         }
     }
 
-    private function add_question_to_system($question_id, &$questions_to_display, $categories, &$current_systems, $system_order)
+    private function addQuestionToSystem($question_id, &$questions_to_display, $categories, &$current_systems, $system_order)
     {
         $last_system_updated = $this->get_last_system_updated();
 
@@ -2288,17 +2291,17 @@ class Refacto extends Component
         }
     }
 
-    private function add_question($question_id, &$questions_to_display, $categories)
+    private function addQuestion($question_id, &$questions_to_display, $categories)
     {
         if (in_array($this->nodes[$question_id]['category'], $categories)) {
             $questions_to_display[] = $question_id;
         }
     }
 
-    public function excluded_by_cc($question_id)
+    public function excludedByCc($question_id)
     {
-        $mc_nodes = $this->mc_nodes;
-        $nodes = $this->nodes;
+        $mc_nodes = $this->medical_case['nodes'];
+        $nodes = $this->algorithm['item']['nodes'];
 
         if (
             $nodes[$question_id]['type'] === config('medal.node_types.final_diagnosis') ||
@@ -2309,15 +2312,15 @@ class Refacto extends Component
         }
 
         return array_reduce($nodes[$question_id]['conditioned_by_cc'], function ($carry, $cc_id) use ($mc_nodes, $nodes) {
-            return $carry || $mc_nodes[$cc_id]['answer'] === $this->get_no_answer($nodes[$cc_id]);
+            return $carry || $mc_nodes[$cc_id]['answer'] === $this->getNoAnswer($nodes[$cc_id]);
         }, false);
     }
 
     public function calculateCondition($instance, $source_id = null, $new_nodes = [])
     {
-        $mc_nodes = array_merge($this->medical_case['nodes'], $new_nodes);
+        $mc_nodes = array_replace($this->medical_case['nodes'], $new_nodes);
 
-        if ($this->excluded_by_cc($instance['id'])) {
+        if ($this->excludedByCc($instance['id'])) {
             return false;
         }
 
@@ -2335,24 +2338,22 @@ class Refacto extends Component
         return array_reduce($conditions, function ($carry, $condition) use ($mc_nodes) {
             return $carry || (
                 $mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end'])
+                $this->respectsCutOff($condition)
             );
         }, false);
     }
 
-    public function get_qs_value($qs_id, $new_mc_nodes)
+    public function getQsValue($nodes, $qs_id, $new_mc_nodes)
     {
-        $nodes = $this->nodes; // Assuming this contains all the nodes
-
         if ($nodes[$qs_id]['category'] === config('medal.categories.scored')) {
-            return $this->scored_calculateCondition($qs_id, $new_mc_nodes);
+            return $this->scoredCalculateCondition($qs_id, $new_mc_nodes);
         } else {
             $conditions_values = array_map(function ($condition) use ($qs_id, $new_mc_nodes, $nodes) {
-                if (
-                    $new_mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                    $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end'])
-                ) {
-                    return $this->qs_instance_value(
+                Log::info('n');
+                Log::info(json_encode($new_mc_nodes[$condition['node_id']]));
+                if ($this->respectsCutOff($condition)) {
+                    Log::info('y');
+                    return $this->qsInstanceValue(
                         $nodes[$qs_id]['instances'][$condition['node_id']],
                         $new_mc_nodes,
                         $nodes[$qs_id]['instances'],
@@ -2362,12 +2363,13 @@ class Refacto extends Component
                     return false;
                 }
             }, $nodes[$qs_id]['conditions']);
-
-            return $this->reduce_conditions($conditions_values);
+            Log::info(json_encode($conditions_values));
+            Log::info(json_encode($this->reduceConditions($conditions_values)));
+            return $this->reduceConditions($conditions_values);
         }
     }
 
-    public function qs_instance_value($instance, $new_mc_nodes, $instances, $qs_id)
+    public function qsInstanceValue($instance, $new_mc_nodes, $instances, $qs_id)
     {
         $mc_node = $new_mc_nodes[$instance['id']];
         $instance_condition = $this->calculateCondition($instance, null, $new_mc_nodes);
@@ -2383,26 +2385,26 @@ class Refacto extends Component
 
             $parents = array_filter($instance['conditions'], function ($condition) use ($new_mc_nodes) {
                 return $new_mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                    $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end']);
+                    $this->respectsCutOff($condition);
             });
 
             if (empty($parents)) {
                 return false;
             } else {
                 $parents_condition = array_map(function ($parent) use ($instances, $new_mc_nodes, $qs_id) {
-                    return $this->qs_instance_value($instances[$parent['node_id']], $new_mc_nodes, $instances, $qs_id);
+                    return $this->qsInstanceValue($instances[$parent['node_id']], $new_mc_nodes, $instances, $qs_id);
                 }, $parents);
 
-                return $this->reduce_conditions($parents_condition);
+                return $this->reduceConditions($parents_condition);
             }
         } else {
             return false;
         }
     }
 
-    public function scored_calculateCondition($qs_id, $new_mc_nodes)
+    public function scoredCalculateCondition($qs_id, $new_mc_nodes)
     {
-        $algorithm = $this->algorithm; // Assuming this contains all the algorithm data
+        $algorithm = $this->algorithm;
 
         $qs = $algorithm['nodes'][$qs_id];
 
@@ -2456,14 +2458,14 @@ class Refacto extends Component
         return null; // Just in case no conditions are met
     }
 
-    public function reduce_conditions($conditions_values)
+    public function reduceConditions($conditions_values)
     {
         return array_reduce($conditions_values, function ($carry, $value) {
             return $carry || $value;
         }, false);
     }
 
-    public function diagram_conditions_values($node_id, $instance, $mc_nodes)
+    public function diagramConditionsValues($node_id, $instance, $mc_nodes)
     {
         $nodes = $this->algorithm['item']['nodes'];
 
@@ -2473,7 +2475,7 @@ class Refacto extends Component
             } else {
                 return (
                     $mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                    $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end'])
+                    $this->respectsCutOff($condition)
                 );
             }
         }, array_filter($nodes[$node_id]['conditions'], function ($condition) use ($instance) {
@@ -2481,7 +2483,7 @@ class Refacto extends Component
         }));
     }
 
-    public function calculateCondition_inverse($conditions, $mc_nodes)
+    public function calculateConditionInverse($conditions, $mc_nodes)
     {
         $instances = $this->algorithm['item']['diagram']['instances'];
 
@@ -2492,11 +2494,11 @@ class Refacto extends Component
         return array_reduce($conditions, function ($carry, $condition) use ($mc_nodes, $instances) {
             $condition_value = (
                 $mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end'])
+                $this->respectsCutOff($condition)
             );
 
             if ($condition_value) {
-                return $carry || $this->calculateCondition_inverse(
+                return $carry || $this->calculateConditionInverse(
                     $instances[$condition['node_id']]['conditions'] ?? [],
                     $mc_nodes
                 );
@@ -2506,135 +2508,156 @@ class Refacto extends Component
         }, false);
     }
 
-    public function update_node($node_id, $value)
+    public function updateNode($node_id, $value)
     {
+        $cached_data = Cache::get($this->cache_key);
         $nodes = $this->algorithm['item']['nodes']; // Assuming $this->algorithm contains algorithm data
         $new_medical_case = $this->medical_case; // Assuming $this->medical_case contains medical case data
         $node = $nodes[$node_id];
         $mc_node = $new_medical_case['nodes'][$node_id];
         $new_nodes = [];
 
-        // Validation
-        $validation = $this->question_validation_service($mc_node, $node, $value);
-
-        // Early return if there is an error in the validation
-        if ($validation['validation_type'] === 'error') {
-            return [
-                'nodes' => array_merge($new_medical_case['nodes'], [
-                    $node_id => array_merge($mc_node, $validation)
-                ])
-            ];
-        }
-
         // Set the new value to the current node
         $new_values = $this->set_node_value($mc_node, $node, $value);
 
-        $new_nodes[$node_id] = array_merge($mc_node, $validation, $new_values);
+        $new_nodes[$node_id] = array_merge($mc_node, $new_values);
 
         // Update question sequence
-        $new_nodes = $this->update_question_sequence([
-            'node_id' => $node['id'],
-            'new_nodes' => $new_nodes,
-            'mc_nodes' => $new_medical_case['nodes']
-        ]);
+        $new_nodes = $this->updateQuestionSequence(
+            $node['id'],
+            $new_nodes,
+            $new_medical_case['nodes']
+        );
 
         // Update related questions
-        $new_nodes = $this->update_related_question([
-            'node_id' => $node['id'],
-            'new_nodes' => $new_nodes,
-            'mc_nodes' => $new_medical_case['nodes']
-        ]);
-
-        // Add activities (if needed)
-        $new_activities = $this->add_activity_service([
-            'medical_case' => $new_medical_case,
-            'node_id' => $node_id,
-            'value' => $value
-        ]);
+        $new_nodes = $this->updateRelatedQuestion(
+            $cached_data,
+            $node['id'],
+            $new_nodes,
+            $new_medical_case['nodes']
+        );
 
         // Assuming the method returns the updated nodes and activities
         return [
             'nodes' => $new_nodes,
-            'activities' => $new_activities
         ];
     }
 
-    public function update_question_sequence($params)
+    public function updateQuestionSequence($node_id, $new_nodes, $mc_nodes)
     {
-        $node_id = $params['node_id'];
-        $new_nodes = $params['new_nodes'];
-        $mc_nodes = $params['mc_nodes'];
+        // Retrieve the nodes from the algorithm state
         $nodes = $this->algorithm['item']['nodes'];
 
         // List of QS we need to update
         $qs_to_update = $nodes[$node_id]['qs'];
 
         while (count($qs_to_update) > 0) {
-            $qs_id = array_shift($qs_to_update);
-            $qs_boolean_value = $this->get_qs_value($qs_id, array_merge($mc_nodes, $new_nodes));
+            $qs_id = $qs_to_update[0];
+            $qs_boolean_value = $this->getQsValue($nodes, $qs_id, array_replace($mc_nodes, $new_nodes));
+            Log::info("qs_id $qs_id");
+            // dd($qs_boolean_value);
+            Log::info("qs_boolean_value $qs_boolean_value");
+            // If the QS has a value
+            if (!is_null($qs_boolean_value)) {
+                $qs_value = $qs_boolean_value ? $this->getYesAnswer($nodes[$qs_id]) : $this->getNoAnswer($nodes[$qs_id]);
+                Log::info("qs_value $qs_value");
+                // dd($qs_boolean_value);
+                $new_qs_values = $this->handleAnswerId($nodes[$qs_id], $qs_value);
 
-            if ($qs_boolean_value !== null) {
-                $qs_value = $qs_boolean_value
-                    ? $this->get_yes_answer($nodes[$qs_id])['id']
-                    : $this->get_no_answer($nodes[$qs_id])['id'];
-
-                $new_qs_values = $this->handle_answer_id($nodes[$qs_id], $qs_value);
-
-                $new_nodes[$qs_id] = array_merge($mc_nodes[$qs_id], $new_qs_values);
+                // Set the QS value in the store
+                $new_nodes[$qs_id] = array_replace($mc_nodes[$qs_id], $new_qs_values);
             } else {
-                $new_nodes[$qs_id] = array_merge($mc_nodes[$qs_id], ['value' => null, 'answer' => null]);
+                $new_nodes[$qs_id] = array_replace($mc_nodes[$qs_id], ['value' => null, 'answer' => null]);
             }
 
             // Add the related QS to the QS processing list
             $new_qs_list = array_filter($nodes[$qs_id]['qs'], function ($child_id) {
-                return !$this->excluded_by_cc($child_id);
+                return !$this->excludedByCC($child_id);
             });
 
-            $qs_to_update = array_unique(array_merge($qs_to_update, $new_qs_list));
+            $qs_to_update = array_replace($qs_to_update, $new_qs_list);
+
+            // uniq to avoid processing the same QS multiple times
+            $qs_to_update = array_unique(array_slice($qs_to_update, 1));
         }
 
         return $new_nodes;
     }
 
-    public function update_related_question($params)
+    public function calculateReference($cached_data, $node_id)
     {
-        $node_id = $params['node_id'];
-        $new_nodes = $params['new_nodes'];
-        $mc_nodes = $params['mc_nodes'];
+        $gender_question_id = $cached_data['gender_question_id'];
+        $female_gender_answer_id = $cached_data['female_gender_answer_id'];
+        //Reference table management
+        if (isset($reference_hash_map[$node_id])) {
+            foreach ($reference_hash_map[$node_id] as $ref_node_id) {
+                $full_nodes = $cached_data['full_nodes'];
+
+                $nodes['current'] = $full_nodes[$ref_node_id];
+                // Get X and Y
+                $reference_table_x_id = $nodes['current']['reference_table_x_id'];
+                $reference_table_y_id = $nodes['current']['reference_table_y_id'];
+                if (
+                    $this->nodes_to_save[$reference_table_x_id]['value']
+                    && $this->nodes_to_save[$reference_table_y_id]['value']
+                ) {
+                    $nodes['x'] = $full_nodes[$reference_table_x_id];
+                    $nodes['y'] = $full_nodes[$reference_table_y_id];
+                    $nodes['x']['value'] = $this->nodes_to_save[$reference_table_x_id]['value'];
+                    $nodes['y']['value'] = $this->nodes_to_save[$reference_table_y_id]['value'];
+
+                    // Get Z
+                    if ($nodes['current']['reference_table_z_id'] !== null) {
+                        $reference_table_z_id = $nodes['current']['reference_table_z_id'];
+                        $nodes['z'] = $full_nodes[$reference_table_z_id];
+                        $nodes['z']['value'] = $this->nodes_to_save[$reference_table_z_id]['value'];
+                    }
+
+                    $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
+                    $reference = $this->referenceCalculator->calculateReference($ref_node_id, $nodes, $gender, $this->cache_key);
+                    if (!is_null($reference)) {
+                        return $this->handleAnswers($cached_data, $ref_node_id, $reference);
+                    }
+                }
+            }
+        }
+    }
+
+    public function updateRelatedQuestion($cached_data, $node_id, $new_nodes, $mc_nodes)
+    {
+        // Retrieve the nodes from the algorithm state
         $nodes = $this->algorithm['item']['nodes'];
 
         // List of formulas/reference tables we need to update
         $questions_to_update = $nodes[$node_id]['referenced_in'];
-
+        Log::info("node_id $node_id");
         while (count($questions_to_update) > 0) {
-            $question_id = array_shift($questions_to_update);
+            $question_id = $questions_to_update[0];
             $node = $nodes[$question_id];
             $mc_node = $mc_nodes[$question_id];
 
             $value = null;
+            Log::info($question_id);
+            // Determine if the node is a formula or reference table
 
             if ($node['display_format'] === config('medal.display_format.formula')) {
-                $value = $this->calculate_formula($question_id, array_merge($mc_nodes, $new_nodes));
+                $value = $this->handleFormula($cached_data, $question_id);
             } else {
-                $value = $this->calculate_reference($question_id, array_merge($mc_nodes, $new_nodes));
+                $value = $this->calculateReference($cached_data, $question_id);
             }
 
-            $validation = $this->question_validation_service($mc_node, $node, $value);
+            // // Perform validation
+            // $validation = $this->questionValidationService($mc_node, $node, $value);
 
-            if ($validation['validation_type'] === 'error') {
-                $new_nodes[$node['id']] = array_merge($mc_node, $validation);
-            } else {
-                $new_question_values = $this->handleNumeric($mc_node, $node, $value);
-                $new_nodes[$question_id] = array_merge($mc_nodes[$question_id], $new_question_values, $validation);
-            }
+            $new_question_values = $this->handleNumeric($mc_node, $node, $value);
+            // Set the question value in the store
+            $new_nodes[$question_id] = array_replace($mc_nodes[$question_id], $new_question_values);
+            // Add the related questions to the update list
+            $questions_to_update = array_merge($questions_to_update, $node['referenced_in']);
 
-            $questions_to_update = array_unique(array_merge($questions_to_update, $node['referenced_in']));
-
-            $new_nodes = $this->update_question_sequence([
-                'node_id' => $question_id,
-                'new_nodes' => $new_nodes,
-                'mc_nodes' => $mc_nodes
-            ]);
+            // Remove duplicates and process the next question in the list
+            $new_nodes = $this->updateQuestionSequence($question_id, $new_nodes, $mc_nodes);
+            $questions_to_update = array_unique(array_slice($questions_to_update, 1));
         }
 
         return $new_nodes;
@@ -2647,7 +2670,7 @@ class Refacto extends Component
         $mc_nodes = $this->medical_case['nodes'];
 
         return array_fill_keys(array_filter($registration_order, function ($node_id) use ($instances, $mc_nodes) {
-            return $this->calculateCondition_inverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
+            return $this->calculateConditionInverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
         }), "");
     }
 
@@ -2666,7 +2689,7 @@ class Refacto extends Component
 
         // Filter the first look assessment order based on the condition inverse calculation
         return array_filter($first_look_assessment_order, function ($node_id) use ($instances, $mc_nodes) {
-            return $this->calculateCondition_inverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
+            return $this->calculateConditionInverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
         });
     }
 
@@ -2687,12 +2710,12 @@ class Refacto extends Component
         if ($this->age_in_days <= 59) {
             return array_filter($neonat_cc, function ($node_id) use ($neonat_general_id, $instances, $mc_nodes) {
                 return $node_id !== $neonat_general_id &&
-                    $this->calculateCondition_inverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
+                    $this->calculateConditionInverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
             });
         } else {
             return array_filter($older_cc, function ($node_id) use ($older_general_id, $instances, $mc_nodes) {
                 return $node_id !== $older_general_id &&
-                    $this->calculateCondition_inverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
+                    $this->calculateConditionInverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
             });
         }
     }
@@ -2708,15 +2731,15 @@ class Refacto extends Component
             if (!empty($nodes[$question_id]['conditioned_by_cc'])) {
                 // Check if any of the complaint categories (cc) are true; if so, exclude the question
                 $exclude_question = array_reduce($nodes[$question_id]['conditioned_by_cc'], function ($carry, $cc_id) use ($mc_nodes, $nodes) {
-                    return $carry || ($mc_nodes[$cc_id]['answer'] === $this->get_yes_answer($nodes[$cc_id])['id']);
+                    return $carry || ($mc_nodes[$cc_id]['answer'] === $this->getYesAnswer($nodes[$cc_id])['id']);
                 }, false);
 
                 if ($exclude_question) {
-                    return $this->calculateCondition_inverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                    return $this->calculateConditionInverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
                 }
             }
 
-            return $this->calculateCondition_inverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
+            return $this->calculateConditionInverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
         });
     }
 
@@ -2756,9 +2779,9 @@ class Refacto extends Component
         $current_systems = $this->questions_per_system['item']['medical_history'];
 
         foreach ($valid_diagnoses as $diagnosis) {
-            $top_conditions = $this->get_top_conditions($diagnosis['instances']);
+            $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
-            $this->handle_children(
+            $this->handleChildren(
                 $top_conditions,
                 null,
                 $question_per_systems,
@@ -2807,9 +2830,9 @@ class Refacto extends Component
 
         // Handle children nodes based on valid diagnoses
         foreach ($valid_diagnoses as $diagnosis) {
-            $top_conditions = $this->get_top_conditions($diagnosis['instances']);
+            $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
-            $this->handle_children(
+            $this->handleChildren(
                 $top_conditions,
                 null,
                 $question_per_systems,
@@ -2829,7 +2852,7 @@ class Refacto extends Component
         foreach ($physical_exam_step as $system) {
             $new_questions = array_filter($system['data'], function ($question_id) use ($question_per_systems, $system, $instances, $mc_nodes) {
                 return in_array($question_id, $question_per_systems[$system['title']] ?? []) &&
-                    $this->calculateCondition_inverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                    $this->calculateConditionInverse($instances[$question_id]['conditions'] ?? [], $mc_nodes);
             });
 
             if (!$this->is_equal($current_systems[$system['title']] ?? [], $new_questions)) {
@@ -2852,9 +2875,9 @@ class Refacto extends Component
         $questions_to_display = [];
 
         foreach ($valid_diagnoses as $diagnosis) {
-            $top_conditions = $this->get_top_conditions($diagnosis['instances']);
+            $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
-            $this->handle_children(
+            $this->handleChildren(
                 $top_conditions,
                 null,
                 $questions_to_display,
@@ -2896,9 +2919,9 @@ class Refacto extends Component
             $final_diagnostic = $nodes[$agreed_final_diagnostic['id']];
 
             $instances = $diagnoses[$final_diagnostic['diagnosis_id']]['final_diagnoses'][$final_diagnostic['id']]['instances'];
-            $top_conditions = $this->get_top_conditions($instances, true);
+            $top_conditions = $this->getTopConditions($instances, true);
 
-            $this->handle_children(
+            $this->handleChildren(
                 $top_conditions,
                 null,
                 $questions_to_display,
@@ -2922,7 +2945,7 @@ class Refacto extends Component
         $mc_nodes = $this->medical_case['nodes'];
 
         return array_filter($referral_order, function ($node_id) use ($instances, $mc_nodes) {
-            return $this->calculateCondition_inverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
+            return $this->calculateConditionInverse($instances[$node_id]['conditions'] ?? [], $mc_nodes);
         });
     }
 
@@ -2987,7 +3010,7 @@ class Refacto extends Component
         return array_reduce($conditions, function ($carry, $condition) use ($mc_nodes, $instances) {
             $condition_value = (
                 $mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
-                $this->respects_cut_off($condition['cut_off_start'], $condition['cut_off_end'])
+                $this->respectsCutOff($condition)
             );
 
             if ($condition_value) {
@@ -3188,7 +3211,7 @@ class Refacto extends Component
 
     public function findProposedFinalDiagnoses($diagnosis)
     {
-        $top_conditions = $this->get_top_conditions($diagnosis['instances']);
+        $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
         return array_unique(
             array_merge(...array_map(function ($instance) use ($diagnosis) {
@@ -3207,8 +3230,8 @@ class Refacto extends Component
         if ($instance_condition) {
             foreach ($instance['children'] as $child_id) {
                 if ($nodes[$child_id]['type'] === config('medal.node_types.final_diagnosis')) {
-                    $final_diagnosis_condition = $this->reduce_conditions(
-                        $this->diagram_conditions_values($child_id, $instance, $mc_nodes)
+                    $final_diagnosis_condition = $this->reduceConditions(
+                        $this->diagramConditionsValues($child_id, $instance, $mc_nodes)
                     );
 
                     if ($final_diagnosis_condition) {
@@ -3320,12 +3343,12 @@ class Refacto extends Component
 
     public function findExcludedFinalDiagnoses($diagnosis)
     {
-        $top_conditions = $this->get_top_conditions($diagnosis['instances']);
+        $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
         return array_map(function ($final_diagnosis) use ($top_conditions, $diagnosis) {
             return [
                 'id' => $final_diagnosis['id'],
-                'value' => $this->reduce_conditions(array_map(function ($instance) use ($diagnosis, $final_diagnosis) {
+                'value' => $this->reduceConditions(array_map(function ($instance) use ($diagnosis, $final_diagnosis) {
                     return $this->searchExcludedFinalDiagnoses(
                         $instance,
                         $diagnosis['instances'],
@@ -3348,7 +3371,7 @@ class Refacto extends Component
         }
 
         if ($instance_condition) {
-            return $this->reduce_conditions(array_map(function ($child_id) use ($nodes, $instances, $final_diagnosis) {
+            return $this->reduceConditions(array_map(function ($child_id) use ($nodes, $instances, $final_diagnosis) {
                 if ($nodes[$child_id]['type'] === config('medal.node_types.final_diagnosis')) {
                     return $final_diagnosis['id'] === $child_id && $this->calculateCondition($nodes[$child_id]);
                 } else {
@@ -3364,14 +3387,14 @@ class Refacto extends Component
         }
     }
 
-    function roundValue($value, $step = 1.0)
+    public function roundValue($value, $step = 1.0)
     {
         $inv = 1.0 / $step;
         $result = round($value * $inv) / $inv;
         return (fmod($result, 1) === 0.0) ? (int) $result : $result;
     }
 
-    function handleNumeric($mc_node, $node, $value)
+    public function handleNumeric($mc_node, $node, $value)
     {
         $response = ['answer' => null, 'value' => $value];
         $unavailable_answer = collect($node['answers'])->firstWhere('value', 'not_available');
@@ -3402,13 +3425,14 @@ class Refacto extends Component
         return $response;
     }
 
-    function handleAnswerId($node, $value)
+    public function handleAnswerId($node, $value)
     {
         $answer = null;
         if (!is_null($value)) {
             // Set Number only if this is a number
             if (is_numeric($value)) {
                 $answer = (int)$value;
+                Log::info(json_encode($node['answers'][$answer]));
                 $value = $node['answers'][$answer]['value'];
             } else {
                 $answer = collect($node['answers'])->firstWhere('value', $value);
@@ -3418,7 +3442,7 @@ class Refacto extends Component
         return ['answer' => $answer, 'value' => $value];
     }
 
-    function setNodeValue($mc_node, $node, $value)
+    public function setNodeValue($mc_node, $node, $value)
     {
         $value_formats = config('medal.value_formats');
         switch ($node['value_format']) {
@@ -3436,6 +3460,84 @@ class Refacto extends Component
             default:
                 return ['answer' => null, 'value' => null];
         }
+    }
+
+    public function generateQuestion($node)
+    {
+        $answer = $node['answer'] ?? null;
+        $value = $node['value'] ?? '';
+        $rounded_value = $node['rounded_value'] ?? '';
+        $estimable = $node['estimable'] ?? false;
+        $estimable_value = $node['estimable_value'] ?? 'measured';
+        $validation_message = $node['validation_message'] ?? null;
+        $validation_type = $node['validation_type'] ?? null;
+        $unavailable_value = $node['unavailable_value'] ?? false;
+
+        $hash = array_merge(
+            $this->_generateCommon($node),
+            [
+                'answer' => $answer,
+                'value' => $value,
+                'rounded_value' => $rounded_value,
+                'validation_message' => $validation_message,
+                'validation_type' => $validation_type,
+                'unavailable_value' => $unavailable_value
+            ]
+        );
+
+        // Set complain category to false by default
+        if ($node['category'] === config('medal.categories.complaint_category')) {
+            $hash['answer'] = $this->getNoAnswer($node);
+        }
+
+        // Add attribute for basic measurement question ex (weight, MUAC, height) to know if it's measured or estimated value answered
+        if ($estimable) {
+            // Type available [measured, estimated]
+            $hash['estimable_value'] = $estimable_value;
+        }
+
+        return $hash;
+    }
+
+    public function generateQuestionsSequence($node)
+    {
+        $answer = $node['answer'] ?? null;
+
+        return array_merge(
+            $this->_generateCommon($node),
+            [
+                'answer' => $answer
+            ]
+        );
+    }
+
+    public function _generateCommon($node)
+    {
+        return [
+            'id' => $node['id']
+        ];
+    }
+
+    public function generateNewNodes($nodes)
+    {
+        $new_nodes = [];
+
+        foreach ($nodes as $node) {
+            switch ($node['type']) {
+                case config('medal.node_types.questions_sequence'):
+                    $new_nodes[$node['id']] = $this->generateQuestionsSequence($node);
+                    break;
+                case config('medal.node_types.question'):
+                    $new_nodes[$node['id']] = $this->generateQuestion($node);
+                    break;
+                case config('medal.node_types.health_care'):
+                case config('medal.node_types.final_diagnosis'):
+                default:
+                    break;
+            }
+        }
+
+        return $new_nodes;
     }
 
     public function goToStep(string $step): void
