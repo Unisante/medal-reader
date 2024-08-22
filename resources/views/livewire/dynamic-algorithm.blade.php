@@ -105,7 +105,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    @foreach ($df_to_display as $diagnosis_id => $drugs)
+                    @foreach ($current_nodes['diagnosis']['proposed'] as $diagnosis_id)
                       <tr wire:key="{{ 'df-' . $diagnosis_id }}">
                         <td>
                           <label class="form-check-label"
@@ -138,8 +138,31 @@
                           <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
                         @break
 
+                        @case('String')
+                          <x-inputs.text step='diagnoses.treatment_questions' :$node_id :$full_nodes :is_background_calc="false" />
+                        @break
+
                         @case('DropDownList')
                           <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
+                        @break
+
+                        @case('Input')
+                          <x-inputs.numeric step='diagnoses.treatment_questions' :$node_id :$full_nodes :label="$nodes_to_save[$node_id]['label']"
+                            :$debug_mode />
+                        @break
+
+                        @case('Formula')
+                          @if ($debug_mode)
+                            <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                              :is_background_calc="true" />
+                          @endif
+                        @break
+
+                        @case('Reference')
+                          @if ($debug_mode)
+                            <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                              :is_background_calc="true" />
+                          @endif
                         @break
 
                         @default
