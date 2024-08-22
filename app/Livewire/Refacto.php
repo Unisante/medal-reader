@@ -623,6 +623,11 @@ class Refacto extends Component
         ];
         $nodes = $this->manageRegistrationStep($cached_data);
         $this->current_nodes['registration'] = $nodes;
+        $this->last_system_updated = [
+            'stage' => null,
+            'step' => 'registration',
+            'system' => '',
+        ];
 
         $this->current_nodes['registration']['birth_date'] = '2024-08-08';
         // $this->chosen_complaint_categories = [];
@@ -1526,6 +1531,8 @@ class Refacto extends Component
         $full_nodes = $cached_data['full_nodes'];
         $general_cc_id = $cached_data['general_cc_id'];
         $yi_general_cc_id = $cached_data['yi_general_cc_id'];
+        $older_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['older'];
+        $neonat_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['neonat'];
 
         $formula = $formula_hash_map[$node_id];
 
@@ -1542,16 +1549,16 @@ class Refacto extends Component
                 //But no other way as the Age in days node id is not saved anywhere
                 if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
                     $this->age_in_days = $days;
-                    dump($days);
                     if ($days <= 59) {
                         if ($this->algorithm_type === 'dynamic') {
                             $this->current_cc = $yi_general_cc_id;
                             $this->chosen_complaint_categories[$yi_general_cc_id] = true;
                             $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$yi_general_cc_id]);
-
+                            foreach ($older_ccs as $older_cc_id) {
+                                $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$older_cc_id]);
+                            }
                             if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                                 unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
-                                dump('unsetted');
                             }
                             $this->age_key = 'neonat';
 
@@ -1567,11 +1574,14 @@ class Refacto extends Component
                             $this->current_cc = $general_cc_id;
                             $this->chosen_complaint_categories[$general_cc_id] = true;
                             $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$general_cc_id]);
+                            foreach ($neonat_ccs as $neonat_cc_id) {
+                                $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$neonat_cc_id]);
+                            }
+
                             if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
                                 unset($this->chosen_complaint_categories[$yi_general_cc_id]);
                             }
                             if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
-                                dump('unsetted');
                                 unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
                             }
                             // Set the first_look_assessment nodes that are depending on the age key
@@ -1644,6 +1654,8 @@ class Refacto extends Component
         $full_nodes = $cached_data['full_nodes'];
         $general_cc_id = $cached_data['general_cc_id'];
         $yi_general_cc_id = $cached_data['yi_general_cc_id'];
+        $older_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['older'];
+        $neonat_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['neonat'];
 
         $formula = $formula_hash_map[$node_id];
 
@@ -1660,41 +1672,38 @@ class Refacto extends Component
                 //But no other way as the Age in days node id is not saved anywhere
                 if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
                     $this->age_in_days = $days;
-                    dump($days);
                     if ($days <= 59) {
                         if ($this->algorithm_type === 'dynamic') {
                             $this->current_cc = $yi_general_cc_id;
                             $this->chosen_complaint_categories[$yi_general_cc_id] = true;
                             $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$yi_general_cc_id]);
+                            foreach ($older_ccs as $older_cc_id) {
+                                $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$older_cc_id]);
+                            }
 
                             if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                                 unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
-                                dump('unsetted');
                             }
                             $this->age_key = 'neonat';
 
                             if (array_key_exists($general_cc_id, $this->chosen_complaint_categories)) {
                                 unset($this->chosen_complaint_categories[$general_cc_id]);
                             }
-                            // Set the first_look_assessment nodes that are depending on the age key
-                            // $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
-                            //     $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
                         }
                     } else {
                         if ($this->algorithm_type === 'dynamic') {
                             $this->current_cc = $general_cc_id;
                             $this->chosen_complaint_categories[$general_cc_id] = true;
                             $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$general_cc_id]);
+                            foreach ($neonat_ccs as $neonat_cc_id) {
+                                $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$neonat_cc_id]);
+                            }
                             if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
                                 unset($this->chosen_complaint_categories[$yi_general_cc_id]);
                             }
                             if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
-                                dump('unsetted');
                                 unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
                             }
-                            // Set the first_look_assessment nodes that are depending on the age key
-                            // $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
-                            //     $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
                         }
                         $this->age_key = 'older';
                     }
@@ -1708,7 +1717,7 @@ class Refacto extends Component
         } else {
             //In this situation we have a formula to calculate
             $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) {
-                return $this->nodes_to_save[$matches[1]]['value'];
+                return $this->medical_case['nodes'][$matches[1]]['value'];
             }, $formula);
 
             try {
@@ -1731,6 +1740,8 @@ class Refacto extends Component
         $formula_hash_map = $cached_data['formula_hash_map'];
         $general_cc_id = $cached_data['general_cc_id'];
         $yi_general_cc_id = $cached_data['yi_general_cc_id'];
+        $older_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['older'];
+        $neonat_ccs = $cached_data['algorithm']['config']['full_order']['complaint_categories_step']['neonat'];
 
         $this->current_nodes['registration']['birth_date'] = $birth_date;
 
@@ -1756,6 +1767,9 @@ class Refacto extends Component
                                     $this->current_cc = $yi_general_cc_id;
                                     $this->chosen_complaint_categories[$yi_general_cc_id] = true;
                                     $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($nodes[$yi_general_cc_id]);
+                                    foreach ($older_ccs as $older_cc_id) {
+                                        $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($nodes[$older_cc_id]);
+                                    }
 
                                     if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                                         unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
@@ -1771,6 +1785,9 @@ class Refacto extends Component
                                     $this->current_cc = $general_cc_id;
                                     $this->chosen_complaint_categories[$general_cc_id] = true;
                                     $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($nodes[$general_cc_id]);
+                                    foreach ($neonat_ccs as $neonat_cc_id) {
+                                        $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($nodes[$neonat_cc_id]);
+                                    }
                                     if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
                                         unset($this->chosen_complaint_categories[$yi_general_cc_id]);
                                     }
@@ -1794,7 +1811,6 @@ class Refacto extends Component
 
             $new_nodes[$node_id] = array_replace($this->medical_case['nodes'][$node_id], $new_value);
             $this->medical_case['nodes'][$node_id] = $new_nodes[$node_id];
-
             // Update related questions based on the new value
             $new_nodes = $this->updateRelatedQuestion(
                 $cached_data,
@@ -2200,7 +2216,6 @@ class Refacto extends Component
                 ];
 
                 $children_instances = array_map(function ($child_id) use ($nodes, $instances, $diagram_type, $diagram_id, $healthcare_categories) {
-                    Log::info(json_encode($nodes[$child_id]));
                     if (
                         ((isset($nodes[$child_id]['type']) && $nodes[$child_id]['type'] !== config('medal.node_types.final_diagnosis') &&
                             $diagram_type === config('medal.node_types.diagnosis')) ||
@@ -2719,7 +2734,7 @@ class Refacto extends Component
     {
         $this->manageVitalSign($cached_data);
         $this->manageComplaintCategory($cached_data);
-        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] = $this->manageBasicMeasurement($cached_data);
+        $this->manageBasicMeasurement($cached_data);
     }
 
     public function manageVitalSign($cached_data)
@@ -2754,13 +2769,11 @@ class Refacto extends Component
 
         if (!isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
             if ($this->age_in_days <= 59) {
-                dump('setted');
                 $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] = array_fill_keys(array_filter($neonat_cc, function ($node_id) use ($cached_data, $neonat_general_id, $instances, $mc_nodes) {
                     return $node_id !== $neonat_general_id &&
                         $this->calculateConditionInverse($cached_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
                 }), '');
             } else {
-                dump('setted');
                 $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] = array_fill_keys(array_filter($older_cc, function ($node_id) use ($cached_data, $older_general_id, $instances, $mc_nodes) {
                     return $node_id !== $older_general_id &&
                         $this->calculateConditionInverse($cached_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
@@ -2777,16 +2790,15 @@ class Refacto extends Component
         $mc_nodes = $this->medical_case['nodes'];
         $instances = $algorithm['diagram']['instances'];
 
-        return array_fill_keys(array_filter($order, function ($question_id) use ($cached_data, $nodes, $mc_nodes, $instances) {
+        $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'] = array_fill_keys(array_filter($order, function ($question_id) use ($cached_data, $nodes, $mc_nodes, $instances) {
+            // Check if the question is conditioned by any complaint category (CC)
             if (!empty($nodes[$question_id]['conditioned_by_cc'])) {
-                // Check if any of the complaint categories (cc) are true; if so, exclude the question
-                $exclude_question = array_reduce($nodes[$question_id]['conditioned_by_cc'], function ($carry, $cc_id) use ($mc_nodes, $nodes) {
-                    return $carry || ($mc_nodes[$cc_id]['answer'] === $this->getYesAnswer($nodes[$cc_id]));
-                }, false);
+                // If one of the CCs is true, we need to exclude the question
+                $exclude = array_filter($nodes[$question_id]['conditioned_by_cc'], function ($cc_id) use ($cached_data, $mc_nodes, $nodes) {
+                    return $mc_nodes[$cc_id]['answer'] === $this->getYesAnswer($nodes[$cc_id]);
+                });
 
-                if ($exclude_question) {
-                    return $this->calculateConditionInverse($cached_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
-                }
+                return !empty($exclude) && $this->calculateConditionInverse($cached_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
             }
 
             return $this->calculateConditionInverse($cached_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
@@ -2795,8 +2807,13 @@ class Refacto extends Component
 
     public function manageConsultationStep($cached_data)
     {
-        $this->manageMedicalHistory($cached_data);
-        $this->managePhysicalExam($cached_data);
+        if ($this->current_sub_step === 'medical_history') {
+            $this->manageMedicalHistory($cached_data);
+        }
+        if ($this->current_sub_step === 'physical_exam') {
+            dump('live');
+            $this->managePhysicalExam($cached_data);
+        }
 
         $this->current_cc = key(array_filter($this->chosen_complaint_categories));
 
@@ -2813,6 +2830,7 @@ class Refacto extends Component
     public function manageMedicalHistory($cached_data)
     {
         $algorithm = $cached_data['algorithm'];
+
         $question_per_systems = [];
 
         $medical_history_categories = [
@@ -2822,8 +2840,10 @@ class Refacto extends Component
             config('medal.categories.vaccine'),
             config('medal.categories.observed_physical_sign'),
         ];
+        $instances = $algorithm['diagram']['instances'];
         $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
         $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
+        $mc_nodes = $this->medical_case['nodes'];
 
         $valid_diagnoses = $this->getValidDiagnoses($cached_data);
 
@@ -2847,8 +2867,10 @@ class Refacto extends Component
 
         $updated_systems = [];
         foreach ($medical_history_step as $system) {
-            $new_questions = array_fill_keys(array_filter($system['data'], function ($question_id) use ($question_per_systems, $system) {
-                return in_array($question_id, $question_per_systems[$system['title']] ?? []);
+            $new_questions = array_fill_keys(array_filter($system['data'], function ($question_id) use ($cached_data, $mc_nodes, $question_per_systems, $system, $instances) {
+                return isset($question_per_systems[$system['title']]) &&
+                    in_array($question_id, $question_per_systems[$system['title']]) &&
+                    $this->calculateConditionInverse($cached_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
             }), '');
 
             // Check if new_questions differs from current_systems
@@ -2884,8 +2906,10 @@ class Refacto extends Component
             config('medal.categories.physical_exam'),
             config('medal.categories.vital_sign_anthropometric')
         ];
+        $instances = $algorithm['diagram']['instances'];
         $physical_exam_step = $algorithm['config']['full_order']['physical_exam_step'];
         $current_systems =  $this->current_nodes['consultation']['physical_exam'] ?? [];
+        $mc_nodes = $this->medical_case['nodes'];
 
         $valid_diagnoses = $this->getValidDiagnoses($cached_data);
 
@@ -2908,12 +2932,13 @@ class Refacto extends Component
         }
 
         $updated_systems = [];
-
         foreach ($physical_exam_step as $system) {
-            $new_questions = array_fill_keys(array_filter($system['data'], function ($question_id) use ($question_per_systems, $system) {
-                return in_array($question_id, $question_per_systems[$system['title']] ?? []);
+            $new_questions = array_fill_keys(array_filter($system['data'], function ($question_id) use ($cached_data, $mc_nodes, $question_per_systems, $system, $instances) {
+                return isset($question_per_systems[$system['title']]) &&
+                    in_array($question_id, $question_per_systems[$system['title']]) &&
+                    $this->calculateConditionInverse($cached_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
             }), '');
-
+            dump($new_questions);
             // Check if new_questions differs from current_systems
             if (!empty($new_questions) && (!isset($current_systems[$system['title']]) || !empty(array_diff($current_systems[$system['title']], $new_questions)))) {
                 $updated_systems[$system['title']] = array_replace($updated_systems[$system['title']] ?? [], $new_questions);
@@ -2931,12 +2956,15 @@ class Refacto extends Component
             }
         }
 
+        dump($updated_systems);
+
         $updated_systems['follow_up_questions'] = array_unique($question_per_systems['follow_up_questions'] ?? []);
 
         $this->current_nodes['consultation']['physical_exam'] = array_replace(
             $this->current_nodes['consultation']['physical_exam'] ?? [],
             $updated_systems
         );
+        dump($this->current_nodes['consultation']['physical_exam']);
     }
 
     public function manageTestStep($cached_data)
@@ -3700,7 +3728,16 @@ class Refacto extends Component
     public function goToStep(string $step): void
     {
         $cached_data = Cache::get($this->cache_key);
-
+        $this->current_step = $step;
+        dump($step);
+        //We set the first substep
+        if ($this->current_sub_step === '' && $this->algorithm_type === 'dynamic') {
+            if (!empty($this->steps[$this->algorithm_type][$this->current_step])) {
+                dump($this->current_sub_step);
+                $this->current_sub_step = $this->steps[$this->algorithm_type][$this->current_step][0];
+            }
+        }
+        dump($this->current_sub_step);
         if ($this->algorithm_type === 'prevention') {
             $this->validate();
         }
@@ -3750,7 +3787,6 @@ class Refacto extends Component
             $this->completion_per_step[1] = 100;
         }
 
-        $this->current_step = $step;
         //We trigger again the calculation in case of modification from the registration
 
         //We set the first substep
@@ -3770,8 +3806,8 @@ class Refacto extends Component
     {
         $cached_data = Cache::get($this->cache_key);
 
-        $this->goToStep($step);
         $this->current_sub_step = $substep;
+        $this->goToStep($step);
 
         // medicines
         if (($substep === 'medicines') && isset($this->diagnoses_status) && count(array_filter($this->diagnoses_status))) {

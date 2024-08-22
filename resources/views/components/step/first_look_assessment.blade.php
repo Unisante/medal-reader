@@ -50,5 +50,6 @@
   </div>
 @endforeach
 <div class="d-flex justify-content-end">
-  <button class="btn button-unisante m-1" wire:click="goToStep('consultation')">consultation</button>
+  <button class="btn button-unisante m-1"
+    wire:click="goToSubStep('consultation', 'medical_history')">consultation</button>
 </div>
