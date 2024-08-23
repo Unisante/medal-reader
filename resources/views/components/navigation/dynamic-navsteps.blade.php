@@ -71,7 +71,7 @@
   {{-- Consultation --}}
   @if ($saved_step >= 3)
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
-      wire:click="goToStep('consultation')"
+      wire:click="goToSubStep('consultation', 'medical_history')"
       class="step dynamic-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $saved_step > 3 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
@@ -141,7 +141,7 @@
   {{-- Diagnoses --}}
   @if ($saved_step >= 5)
     <div name="navstep" style="{{ $saved_step >= 5 ? 'cursor:pointer;' : 'cursor:default;' }}"
-      wire:click="goToStep('diagnoses')"
+      wire:click="goToSubStep('diagnoses', 'final_diagnoses')"
       class="step dynamic-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 5 ? ' empty' : '' }}{{ $saved_step > 5 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 5 ? 'cursor:pointer;' : 'cursor:default;' }}"
