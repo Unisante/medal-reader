@@ -1025,7 +1025,7 @@ class Refacto extends Component
         $algorithm = $cached_data['algorithm'];
         $need_emergency = $cached_data['need_emergency'];
         $nodes = $algorithm['nodes'];
-        $new_medical_case = $this->medical_case;
+        $this->medical_case = $this->medical_case;
         $node_id = intval(Str::of($key)->explode('.')->last());
         Arr::set($this->current_nodes, $key, $value);
 
@@ -1037,19 +1037,19 @@ class Refacto extends Component
         }
 
         $node = $nodes[$node_id];
-        $mc_node = $new_medical_case['nodes'][$node_id];
+        $mc_node = $this->medical_case['nodes'][$node_id];
         $new_nodes = [];
 
         // Set the new value to the current node
         $new_values = $this->setNodeValue($cached_data, $mc_node, $node, $value);
-
         $new_nodes[$node_id] = array_replace($mc_node, $new_values);
+
         // Update question sequence
         $new_nodes = $this->updateQuestionSequence(
             $cached_data,
             $node['id'],
             $new_nodes,
-            $new_medical_case['nodes']
+            $this->medical_case['nodes']
         );
 
         // Update related questions
@@ -1057,7 +1057,7 @@ class Refacto extends Component
             $cached_data,
             $node['id'],
             $new_nodes,
-            $new_medical_case['nodes']
+            $this->medical_case['nodes']
         );
 
 
@@ -1067,14 +1067,13 @@ class Refacto extends Component
             'system' => $node['system'] ?? '',
         ];
 
-        foreach ($new_nodes as $key => $v) {
-            if (array_key_exists($key, $this->medical_case['nodes'])) {
-                $new_questions[$key] = $this->medical_case['nodes'][$key];
-            }
-        }
+        // foreach ($new_nodes as $key => $v) {
+        //     if (array_key_exists($key, $this->medical_case['nodes'])) {
+        //         $new_questions[$key] = $this->medical_case['nodes'][$key];
+        //     }
+        // }
 
         // $updated_systems[$system['title']] = array_intersect_key($new_questions, $updated_systems[$system['title']]);
-
         $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
 
         match ($this->current_step) {
@@ -1664,7 +1663,7 @@ class Refacto extends Component
         return null;
     }
 
-    public function calculateFormula($cached_data, $node_id)
+    public function calculateFormula($cached_data, $node_id, $new_nodes)
     {
         $formula_hash_map = $cached_data['formula_hash_map'];
         $full_nodes = $cached_data['full_nodes'];
@@ -1732,8 +1731,8 @@ class Refacto extends Component
             }
         } else {
             //In this situation we have a formula to calculate
-            $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) {
-                return $this->medical_case['nodes'][$matches[1]]['value'];
+            $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($new_nodes) {
+                return $new_nodes[$matches[1]]['value'];
             }, $formula);
 
             try {
@@ -2689,7 +2688,7 @@ class Refacto extends Component
 
             // Determine if the node is a formula or reference table
             if ($node['display_format'] === config('medal.display_format.formula')) {
-                $value = $this->calculateFormula($cached_data, $question_id);
+                $value = $this->calculateFormula($cached_data, $question_id, $new_nodes);
             } else {
                 $value = $this->calculateReference($cached_data, $question_id, array_replace($mc_nodes, $new_nodes));
             }
@@ -3004,8 +3003,10 @@ class Refacto extends Component
                 }
             }
             $updated_systems[$system['title']] = $new_questions;
-            $updated_systems[$system['title']] = array_intersect_key($updated_systems[$system['title']], $new_questions);
+            // $updated_systems[$system['title']] = array_intersect_key($updated_systems[$system['title']], $new_questions);
+            $updated_systems[$system['title']] = array_intersect_key($new_questions, $updated_systems[$system['title']]);
         }
+
 
         $updated_systems['follow_up_questions'] = array_unique($question_per_systems['follow_up_questions'] ?? []);;
 
@@ -3047,16 +3048,38 @@ class Refacto extends Component
             return in_array($question, $questions_to_display);
         }), '');
 
+        foreach ($tests_nodes as $node_id => $v) {
+            if (array_key_exists($node_id, $this->current_nodes['tests'] ?? [])) {
+                $tests_nodes[$node_id] = $this->current_nodes['tests'][$node_id];
+            }
+        }
         $this->current_nodes['tests'] = $tests_nodes;
+
+        $this->current_nodes['tests'] = array_intersect_key($tests_nodes, $this->current_nodes['tests']);
+
+        $this->current_nodes['tests'] = array_replace(
+            $this->current_nodes['tests'] ?? [],
+            $tests_nodes
+        );
     }
 
     public function manageDiagnosesStep($cached_data)
     {
-        $this->manageFinalDiagnose($cached_data);
-        $this->manageTreatment($cached_data);
-        // $this->manageDrugs();
-        // $this->manageSummary();
-        $this->manageReferral($cached_data);
+        if ($this->current_sub_step === 'final_diagnoses') {
+            $this->manageFinalDiagnose($cached_data);
+        }
+        if ($this->current_sub_step === 'treatment_questions') {
+            $this->manageTreatment($cached_data);
+        }
+        if ($this->current_sub_step === 'medicines') {
+            // $this->manageDrugs();
+        }
+        if ($this->current_sub_step === 'summary') {
+            // $this->manageSummary();
+        }
+        if ($this->current_sub_step === 'referral') {
+            $this->manageReferral($cached_data);
+        }
     }
 
     public function manageTreatment($cached_data)
@@ -3096,12 +3119,21 @@ class Refacto extends Component
             );
         }
 
+        $questions_to_display = array_fill_keys($questions_to_display, '');
+
+        foreach ($questions_to_display as $node_id => $v) {
+            if (array_key_exists($node_id, $this->current_nodes['diagnoses']['treatment_questions'] ?? [])) {
+                $questions_to_display[$node_id] = $this->current_nodes['diagnoses']['treatment_questions'][$node_id];
+            }
+        }
+        $this->current_nodes['diagnoses']['treatment_questions'] = $questions_to_display;
+
+        $this->current_nodes['diagnoses']['treatment_questions'] = array_intersect_key($questions_to_display, $this->current_nodes['diagnoses']['treatment_questions']);
+
         $this->current_nodes['diagnoses']['treatment_questions'] = array_replace(
             $this->current_nodes['diagnoses']['treatment_questions'] ?? [],
-            array_fill_keys($questions_to_display, '')
+            $questions_to_display
         );
-
-        return array_unique($questions_to_display);
     }
 
     public function manageReferral($cached_data)
@@ -3121,6 +3153,7 @@ class Refacto extends Component
         $algorithm = $cached_data['algorithm'];
         // $mc_diagnosis = $this->deepCopy($this->medical_case['diagnosis']);
         $mc_diagnosis = $this->medical_case['diagnosis'];
+
         $diagnoses = $algorithm['diagnoses'];
         $nodes = $algorithm['nodes'];
         $valid_diagnoses = $this->getValidDiagnoses($cached_data);
@@ -3161,8 +3194,8 @@ class Refacto extends Component
         $mc_diagnosis['excluded'] = array_replace($mc_diagnosis['excluded'], array_map(fn($final_diagnosis) => $final_diagnosis['id'], $excluded_diagnoses));
 
         $this->current_nodes['diagnoses'] = array_replace(
-            $mc_diagnosis,
             $this->current_nodes['diagnoses'] ?? [],
+            $mc_diagnosis,
         );
     }
 
