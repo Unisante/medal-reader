@@ -2191,7 +2191,6 @@ class Refacto extends Component
         $nodes = $algorithm['nodes'];
 
         foreach ($children as $instance) {
-
             if (
                 (!$this->excludedByCc($cached_data, $instance['id']) && empty($instance['conditions'])) ||
                 $this->calculateCondition($cached_data, $instance, $source)
@@ -2279,14 +2278,13 @@ class Refacto extends Component
         $nodes = $algorithm['nodes'];
         $mc_nodes = $this->medical_case['nodes'];
 
-        // Check if the question's category is in the provided categories
         if (in_array($nodes[$question_id]['category'], $categories)) {
-            // Find the index of the last updated system in the system order
+
             $old_system_index = array_search(
                 $this->last_system_updated['system'] ?? null,
                 array_column($system_order, 'title')
             );
-            // Find the index of the current question's system in the system order
+
             $current_question_system_index = array_search(
                 $nodes[$question_id]['system'],
                 array_column($system_order, 'title')
@@ -2297,12 +2295,9 @@ class Refacto extends Component
                 $visible_nodes[] = $key;
             });
 
-            // Check if the question is already displayed
             $is_already_displayed = in_array($question_id, $visible_nodes);
-            // Check if any of the visible nodes have been answered
             $is_nodes_already_answered = $this->isNodeAnswered($visible_nodes, $mc_nodes);
 
-            // Logic to add the question to the appropriate system
             if (
                 (!$is_already_displayed &&
                     $is_nodes_already_answered &&
@@ -2387,6 +2382,7 @@ class Refacto extends Component
             if ($source_id !== null && $condition['node_id'] !== $source_id) {
                 continue;
             }
+
             if (
                 isset($mc_nodes[$condition['node_id']]) &&
                 $mc_nodes[$condition['node_id']]['answer'] === $condition['answer_id'] &&
@@ -2630,7 +2626,7 @@ class Refacto extends Component
                 return !$this->excludedByCC($cached_data, $child_id);
             });
 
-            $qs_to_update = array_replace($qs_to_update, $new_qs_list);
+            $qs_to_update = array_merge($qs_to_update, $new_qs_list);
 
             // uniq to avoid processing the same QS multiple times
             $qs_to_update = array_unique(array_slice($qs_to_update, 1));
@@ -2699,6 +2695,7 @@ class Refacto extends Component
             $new_question_values = $this->handleNumeric($cached_data, $mc_node, $node, $value);
             // Set the question value in the store
             $new_nodes[$question_id] = array_replace($mc_nodes[$question_id], $new_question_values);
+
             // Add the related questions to the update list
             $questions_to_update = array_merge($questions_to_update, $node['referenced_in']);
 
