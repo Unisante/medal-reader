@@ -80,7 +80,7 @@
   @if ($current_step === 'consultation')
     <div class="row g-3 mt-3">
       <div class="col-8 border-end">
-        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$chosen_complaint_categories :$full_nodes :$nodes_to_save :$current_cc
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$chosen_complaint_categories :$full_nodes :$nodes_to_save :$current_cc
           :$cache_key :$debug_mode />
       </div>
       <div class="col-4">

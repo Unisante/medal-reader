@@ -8,7 +8,6 @@
 @endphp
 
 <div class="input-container mb-2">
-
   <div wire:ignore>
     @if ($full_nodes[$node_id]['description']['en'])
       @if (Str::contains($full_nodes[$node_id]['description']['en'], '[i]') || $this->algorithm_type === 'dynamic')

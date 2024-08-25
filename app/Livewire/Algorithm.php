@@ -2374,7 +2374,6 @@ class Algorithm extends Component
                                             if ($condition['cut_off_start'] >= $this->age_in_days || $condition['cut_off_end'] < $this->age_in_days) {
                                                 unset($this->current_nodes['consultation'][$cc_id][$node_id]);
                                                 if (array_key_exists($node_id, $this->nodes_to_save)) {
-                                                    if ($node_id === 8447) dump('here');
                                                     $this->nodes_to_save[$node_id] = [
                                                         'value' => '',
                                                         'answer_id' => '',
