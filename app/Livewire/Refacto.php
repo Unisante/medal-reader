@@ -654,11 +654,11 @@ class Refacto extends Component
             // $this->current_nodes['registration'][42318] = 74;
             // $this->current_nodes['registration'][42323] = 160;
 
-            // $this->current_nodes['registration']['birth_date'] = '2001-04-08';
+            // $this->current_nodes['registration']['birth_date'] = '1980-01-01';
             // $this->chosen_complaint_categories = [];
             // $this->df_to_display = [];
             // $this->diagnoses_per_cc = [];
-            // $this->updatingCurrentNodesRegistrationBirthDate('1950-10-05');
+            // $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
         }
         //END TO REMOVE
 
@@ -2171,6 +2171,10 @@ class Refacto extends Component
         $cut_off_start = isset($condition['cut_off_start']) ? $condition['cut_off_start'] : null;
         $cut_off_end = isset($condition['cut_off_end']) ? $condition['cut_off_end'] : null;
 
+        if (!isset($this->age_in_days)) {
+            return false;
+        }
+
         if (is_null($cut_off_start) && is_null($cut_off_end)) {
             return true;
         }
@@ -2374,15 +2378,8 @@ class Refacto extends Component
         }
 
         foreach ($nodes[$question_id]['conditioned_by_cc'] as $cc_id) {
-            if ($this->algorithm_type === 'dynamic') {
-                if ($mc_nodes[$cc_id]['answer'] === $this->getNoAnswer($nodes[$cc_id])) {
-                    return true;
-                }
-            }
-            if ($this->algorithm_type === 'prevention') {
-                if ($mc_nodes[$cc_id]['answer'] === $this->getYesAnswer($nodes[$cc_id])) {
-                    return true;
-                }
+            if ($mc_nodes[$cc_id]['answer'] === $this->getNoAnswer($nodes[$cc_id])) {
+                return true;
             }
         }
 
@@ -2400,6 +2397,7 @@ class Refacto extends Component
         if (empty($instance['conditions'])) {
             return true;
         }
+
         foreach ($instance['conditions'] as $condition) {
             if ($source_id !== null && $condition['node_id'] !== $source_id) {
                 continue;
@@ -2435,6 +2433,7 @@ class Refacto extends Component
                     return false;
                 }
             }, $nodes[$qs_id]['conditions']);
+
             return $this->reduceConditions($conditions_values);
         }
     }
@@ -2926,13 +2925,13 @@ class Refacto extends Component
         $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
         $mc_nodes = $this->medical_case['nodes'];
 
-        $valid_diagnoses = $this->getValidDiagnoses($cached_data);
-
         $valid_diagnoses = $this->getValidPreventionDiagnoses($cached_data);
+
         if (empty($valid_diagnoses)) {
             flash()->addError('There is no recommendation for this age range');
             return;
         }
+
         foreach ($valid_diagnoses as $cc_id => $diagnosis_per_cc) {
             foreach ($diagnosis_per_cc as $diagnosis) {
                 $top_conditions = $this->getTopConditions($diagnosis['instances']);

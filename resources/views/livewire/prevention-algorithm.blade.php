@@ -45,7 +45,7 @@
         @endforeach
         <div class="d-flex justify-content-end pe-3">
           <button class="btn button-unisante mt-3" @if (empty(array_filter($chosen_complaint_categories))) disabled @endif
-            wire:click="goToStep('consultation')">Surveys</button>
+            wire:click="goToSubStep('consultation', 'medical_history')">Surveys</button>
         </div>
       </div>
       <div class="col-4">
