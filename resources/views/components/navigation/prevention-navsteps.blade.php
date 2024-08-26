@@ -72,7 +72,7 @@
   {{-- Consultation --}}
   @if ($saved_step >= 3 && !empty(array_filter($chosen_complaint_categories)))
     <div name="navstep" style="{{ $saved_step >= 3 ? 'cursor:pointer;' : 'cursor:default;' }}"
-      wire:click="goToStep('consultation')"
+      wire:click="goToSubStep('consultation', 'medical_history')"
       class="step prevention-step{{ $current_step === 'consultation' ? ' active' : '' }}{{ $saved_step < 3 ? ' empty' : '' }}{{ $completion_per_step['consultation']['end'] >= 100 && $saved_step > 3 ? ' success' : '' }}">
     @else
       <div name="navstep"
@@ -108,7 +108,7 @@
   {{-- Results but using diagnoses step --}}
   @if ($saved_step >= 4)
     <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
-      wire:click="goToStep('diagnoses')"
+      wire:click="goToSubStep('diagnoses', 'final_diagnoses')"
       class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step > 4 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"

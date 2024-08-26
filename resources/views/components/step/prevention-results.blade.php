@@ -15,96 +15,60 @@
   $health_cares = $cache['health_cares'];
   $female_gender_answer_id = $cache['female_gender_answer_id'];
   $gender = $gender_node === $female_gender_answer_id ? 'f' : 'm';
-  $all_diag = [];
-  $df_to_display_after_check = [];
 
-  foreach ($diagnoses_per_cc as $diag_cc_id => $dd_per_cc) {
-      foreach ($dd_per_cc as $dd_id => $label) {
-          $all_diag[$dd_id] = $label;
-      }
-  }
-
-  foreach ($df_to_display as $potential_df_id => $potential_df) {
-      foreach ($diagnoses_per_cc as $diags_cc_dd => $diags_per_cc) {
-          foreach ($diags_per_cc as $diag_id => $l) {
-              $df = $final_diagnoses[$potential_df_id];
-              $df_id = $df['id'];
-              $dd_to_check = $df['diagnosis_id'];
-              if ($dd_to_check === $diag_id) {
-                  if (isset(array_filter($chosen_complaint_categories)[$df['cc']])) {
-                      $df_to_display_after_check[$df_id] = '';
-                  }
-              }
-          }
-      }
-  }
-  // if () {
-  //       if (!Str::contains($diagnose, '[M]')) {
-
-  $high_dfs = collect($df_to_display_after_check)->filter(function ($df, $k) use (
-      $final_diagnoses,
-      $all_diag,
-      $gender,
-  ) {
-      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+  $high_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $gender) {
+      $df = $final_diagnoses[$k];
+      $dd_id = $df['diagnosis_id'];
       $gender_is_ok = false;
+
       if (
-          isset($all_diag[$dd_id]) &&
-          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
-              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+          isset($df['label']['en']) &&
+          ((!Str::contains($df['label']['en'], '[M]') && $gender === 'f') ||
+              (!Str::contains($df['label']['en'], '[F]') && $gender === 'm'))
       ) {
           $gender_is_ok = true;
       }
-      return $final_diagnoses[$k]['level_of_urgency'] === 10 && $gender_is_ok;
+      return $df['level_of_urgency'] === 10 && $gender_is_ok;
   });
 
-  $moderate_dfs = collect($df_to_display_after_check)->filter(function ($df, $k) use (
-      $final_diagnoses,
-      $all_diag,
-      $gender,
-  ) {
-      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+  $moderate_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $gender) {
+      $df = $final_diagnoses[$k];
+      $dd_id = $df['diagnosis_id'];
       $gender_is_ok = false;
       if (
-          isset($all_diag[$dd_id]) &&
-          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
-              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+          isset($df['label']['en']) &&
+          ((!Str::contains($df['label']['en'], '[M]') && $gender === 'f') ||
+              (!Str::contains($df['label']['en'], '[F]') && $gender === 'm'))
       ) {
           $gender_is_ok = true;
       }
-      return $final_diagnoses[$k]['level_of_urgency'] === 9 && $gender_is_ok;
+      return $df['level_of_urgency'] === 9 && $gender_is_ok;
   });
-  $light_dfs = collect($df_to_display_after_check)->filter(function ($df, $k) use (
-      $final_diagnoses,
-      $all_diag,
-      $gender,
-  ) {
-      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+  $light_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $gender) {
+      $df = $final_diagnoses[$k];
+      $dd_id = $df['diagnosis_id'];
       $gender_is_ok = false;
       if (
-          isset($all_diag[$dd_id]) &&
-          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
-              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+          isset($df['label']['en']) &&
+          ((!Str::contains($df['label']['en'], '[M]') && $gender === 'f') ||
+              (!Str::contains($df['label']['en'], '[F]') && $gender === 'm'))
       ) {
           $gender_is_ok = true;
       }
-      return $final_diagnoses[$k]['level_of_urgency'] === 8 && $gender_is_ok;
+      return $df['level_of_urgency'] === 8 && $gender_is_ok;
   });
-  $other_dfs = collect($df_to_display_after_check)->filter(function ($df, $k) use (
-      $final_diagnoses,
-      $all_diag,
-      $gender,
-  ) {
-      $dd_id = $final_diagnoses[$k]['diagnosis_id'];
+  $other_dfs = collect($df_to_display)->filter(function ($df, $k) use ($final_diagnoses, $gender) {
+      $df = $final_diagnoses[$k];
+      $dd_id = $df['diagnosis_id'];
       $gender_is_ok = false;
       if (
-          isset($all_diag[$dd_id]) &&
-          ((!Str::contains($all_diag[$dd_id], '[M]') && $gender === 'f') ||
-              (!Str::contains($all_diag[$dd_id], '[F]') && $gender === 'm'))
+          isset($df['label']['en']) &&
+          ((!Str::contains($df['label']['en'], '[M]') && $gender === 'f') ||
+              (!Str::contains($df['label']['en'], '[F]') && $gender === 'm'))
       ) {
           $gender_is_ok = true;
       }
-      return $final_diagnoses[$k]['level_of_urgency'] < 8 && $gender_is_ok;
+      return $df['level_of_urgency'] < 8 && $gender_is_ok;
   });
 @endphp
 

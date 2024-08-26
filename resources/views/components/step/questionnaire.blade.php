@@ -67,7 +67,8 @@
             <button class="btn button-unisante m-1" wire:click="goToNextCc()">Next</button>
           @endif
           @if ($loop->last)
-            <button class="btn button-unisante m-1" wire:click="goToStep('diagnoses')">Results</button>
+            <button class="btn button-unisante m-1"
+              wire:click="goToSubStep('diagnoses','final_diagnoses')">Results</button>
           @endif
         </div>
       @endif
