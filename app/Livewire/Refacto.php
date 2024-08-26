@@ -1018,6 +1018,8 @@ class Refacto extends Component
     {
         if ($this->algorithmService->isDate($value)) return;
 
+        if (Str::of($key)->contains('first_name') || Str::of($key)->contains('last_name')) return;
+
         if (Str::of($key)->contains('first_look_nodes_id')) {
             if ($value) {
                 $this->dispatch('openEmergencyModal');
@@ -3934,6 +3936,10 @@ class Refacto extends Component
                     flash()->addError('This patient is ineligible for the study (age). No clinical data will be collected');
                     return;
                 }
+            }
+            if (!isset($this->age_in_days)) {
+                flash()->addError('Please enter a date of birth');
+                return;
             }
         }
 
