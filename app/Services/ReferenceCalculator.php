@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 
 class ReferenceCalculator
 {
@@ -18,12 +19,12 @@ class ReferenceCalculator
     public function calculateReference(int $node_id, array $nodes, string $gender)
     {
         $value = null;
-
         // Parse value in correct format
         if ($nodes['x']['value'] !== '' && $nodes['y']['value'] !== '') {
             $x = $this->parseValue($nodes['current'], $nodes['x']);
             $y = $this->parseValue($nodes['current'], $nodes['y']);
             $z = isset($nodes['z']) ? $this->parseValue($nodes['current'], $nodes['z']) : null;
+
             $reference = $this->getReferenceTable($nodes['current'], $gender);
             if ($reference !== null && $z === null) {
                 $value = $this->processReferenceTable($reference, $x, $y);

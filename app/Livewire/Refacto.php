@@ -633,13 +633,13 @@ class Refacto extends Component
             'system' => null,
         ];
 
-        // $this->current_nodes['registration']['birth_date'] = '1971-01-01';
+        $this->current_nodes['registration']['birth_date'] = '2018-01-01';
         // $this->chosen_complaint_categories = [];
         // $this->df_to_display = [];
         // $this->diagnoses_per_cc = [];
         // $this->drugs_to_display = [];
         // $this->all_managements_to_display = [];
-        // $this->updatingCurrentNodesRegistrationBirthDate('1971-01-01');
+        $this->updatingCurrentNodesRegistrationBirthDate('2018-01-01');
 
         if ($this->algorithm_type === 'prevention') {
             unset($this->current_nodes['registration']['first_name']);
@@ -650,15 +650,15 @@ class Refacto extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration'][42321] = 43855;
-            // $this->current_nodes['registration'][42318] = 74;
-            // $this->current_nodes['registration'][42323] = 160;
+            $this->current_nodes['registration'][42321] = 43855;
+            $this->current_nodes['registration'][42318] = 74;
+            $this->current_nodes['registration'][42323] = 160;
 
-            // $this->current_nodes['registration']['birth_date'] = '1980-01-01';
-            // $this->chosen_complaint_categories = [];
-            // $this->df_to_display = [];
-            // $this->diagnoses_per_cc = [];
-            // $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
+            $this->current_nodes['registration']['birth_date'] = '1974-01-01';
+            $this->chosen_complaint_categories = [];
+            $this->df_to_display = [];
+            $this->diagnoses_per_cc = [];
+            $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
         }
         //END TO REMOVE
 
@@ -1087,7 +1087,7 @@ class Refacto extends Component
 
     public function updatingChosenComplaintCategories($value, int $modified_cc_id)
     {
-        $cached_data = empty($cached_data) ? Cache::get($this->cache_key) : $cached_data;
+        $cached_data = Cache::get($this->cache_key);
         $nodes = $cached_data['algorithm']['nodes'];
 
         if ($value) {
@@ -1100,8 +1100,6 @@ class Refacto extends Component
     #[On('nodeToSave')]
     public function saveNode($key, $node_id, $value, $answer_id, $old_answer_id, $cached_data = [])
     {
-        Log::info('start--------------');
-        Log::info($node_id);
         $cached_data = empty($cached_data) ? Cache::get($this->cache_key) : $cached_data;
         $formula_hash_map = $cached_data['formula_hash_map'];
         $drugs_hash_map = $cached_data['drugs_hash_map'];
@@ -4357,5 +4355,15 @@ class Refacto extends Component
         };
 
         return view($view);
+    }
+
+    public function debugUpdatingCurrentNodesRegistrationBirthDate($birth_date)
+    {
+        return $this->updatingCurrentNodesRegistrationBirthDate($birth_date);
+    }
+
+    public function debugUpdatingCurrentNodes($key, $value)
+    {
+        return $this->updatingCurrentNodes($value, $key);
     }
 }
