@@ -650,15 +650,15 @@ class Refacto extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            // $this->current_nodes['registration'][42321] = 43855;
-            // $this->current_nodes['registration'][42318] = 74;
-            // $this->current_nodes['registration'][42323] = 160;
+            $this->current_nodes['registration'][42321] = 43855;
+            $this->current_nodes['registration'][42318] = 74;
+            $this->current_nodes['registration'][42323] = 160;
 
-            // $this->current_nodes['registration']['birth_date'] = '1980-01-01';
-            // $this->chosen_complaint_categories = [];
-            // $this->df_to_display = [];
-            // $this->diagnoses_per_cc = [];
-            // $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
+            $this->current_nodes['registration']['birth_date'] = '1980-01-01';
+            $this->chosen_complaint_categories = [];
+            $this->df_to_display = [];
+            $this->diagnoses_per_cc = [];
+            $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
         }
         //END TO REMOVE
 
@@ -2929,6 +2929,8 @@ class Refacto extends Component
 
         $valid_diagnoses = $this->getValidPreventionDiagnoses($cached_data);
 
+        $this->diagnoses_per_cc = $valid_diagnoses;
+
         if (empty($valid_diagnoses)) {
             flash()->addError('There is no recommendation for this age range');
             return;
@@ -3966,6 +3968,7 @@ class Refacto extends Component
                     flash()->addError('There is no recommendation for this age range');
                     return;
                 }
+                $this->diagnoses_per_cc = $valid_diagnoses;
             }
             $this->manageFirstLookAssessmentStep($cached_data);
         }

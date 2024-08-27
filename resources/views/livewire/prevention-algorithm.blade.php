@@ -51,21 +51,21 @@
       <div class="col-4">
         @foreach ($diagnoses_per_cc as $cc => $diagnoses)
           @foreach ($diagnoses as $diagnose)
-            <div wire:key="{{ $diagnose }}">
+            <div wire:key="diagnose-{{ $diagnose['id'] }}">
               @if (intval($current_nodes['registration'][$gender_question_id]) === $female_gender_answer_id)
-                @if (!Str::contains($diagnose, '[M]'))
+                @if (!Str::contains($diagnose['label']['en'], '[M]'))
                   @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
-                    <p class="text-success mb-0">{{ Str::replace('[F]', '', $diagnose) }}</p>
+                    <p class="text-success mb-0">{{ Str::replace('[F]', '', $diagnose['label']['en']) }}</p>
                   @else
-                    <p class="mb-0">{{ Str::replace('[F]', '', $diagnose) }}</p>
+                    <p class="mb-0">{{ Str::replace('[F]', '', $diagnose['label']['en']) }}</p>
                   @endif
                 @endif
               @else
-                @if (!Str::contains($diagnose, '[F]'))
+                @if (!Str::contains($diagnose['label']['en'], '[F]'))
                   @if (array_key_exists($cc, array_filter($chosen_complaint_categories)))
-                    <p class="text-success mb-0">{{ Str::replace('[M]', '', $diagnose) }}</p>
+                    <p class="text-success mb-0">{{ Str::replace('[M]', '', $diagnose['label']['en']) }}</p>
                   @else
-                    <p class="mb-0">{{ Str::replace('[M]', '', $diagnose) }}</p>
+                    <p class="mb-0">{{ Str::replace('[M]', '', $diagnose['label']['en']) }}</p>
                   @endif
                 @endif
               @endif
