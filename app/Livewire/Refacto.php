@@ -650,15 +650,15 @@ class Refacto extends Component
             $this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'] =
                 $cached_data['nodes_per_step']['first_look_assessment']['complaint_categories_nodes_id'][$this->age_key];
 
-            $this->current_nodes['registration'][42321] = 43855;
-            $this->current_nodes['registration'][42318] = 74;
-            $this->current_nodes['registration'][42323] = 160;
+            // $this->current_nodes['registration'][42321] = 43855;
+            // $this->current_nodes['registration'][42318] = 74;
+            // $this->current_nodes['registration'][42323] = 160;
 
-            $this->current_nodes['registration']['birth_date'] = '1980-01-01';
-            $this->chosen_complaint_categories = [];
-            $this->df_to_display = [];
-            $this->diagnoses_per_cc = [];
-            $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
+            // $this->current_nodes['registration']['birth_date'] = '1980-01-01';
+            // $this->chosen_complaint_categories = [];
+            // $this->df_to_display = [];
+            // $this->diagnoses_per_cc = [];
+            // $this->updatingCurrentNodesRegistrationBirthDate('1980-01-01');
         }
         //END TO REMOVE
 
@@ -1064,7 +1064,6 @@ class Refacto extends Component
             $this->medical_case['nodes']
         );
 
-
         $this->last_system_updated = [
             'stage' => $this->current_sub_step,
             'step' => $this->current_step,
@@ -1084,6 +1083,9 @@ class Refacto extends Component
             'diagnoses' => $this->manageDiagnosesStep($cached_data),
             default => null,
         };
+
+        dump($new_nodes);
+        dump($this->medical_case['nodes'][8469]);
     }
 
     public function updatingChosenComplaintCategories($value, int $modified_cc_id)
@@ -2311,6 +2313,9 @@ class Refacto extends Component
             $is_already_displayed = in_array($question_id, $visible_nodes);
             $is_nodes_already_answered = $this->isNodeAnswered($visible_nodes, $mc_nodes);
 
+            if ($question_id === 8535) dump($is_already_displayed);
+            if ($question_id === 8535) dump($is_nodes_already_answered);
+
             if (
                 (!$is_already_displayed &&
                     $is_nodes_already_answered &&
@@ -2390,7 +2395,7 @@ class Refacto extends Component
 
     public function calculateCondition($cached_data, $instance, $source_id = null, $new_nodes = [])
     {
-        $mc_nodes = array_replace($new_nodes, $this->medical_case['nodes']);
+        $mc_nodes = array_replace($this->medical_case['nodes'], $new_nodes);
 
         if ($this->excludedByCc($cached_data, $instance['id'])) {
             return false;
@@ -2580,7 +2585,6 @@ class Refacto extends Component
                 }
             }
         }
-
         return false;
     }
 
