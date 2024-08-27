@@ -1083,9 +1083,6 @@ class Refacto extends Component
             'diagnoses' => $this->manageDiagnosesStep($cached_data),
             default => null,
         };
-
-        dump($new_nodes);
-        dump($this->medical_case['nodes'][8469]);
     }
 
     public function updatingChosenComplaintCategories($value, int $modified_cc_id)
