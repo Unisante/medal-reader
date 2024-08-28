@@ -32,7 +32,7 @@ class RelatedQuestionsTest extends TestCase
         ])
             ->call('debugUpdatingCurrentNodesRegistrationBirthDate', $date_to_check)
             ->set('current_nodes.registration.214', 393)  // I'm a female
-            ->call('debugUpdatingCurrentNodes', 'medical_case.nodes.214', 393)
+            ->call('debugUpdatingCurrentNodes', 'current_nodes.registration.214', 393)
             ->call('debugUpdatingCurrentNodes', 'medical_case.nodes.97', 16.9) // my Muac 16.9 cm
             ->assertSet('medical_case.nodes.99.value', -1);
     }
@@ -40,8 +40,8 @@ class RelatedQuestionsTest extends TestCase
     /** @test */
     public function it_should_update_date_formulas_on_set_birthday()
     {
-        $today = Carbon::today();
-        $date_to_check = $today->subDays(129);
+        $today = Carbon::now()->addMinute();
+        $date_to_check = $today->copy()->subDays(129);
 
         Livewire::test(Refacto::class, [
             'id' => 0,
@@ -49,7 +49,7 @@ class RelatedQuestionsTest extends TestCase
             'data' => [],
         ])
             ->call('debugUpdatingCurrentNodesRegistrationBirthDate', $date_to_check)
-            ->assertSet('medical_case.nodes.2.value', 129);
+            ->assertSet('medical_case.nodes.2.value', '128');
     }
 
     /** @test */

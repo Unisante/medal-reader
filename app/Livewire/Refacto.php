@@ -41,6 +41,7 @@ class Refacto extends Component
     public string $algorithm_type;
     public bool $debug_mode = false;
     //todo remove definition when in prod
+    public object $created_at;
     public string $age_key = 'older';
     public string $current_step = 'registration';
     public int $saved_step = 1;
@@ -166,6 +167,7 @@ class Refacto extends Component
             abort(404);
         }
         $this->title = $json['name'];
+        $this->created_at = Carbon::now();
         $json_version = $json['medal_r_json_version'];
         $project_name = $json['algorithm_name'] ?? $json['medal_r_json']['algorithm_name'];
         $matching_projects = array_filter(config('medal.projects'), function ($project) use ($project_name) {
@@ -975,7 +977,9 @@ class Refacto extends Component
 
         if ($value) {
             $this->current_nodes['diagnoses']['agreed'][] = intval($key);
+            $this->current_nodes['diagnoses']['refused'] = array_diff($this->current_nodes['diagnoses']['refused'], [intval($key)]);
         } else {
+            $this->current_nodes['diagnoses']['refused'][] = intval($key);
             $this->current_nodes['diagnoses']['agreed'] = array_diff($this->current_nodes['diagnoses']['agreed'], [intval($key)]);
         }
         $this->manageFinalDiagnose($cached_data);
@@ -1544,10 +1548,8 @@ class Refacto extends Component
 
         //In this situation we just have to get the days/months/years
         if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
-            $today = new DateTime('today');
             $dob = new DateTime($this->current_nodes['registration']['birth_date']);
-
-            $interval = $today->diff($dob);
+            $interval = $this->created_at->diff($dob);
 
             if ($formula === "ToDay") {
                 $days = $interval->format('%a');
@@ -1665,10 +1667,8 @@ class Refacto extends Component
 
         //In this situation we just have to get the days/months/years
         if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
-            $today = new DateTime('today');
             $dob = new DateTime($this->current_nodes['registration']['birth_date']);
-
-            $interval = $today->diff($dob);
+            $interval = $this->created_at->diff($dob);
 
             if ($formula === "ToDay") {
                 $days = $interval->format('%a');
@@ -1756,10 +1756,8 @@ class Refacto extends Component
                 $formula = $formula_hash_map[$node_id] ?? null;
                 //In this situation we just have to get the days/months/years
                 if ($formula && ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear")) {
-                    $today = new DateTime('today');
                     $dob = new DateTime($birth_date);
-
-                    $interval = $today->diff($dob);
+                    $interval = $this->created_at->diff($dob);
 
                     if ($formula === "ToDay") {
                         $days = $interval->format('%a');
@@ -4365,5 +4363,10 @@ class Refacto extends Component
     public function debugUpdatingCurrentNodes($key, $value)
     {
         return $this->updatingCurrentNodes($value, $key);
+    }
+
+    public function debugUpdatedDiagnosesStatus($value, $key)
+    {
+        return $this->updatedDiagnosesStatus($value, $key);
     }
 }
