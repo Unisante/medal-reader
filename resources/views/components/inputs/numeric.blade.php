@@ -35,8 +35,8 @@
   @error('current_nodes.' . $step . '.' . $node_id)
     <div class="invalid-feedback" role="alert">{{ $message }}</div>
   @enderror
-  @if ($debug_mode)
-    <p style="font-size: smaller;" class="fst-italic">{{ $label }}</p>
+  @if ($debug_mode && $label)
+    <p class="mb-0 pb-0" style="font-size: smaller;" class="fst-italic">{{ $label }}</p>
   @endif
 </div>
 

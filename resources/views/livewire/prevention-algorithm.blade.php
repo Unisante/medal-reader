@@ -13,8 +13,8 @@
   @php
     $cache = Cache::get($cache_key);
     $full_nodes = $cache['full_nodes'];
-    $final_diagnoses = $cache['final_diagnoses'];
-    $health_cares = $cache['health_cares'];
+    $final_diagnoses = $cache['algorithm']['final_diagnoses'];
+    $health_cares = $cache['algorithm']['health_cares'];
     $gender_question_id = $cache['gender_question_id'];
     $female_gender_answer_id = $cache['female_gender_answer_id'];
   @endphp
@@ -26,7 +26,7 @@
     @if ($current_step === 'registration')
       <div class="row g-3 mt-3">
         <div class="col-8">
-          <x-step.registration :nodes="$current_nodes['registration']" :$nodes_to_save :$full_nodes :$cache_key :$algorithm_type
+          <x-step.registration :nodes="$current_nodes['registration']" :$full_nodes :$medical_case :$cache_key :$algorithm_type
             :$debug_mode />
         </div>
       </div>
@@ -80,7 +80,7 @@
   @if ($current_step === 'consultation')
     <div class="row g-3 mt-3">
       <div class="col-8 border-end">
-        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$chosen_complaint_categories :$full_nodes :$nodes_to_save :$current_cc
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$chosen_complaint_categories :$full_nodes :$medical_case :$current_cc
           :$cache_key :$debug_mode />
       </div>
       <div class="col-4">

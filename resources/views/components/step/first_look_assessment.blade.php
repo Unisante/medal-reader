@@ -1,4 +1,4 @@
-@props(['nodes', 'full_nodes', 'nodes_to_save', 'debug_mode'])
+@props(['nodes', 'full_nodes', 'medical_case', 'debug_mode'])
 
 <h2 class="fw-normal pb-3">First Look Assessment</h2>
 
@@ -34,7 +34,7 @@
       @break
 
       @case('Input')
-        <x-inputs.numeric step="first_look_assessment.basic_measurements_nodes_id" :$node_id :$full_nodes :label="$nodes_to_save[$node_id]['label']"
+        <x-inputs.numeric step="first_look_assessment.basic_measurements_nodes_id" :$node_id :$full_nodes :label="$medical_case['nodes'][$node_id]['label']"
           :$debug_mode />
       @break
 

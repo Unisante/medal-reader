@@ -429,7 +429,7 @@ class Algorithm extends Component
                         }
 
                         if ($instance_node['type'] === 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                            $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, true);
+                            $this->algorithmService->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, true);
                         }
 
                         // We don't care about background calculations
@@ -469,7 +469,7 @@ class Algorithm extends Component
                             }
 
                             if ($instance_node['type'] === 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                                $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
+                                $this->algorithmService->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
                             }
 
                             $node = $cached_data['full_nodes'][$node_id];
@@ -477,7 +477,7 @@ class Algorithm extends Component
                                 $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
                             } else {
                                 if ($instance['final_diagnosis_id'] === null) {
-                                    $this->manageQS($cached_data, $diag, $node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
+                                    $this->algorithmService->manageQS($cached_data, $diag, $node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
                                 }
                             }
 
@@ -488,7 +488,7 @@ class Algorithm extends Component
                                         $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node_id, $answer_id, $dependency_map);
                                     } else {
                                         if ($instance['final_diagnosis_id'] === null) {
-                                            $this->manageQS($cached_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, empty($instance['conditions']));
+                                            $this->algorithmService->manageQS($cached_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, empty($instance['conditions']));
                                         }
                                     }
                                 }
@@ -719,94 +719,6 @@ class Algorithm extends Component
         // dump($cached_data['managements_hash_map']);
         // dump($cached_data['max_path_length']);
         // dump($cached_data['reference_hash_map']);
-    }
-
-    private function manageQS($cached_data, $diag, $node, $step, &$consultation_nodes, &$answers_hash_map, &$qs_hash_map, &$dependency_map, $no_condition, $answer_id = null)
-    {
-        $no_answer = collect($node['answers'])->where('reference', 2)->first()['id'];
-        $this->nodes_to_save[$node['id']]  = [
-            'value' => '',
-            'answer_id' => $no_answer,
-            'label' => $node['label']['en'],
-        ];
-
-        foreach ($node['conditions'] as $condition) {
-            if (!isset($qs_hash_map[$step][$diag['id']][$condition['answer_id']][$node['id']])) {
-                $qs_hash_map[$step][$diag['id']][$condition['answer_id']][$node['id']] = [];
-            }
-            $yes_answer = collect($node['answers'])->where('reference', 1)->first()['id'];
-            $qs_hash_map[$step][$diag['id']][$condition['answer_id']][$node['id']] = $yes_answer;
-        }
-
-        foreach ($node['instances'] as $instance_id => $instance) {
-            $instance_node = $cached_data['full_nodes'][$instance_id];
-            $substep = $instance_node['category'] === 'physical_exam' ? 'physical_exam' : 'medical_history';
-            $system = $instance_node['category'] !== 'background_calculation' ? $instance_node['system'] ?? 'others' : 'others';
-
-            if (empty($instance['conditions'])) {
-                // We don't care about background calculations
-                if ($no_condition && $instance_node['type'] !== 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                    if (array_key_exists('system', $instance_node) || $instance_node['category'] === 'unique_triage_question') {
-                        $consultation_nodes[$substep][$system][$step][$diag['id']][$instance_id] = '';
-                    }
-                }
-                if ($answer_id && $instance_node['type'] !== 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                    if (!isset($answers_hash_map[$step][$diag['id']][$answer_id])) {
-                        $answers_hash_map[$step][$diag['id']][$answer_id] = [];
-                    }
-                    if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$answer_id])) {
-                        $answers_hash_map[$step][$diag['id']][$answer_id][] = $instance_id;
-                    }
-                    if (!isset($dependency_map[$diag['id']][$answer_id])) {
-                        $dependency_map[$diag['id']][$answer_id] = [];
-                    }
-
-                    if (!isset(array_flip($dependency_map[$diag['id']][$answer_id])[$instance_id])) {
-                        $dependency_map[$diag['id']][$answer_id][] = $instance_id;
-                    }
-                    $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $instance_id, $answer_id, $dependency_map);
-                }
-                if ($instance_node['type'] === 'QuestionsSequence') {
-                    $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, $no_condition, $answer_id);
-                }
-            }
-
-            if (!empty($instance['conditions'])) {
-                foreach ($instance['conditions'] as $condition) {
-                    $condition_node = $cached_data['full_nodes'][$condition['node_id']];
-                    if ($instance_node['type'] !== 'QuestionsSequence') {
-                        if (!isset($answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
-                            $answers_hash_map[$step][$diag['id']][$condition['answer_id']] = [];
-                        }
-                        if (!in_array($instance_id, $answers_hash_map[$step][$diag['id']][$condition['answer_id']])) {
-                            $answers_hash_map[$step][$diag['id']][$condition['answer_id']][] = $instance_id;
-                        }
-                        if (!isset($dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']])) {
-                            $dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']] = [];
-                        }
-
-                        if (!isset(array_flip($dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']])[$instance_id])) {
-                            $dependency_map[$diag['id']][$answer_id ?? $condition['answer_id']][] = $instance_id;
-                        }
-                        $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node['id'], $answer_id ?? $condition['answer_id'], $dependency_map, true);
-                    } else {
-                        $this->manageQS($cached_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $condition['answer_id']);
-                    }
-                    if ($condition_node['type'] !== 'QuestionsSequence') {
-                        $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node['id'], $answer_id ?? $condition['answer_id'], $dependency_map, true);
-                    }
-                }
-            }
-
-            foreach ($instance['children'] as $child_node_id) {
-                $child_node = $cached_data['full_nodes'][$child_node_id];
-                if ($child_node_id !== $node['id'] && $child_node['type'] === 'QuestionsSequence') {
-                    $this->manageQS($cached_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, $no_condition);
-                } else {
-                    $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node['id'], $answer_id, $dependency_map, true);
-                }
-            }
-        }
     }
 
     public function calculateCompletionPercentage($cached_data, $other_cc = null)

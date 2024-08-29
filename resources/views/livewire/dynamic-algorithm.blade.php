@@ -13,8 +13,8 @@
   @php
     $cache = Cache::get($cache_key);
     $full_nodes = $cache['full_nodes'];
-    $final_diagnoses = $cache['final_diagnoses'];
-    $health_cares = $cache['health_cares'];
+    $final_diagnoses = $cache['algorithm']['final_diagnoses'];
+    $health_cares = $cache['algorithm']['health_cares'];
     $villages = $cache['villages'];
   @endphp
 
@@ -24,12 +24,12 @@
     <div class="col-10">
 
       @if ($current_step === 'registration')
-        <x-step.registration :nodes="$current_nodes['registration']" :$nodes_to_save :$full_nodes :$villages :$algorithm_type :$debug_mode />
+        <x-step.registration :nodes="$current_nodes['registration']" :$medical_case :$full_nodes :$villages :$algorithm_type :$debug_mode />
       @endif
 
       {{-- first_look_assessment --}}
       @if ($current_step === 'first_look_assessment')
-        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :$full_nodes :$nodes_to_save :$debug_mode />
+        <x-step.first_look_assessment :nodes="$current_nodes['first_look_assessment']" :$full_nodes :$medical_case :$debug_mode />
       @endif
 
       {{-- Consultation --}}
@@ -47,7 +47,7 @@
           </ul>
           @if ($current_sub_step === 'medical_history')
             <div wire:key="consultation-medical_history'">
-              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$nodes_to_save :$full_nodes :$villages
+              <x-step.consultation :nodes="$current_nodes['consultation']['medical_history']" substep="medical_history" :$medical_case :$full_nodes :$villages
                 :$debug_mode />
               <div class="d-flex justify-content-end">
                 <button class="btn button-unisante m-1"
@@ -58,7 +58,7 @@
           @endif
           @if ($current_sub_step === 'physical_exam')
             <div wire:key="consultation-physical_exam'">
-              <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exam" :$nodes_to_save :$full_nodes :$villages
+              <x-step.consultation :nodes="$current_nodes['consultation']['physical_exam']" substep="physical_exam" :$medical_case :$full_nodes :$villages
                 :$debug_mode />
               <div class="d-flex justify-content-end">
                 <button class="btn button-unisante m-1" wire:click="goToStep('tests')">Tests</button>
@@ -71,7 +71,7 @@
       {{-- Tests --}}
       @if ($current_step === 'tests')
         @if (isset($current_nodes['tests']))
-          <x-step.tests :nodes="$current_nodes['tests']" :$nodes_to_save :$full_nodes :$debug_mode />
+          <x-step.tests :nodes="$current_nodes['tests']" :$medical_case :$full_nodes :$debug_mode />
         @else
           <h2 class="fw-normal pb-3">Tests</h2>
           <p>There are no test</p>
@@ -85,7 +85,7 @@
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
         <h2 class="fw-normal pb-3">Diagnoses</h2>
-        <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs pb-3">
           <li class="nav-item">
             <button class="nav-link @if ($current_sub_step === 'final_diagnoses') active @endif"
               wire:click="goToSubStep('diagnoses', 'final_diagnoses')">Final Diagnoses</button>
@@ -147,7 +147,7 @@
           @endphp
           @if (isset($treatment_questions))
             @foreach ($treatment_questions as $node_id => $answer)
-              <div wire:key="{{ 'treatment-question-' . $node_id }}">
+              <div wire:key="{{ 'treatment-question-' . $node_id }}" class="pt-3">
                 @switch($full_nodes[$node_id]['display_format'])
                   @case('RadioButton')
                     <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
@@ -162,20 +162,20 @@
                   @break
 
                   @case('Input')
-                    <x-inputs.numeric step='diagnoses.treatment_questions' :$node_id :$full_nodes :label="$nodes_to_save[$node_id]['label']"
+                    <x-inputs.numeric step='diagnoses.treatment_questions' :$node_id :$full_nodes :label="$medical_case[$node_id]['label']"
                       :$debug_mode />
                   @break
 
                   @case('Formula')
                     @if ($debug_mode)
-                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$medical_case[$node_id]" :$full_nodes
                         :is_background_calc="true" />
                     @endif
                   @break
 
                   @case('Reference')
                     @if ($debug_mode)
-                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$medical_case[$node_id]" :$full_nodes
                         :is_background_calc="true" />
                     @endif
                   @break

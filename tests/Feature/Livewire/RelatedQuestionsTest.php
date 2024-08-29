@@ -34,6 +34,7 @@ class RelatedQuestionsTest extends TestCase
             ->set('current_nodes.registration.214', 393)  // I'm a female
             ->call('debugUpdatingCurrentNodes', 'current_nodes.registration.214', 393)
             ->call('debugUpdatingCurrentNodes', 'medical_case.nodes.97', 16.9) // my Muac 16.9 cm
+
             ->assertSet('medical_case.nodes.99.value', -1);
     }
 

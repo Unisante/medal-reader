@@ -107,10 +107,15 @@ class AlgorithmController extends Controller
     {
         $extract_dir = Config::get('medal.storage.json_extract_dir');
         Storage::makeDirectory($extract_dir);
-        Validator::make($request->all(), [
+
+        $validator = Validator::make($request->all(), [
             'id' => 'required|integer|max:500',
             'url' => 'required|string|max:500',
-        ])->validate();
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
 
         try {
             $data = Http::acceptJson()
@@ -119,13 +124,13 @@ class AlgorithmController extends Controller
         } catch (Exception $e) {
             $error['error'] = $e->getMessage();
             Log::error('Error occurred in get request', $error);
-            return back()->withErrors($error);
+            return back()->withErrors($error)->withInput();
         }
 
         if (empty($data)) {
             $error['error'] = "The algorithm {$request['id']} is empty";
             Log::error($error['error']);
-            return back()->withErrors($error['error']);
+            return back()->withErrors($error)->withInput();
         }
 
         Storage::disk('local')->put("$extract_dir/$request->id.json", $data);

@@ -1,4 +1,4 @@
-@props(['nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages', 'algorithm_type', 'debug_mode'])
+@props(['nodes', 'cache_key', 'medical_case', 'full_nodes', 'villages', 'algorithm_type', 'debug_mode'])
 
 <h2 class="fw-normal pb-3">Registration</h2>
 
@@ -37,7 +37,7 @@
         @break
 
         @case('Input')
-          <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
+          <x-inputs.numeric step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :label="$medical_case['nodes'][$node_id]['label']" :$debug_mode />
         @break
 
         @case('String')

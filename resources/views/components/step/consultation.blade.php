@@ -1,4 +1,4 @@
-@props(['substep', 'nodes', 'cache_key', 'nodes_to_save', 'full_nodes', 'villages', 'debug_mode'])
+@props(['substep', 'nodes', 'cache_key', 'medical_case', 'full_nodes', 'villages', 'debug_mode'])
 
 <h2 class="fw-normal pb-3">Consultation</h2>
 
@@ -24,20 +24,20 @@
               @break
 
               @case('Input')
-                <x-inputs.numeric step='{{ "consultation.$substep.$title" }}' :$node_id :$full_nodes :label="$nodes_to_save[$node_id]['label']"
+                <x-inputs.numeric step='{{ "consultation.$substep.$title" }}' :$node_id :$full_nodes :label="$medical_case['nodes'][$node_id]['label']"
                   :$debug_mode />
               @break
 
               @case('Formula')
                 @if ($debug_mode)
-                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$medical_case['nodes'][$node_id]" :$full_nodes
                     :is_background_calc="true" />
                 @endif
               @break
 
               @case('Reference')
                 @if ($debug_mode)
-                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$nodes_to_save[$node_id]" :$full_nodes
+                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$medical_case['nodes'][$node_id]" :$full_nodes
                     :is_background_calc="true" />
                 @endif
               @break

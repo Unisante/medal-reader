@@ -1,4 +1,4 @@
-@props(['nodes', 'chosen_complaint_categories', 'cache_key', 'current_cc', 'nodes_to_save', 'debug_mode'])
+@props(['nodes', 'chosen_complaint_categories', 'medical_case', 'cache_key', 'current_cc', 'debug_mode'])
 
 @php
   $cache = Cache::get($cache_key);
@@ -34,19 +34,19 @@
 
               @case('Input')
                 <x-inputs.numeric step="consultation.medical_history.{{ $cc_id }}" :$node_id :$full_nodes :$cache_key
-                  :label="$nodes_to_save[$node_id]['label']" :$debug_mode />
+                  :label="$medical_case['nodes'][$node_id]['label']" :$debug_mode />
               @break
 
               @case('Formula')
                 @if ($debug_mode)
-                  <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :value="$nodes_to_save[$node_id]" :$node_id
+                  <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :value="$medical_case['nodes'][$node_id]['value']" :$node_id
                     :$full_nodes :$cache_key :is_background_calc="true" />
                 @endif
               @break
 
               @case('Reference')
                 @if ($debug_mode)
-                  <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :$node_id :value="$nodes_to_save[$node_id]"
+                  <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :$node_id :value="$medical_case['nodes'][$node_id]['value']"
                     :$full_nodes :$cache_key :is_background_calc="true" />
                 @endif
               @break

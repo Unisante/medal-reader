@@ -23,7 +23,7 @@
         <div class="col-4">
           <select id="url" name="url" class="form-select">
             @foreach ($urls as $url)
-              <option value="{{ $url }}">{{ $url }}</option>
+              <option {{ old('url') === $url ? 'selected' : '' }} value="{{ $url }}">{{ $url }}</option>
             @endforeach
           </select>
         </div>
