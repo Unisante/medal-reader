@@ -85,7 +85,7 @@
       {{-- Diagnoses --}}
       @if ($current_step === 'diagnoses')
         <h2 class="fw-normal pb-3">Diagnoses</h2>
-        <ul class="nav nav-tabs pb-3">
+        <ul class="nav nav-tabs">
           <li class="nav-item">
             <button class="nav-link @if ($current_sub_step === 'final_diagnoses') active @endif"
               wire:click="goToSubStep('diagnoses', 'final_diagnoses')">Final Diagnoses</button>

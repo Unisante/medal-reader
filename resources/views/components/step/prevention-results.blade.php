@@ -11,8 +11,8 @@
 @php
   $cache = Cache::get($cache_key);
   $full_nodes = $cache['full_nodes'];
-  $final_diagnoses = $cache['final_diagnoses'];
-  $health_cares = $cache['health_cares'];
+  $final_diagnoses = $cache['algorithm']['final_diagnoses'];
+  $health_cares = $cache['algorithm']['health_cares'];
   $female_gender_answer_id = $cache['female_gender_answer_id'];
   $gender = $gender_node === $female_gender_answer_id ? 'f' : 'm';
 
