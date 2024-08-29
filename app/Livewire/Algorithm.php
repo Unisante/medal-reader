@@ -498,38 +498,9 @@ class Algorithm extends Component
             $this->updatingCurrentNodesRegistrationBirthDate($date_of_birth);
             $this->calculateCompletionPercentage($json_data);
         }
-
-        // dd($this->registration_nodes_id);
-        // dd($json_data);
-        // dd($json_data['full_nodes']);
-        // dd($this->current_nodes);
-        // dump($json_data['full_order']);
-        // dump(json_encode($json_data['nodes_per_step']));
-        // dump($json_data['nodes_per_step']);
-        // dump($json_data['formula_hash_map']);
-        // dump($json_data['dependency_map']);
-        // dump($json_data['dependency_map'][8708][5306]);
-        // dump(json_encode($json_data['dependency_map']));
-        // dump($json_data['qs_hash_map']);
-        // dump($json_data['answers_hash_map']);
-        // dump(json_encode($json_data['answers_hash_map']));
-        // dump($json_data['qs_hash_map']);
-        // dump(json_encode($json_data['qs_hash_map']));
-        // dump($json_data['no_condition_nodes']);
-        // dump($consultation_nodes);
-        // dump($json_data['drugs_hash_map']);
-        // dump($json_data['df_hash_map']);
-        // dump($json_data['managements_hash_map']);
-        // dump($json_data['excluding_df_hash_map']);
-        // dump($json_data['cut_off_hash_map']);
-        // dump($json_data['df_dd_mapping']);
-        // dump(json_encode($json_data['consultation_nodes']));
-        // dump($json_data['nodes_to_update']);
-        // dump($json_data['max_path_length']);
-        // dump($json_data['reference_hash_map']);
     }
 
-    public function calculateCompletionPercentage($json_data, $other_cc = null)
+    private function calculateCompletionPercentage($json_data, $other_cc = null)
     {
         if ($this->current_step === 'diagnoses' || $this->current_step === 'tests') {
             return;
@@ -723,12 +694,9 @@ class Algorithm extends Component
             'system' => $node['system'] ?? '',
         ];
 
-        // $updated_systems[$system['title']] = array_intersect_key($new_questions, $updated_systems[$system['title']]);
         $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
 
         match ($this->current_step) {
-            // 'registration' => $this->manageRegistrationStep($json_data),
-            // 'first_look_assessment' => $this->manageFirstLookAssessmentStep($json_data),
             'consultation' => $this->current_sub_step === 'medical_history'
                 ? $this->manageMedicalHistory($json_data)
                 : $this->managePhysicalExam($json_data),
@@ -748,119 +716,6 @@ class Algorithm extends Component
         } else {
             $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->getNoAnswer($nodes[$modified_cc_id]);
         }
-    }
-
-    public function handleAnswers($json_data, $node_id, $value)
-    {
-        $answers = $json_data['full_nodes'][$node_id]['answers'];
-
-        foreach ($answers as $answer) {
-            $result = floatval($value);
-            $answer_value = $answer['value'];
-            $answer_values = explode(',', $answer_value);
-            $minValue = floatval($answer_values[0]);
-            $maxValue = floatval($answer_values[1] ?? $minValue);
-
-            $answer_found = match ($answer['operator']) {
-                'more_or_equal' => $result >= $minValue ? true : false,
-                'less' => $result < $minValue ? true : false,
-                'between' => ($result >= $minValue && $result < $maxValue) ? true : false,
-                default => null,
-            };
-
-            if ($answer_found) {
-                $label = "{$answer['id']} : {$answer['label']['en']} ($result is {$answer['operator']} {$answer['value']})";
-
-                return [
-                    'answer' => intval($answer['id']),
-                    'label' => $label
-                ];
-            }
-        }
-
-        return ['answer' => null, 'label' => null];
-    }
-
-    public function calculateFormula($json_data, $node_id, $new_nodes)
-    {
-        $formula_hash_map = $json_data['formula_hash_map'];
-        $full_nodes = $json_data['full_nodes'];
-        $general_cc_id = $json_data['general_cc_id'];
-        $yi_general_cc_id = $json_data['yi_general_cc_id'];
-        $older_ccs = $json_data['algorithm']['config']['full_order']['complaint_categories_step']['older'];
-        $neonat_ccs = $json_data['algorithm']['config']['full_order']['complaint_categories_step']['neonat'];
-
-        $formula = $formula_hash_map[$node_id];
-
-        //In this situation we just have to get the days/months/years
-        if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
-            $dob = new DateTime($this->current_nodes['registration']['birth_date']);
-            $interval = $this->created_at->diff($dob);
-
-            if ($formula === "ToDay") {
-                $days = $interval->format('%a');
-                //My eyes are burning....
-                //But no other way as the Age in days node id is not saved anywhere
-                if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
-                    $this->age_in_days = $days;
-                    if ($days <= 59) {
-                        if ($this->algorithm_type === 'dynamic') {
-                            $this->chosen_complaint_categories[$yi_general_cc_id] = true;
-                            if (array_key_exists($general_cc_id, $this->chosen_complaint_categories)) {
-                                unset($this->chosen_complaint_categories[$general_cc_id]);
-                            }
-                        }
-                        $this->current_cc = $yi_general_cc_id;
-                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$yi_general_cc_id]);
-                        foreach ($older_ccs as $older_cc_id) {
-                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$older_cc_id]);
-                        }
-
-                        if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
-                            unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
-                        }
-                        $this->age_key = 'neonat';
-                    } else {
-                        if ($this->algorithm_type === 'dynamic') {
-                            $this->chosen_complaint_categories[$general_cc_id] = true;
-                            if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
-                                unset($this->chosen_complaint_categories[$yi_general_cc_id]);
-                            }
-                        }
-                        $this->current_cc = $general_cc_id;
-                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$general_cc_id]);
-                        foreach ($neonat_ccs as $neonat_cc_id) {
-                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$neonat_cc_id]);
-                        }
-                        if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
-                            unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
-                        }
-                        $this->age_key = 'older';
-                    }
-                }
-                $result = $days;
-            } elseif ($formula === "ToMonth") {
-                $result = $interval->m + ($interval->y * 12);
-            } elseif ($formula === "ToYear") {
-                $result = $interval->y;
-            }
-        } else {
-            //In this situation we have a formula to calculate
-            $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($new_nodes) {
-                return $new_nodes[$matches[1]]['value'] ?? $this->medical_case['nodes'][$matches[1]]['value'];
-            }, $formula);
-
-            try {
-                $result = (new ExpressionLanguage())->evaluate($formula);
-                $result = $result ? round($result, 3) : null;
-            } catch (DivisionByZeroError $e) {
-                return null;
-            } catch (Exception $e) {
-                return null;
-            }
-        }
-
-        return $result;
     }
 
     public function updatingCurrentNodesRegistrationBirthDate($birth_date)
@@ -967,7 +822,120 @@ class Algorithm extends Component
         return;
     }
 
-    public function getValidDiagnoses($json_data)
+    private function handleAnswers($json_data, $node_id, $value)
+    {
+        $answers = $json_data['full_nodes'][$node_id]['answers'];
+
+        foreach ($answers as $answer) {
+            $result = floatval($value);
+            $answer_value = $answer['value'];
+            $answer_values = explode(',', $answer_value);
+            $minValue = floatval($answer_values[0]);
+            $maxValue = floatval($answer_values[1] ?? $minValue);
+
+            $answer_found = match ($answer['operator']) {
+                'more_or_equal' => $result >= $minValue ? true : false,
+                'less' => $result < $minValue ? true : false,
+                'between' => ($result >= $minValue && $result < $maxValue) ? true : false,
+                default => null,
+            };
+
+            if ($answer_found) {
+                $label = "{$answer['id']} : {$answer['label']['en']} ($result is {$answer['operator']} {$answer['value']})";
+
+                return [
+                    'answer' => intval($answer['id']),
+                    'label' => $label
+                ];
+            }
+        }
+
+        return ['answer' => null, 'label' => null];
+    }
+
+    private function calculateFormula($json_data, $node_id, $new_nodes)
+    {
+        $formula_hash_map = $json_data['formula_hash_map'];
+        $full_nodes = $json_data['full_nodes'];
+        $general_cc_id = $json_data['general_cc_id'];
+        $yi_general_cc_id = $json_data['yi_general_cc_id'];
+        $older_ccs = $json_data['algorithm']['config']['full_order']['complaint_categories_step']['older'];
+        $neonat_ccs = $json_data['algorithm']['config']['full_order']['complaint_categories_step']['neonat'];
+
+        $formula = $formula_hash_map[$node_id];
+
+        //In this situation we just have to get the days/months/years
+        if ($formula === "ToDay" || $formula === "ToMonth" || $formula === "ToYear") {
+            $dob = new DateTime($this->current_nodes['registration']['birth_date']);
+            $interval = $this->created_at->diff($dob);
+
+            if ($formula === "ToDay") {
+                $days = $interval->format('%a');
+                //My eyes are burning....
+                //But no other way as the Age in days node id is not saved anywhere
+                if ($full_nodes[$node_id]['label']['en'] === 'Age in days') {
+                    $this->age_in_days = $days;
+                    if ($days <= 59) {
+                        if ($this->algorithm_type === 'dynamic') {
+                            $this->chosen_complaint_categories[$yi_general_cc_id] = true;
+                            if (array_key_exists($general_cc_id, $this->chosen_complaint_categories)) {
+                                unset($this->chosen_complaint_categories[$general_cc_id]);
+                            }
+                        }
+                        $this->current_cc = $yi_general_cc_id;
+                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$yi_general_cc_id]);
+                        foreach ($older_ccs as $older_cc_id) {
+                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$older_cc_id]);
+                        }
+
+                        if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
+                            unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
+                        }
+                        $this->age_key = 'neonat';
+                    } else {
+                        if ($this->algorithm_type === 'dynamic') {
+                            $this->chosen_complaint_categories[$general_cc_id] = true;
+                            if (array_key_exists($yi_general_cc_id, $this->chosen_complaint_categories)) {
+                                unset($this->chosen_complaint_categories[$yi_general_cc_id]);
+                            }
+                        }
+                        $this->current_cc = $general_cc_id;
+                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$general_cc_id]);
+                        foreach ($neonat_ccs as $neonat_cc_id) {
+                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$neonat_cc_id]);
+                        }
+                        if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
+                            unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
+                        }
+                        $this->age_key = 'older';
+                    }
+                }
+                $result = $days;
+            } elseif ($formula === "ToMonth") {
+                $result = $interval->m + ($interval->y * 12);
+            } elseif ($formula === "ToYear") {
+                $result = $interval->y;
+            }
+        } else {
+            //In this situation we have a formula to calculate
+            $formula = preg_replace_callback('/\[(\d+)\]/', function ($matches) use ($new_nodes) {
+                return $new_nodes[$matches[1]]['value'] ?? $this->medical_case['nodes'][$matches[1]]['value'];
+            }, $formula);
+
+            try {
+                $result = (new ExpressionLanguage())->evaluate($formula);
+                $result = $result ? round($result, 3) : null;
+            } catch (DivisionByZeroError $e) {
+                return null;
+            } catch (Exception $e) {
+                return null;
+            }
+        }
+
+        return $result;
+    }
+
+    private function getValidDiagnoses($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -983,7 +951,7 @@ class Algorithm extends Component
         });
     }
 
-    public function getValidPreventionDiagnoses($json_data)
+    private function getValidPreventionDiagnoses($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $diagnoses = $algorithm['diagnoses'];
@@ -1009,7 +977,7 @@ class Algorithm extends Component
         return collect($node['answers'])->where('reference', 2)->first()['id'];
     }
 
-    public function respectsCutOff($condition)
+    private function respectsCutOff($condition)
     {
         $cut_off_start = isset($condition['cut_off_start']) ? $condition['cut_off_start'] : null;
         $cut_off_end = isset($condition['cut_off_end']) ? $condition['cut_off_end'] : null;
@@ -1032,14 +1000,14 @@ class Algorithm extends Component
         return $cut_off_start <= $this->age_in_days && $cut_off_end > $this->age_in_days;
     }
 
-    public function getTopConditions($instances, $is_final_diagnosis = false)
+    private function getTopConditions($instances, $is_final_diagnosis = false)
     {
         return array_filter($instances, function ($instance) use ($is_final_diagnosis) {
             return empty($instance['conditions']) && ($is_final_diagnosis || is_null($instance['final_diagnosis_id']));
         });
     }
 
-    public function handleChildren($json_data, $children, $source, &$questions_to_display, $instances, $categories, $diagram_id, $diagram_type, $system, &$current_systems, $system_order)
+    private function handleChildren($json_data, $children, $source, &$questions_to_display, $instances, $categories, $diagram_id, $diagram_type, $system, &$current_systems, $system_order)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -1202,7 +1170,7 @@ class Algorithm extends Component
         }
     }
 
-    public function excludedByCc($json_data, $question_id)
+    private function excludedByCc($json_data, $question_id)
     {
         $algorithm = $json_data['algorithm'];
         $mc_nodes = $this->medical_case['nodes'];
@@ -1229,7 +1197,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function calculateCondition($json_data, $instance, $source_id = null, $new_nodes = [])
+    private function calculateCondition($json_data, $instance, $source_id = null, $new_nodes = [])
     {
         $mc_nodes = array_replace($this->medical_case['nodes'], $new_nodes);
 
@@ -1258,7 +1226,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function getQsValue($json_data, $nodes, $qs_id, $new_mc_nodes)
+    private function getQsValue($json_data, $nodes, $qs_id, $new_mc_nodes)
     {
         if ($nodes[$qs_id]['category'] === config('medal.categories.scored')) {
             return $this->scoredCalculateCondition($json_data, $qs_id, $new_mc_nodes);
@@ -1281,7 +1249,7 @@ class Algorithm extends Component
         }
     }
 
-    public function qsInstanceValue($json_data, $instance, $new_mc_nodes, $instances, $qs_id)
+    private function qsInstanceValue($json_data, $instance, $new_mc_nodes, $instances, $qs_id)
     {
         $mc_node = $new_mc_nodes[$instance['id']];
         $instance_condition = $this->calculateCondition($json_data, $instance, null, $new_mc_nodes);
@@ -1314,7 +1282,7 @@ class Algorithm extends Component
         }
     }
 
-    public function scoredCalculateCondition($json_data, $qs_id, $new_mc_nodes)
+    private function scoredCalculateCondition($json_data, $qs_id, $new_mc_nodes)
     {
         $algorithm = $json_data['algorithm'];
 
@@ -1370,14 +1338,14 @@ class Algorithm extends Component
         return null; // Just in case no conditions are met
     }
 
-    public function reduceConditions($conditions_values)
+    private function reduceConditions($conditions_values)
     {
         return array_reduce($conditions_values, function ($result, $value) {
             return $this->comparingBooleanOr($result, $value);
         }, false);
     }
 
-    public function diagramConditionsValues($json_data, $node_id, $instance, $mc_nodes)
+    private function diagramConditionsValues($json_data, $node_id, $instance, $mc_nodes)
     {
 
         $algorithm = $json_data['algorithm'];
@@ -1397,7 +1365,7 @@ class Algorithm extends Component
         }));
     }
 
-    public function calculateConditionInverse($json_data, $conditions, $mc_nodes)
+    private function calculateConditionInverse($json_data, $conditions, $mc_nodes)
     {
         $algorithm = $json_data['algorithm'];
         $instances = $algorithm['diagram']['instances'];
@@ -1424,7 +1392,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function updateQuestionSequence($json_data, $node_id, $new_nodes, $mc_nodes)
+    private function updateQuestionSequence($json_data, $node_id, $new_nodes, $mc_nodes)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -1461,7 +1429,7 @@ class Algorithm extends Component
         return $new_nodes;
     }
 
-    public function calculateReference($json_data, $node_id, $mc_nodes)
+    private function calculateReference($json_data, $node_id, $mc_nodes)
     {
         $algo_nodes = $json_data['algorithm']['nodes'];
         $gender_question_id = $json_data['gender_question_id'];
@@ -1493,7 +1461,7 @@ class Algorithm extends Component
         return null;
     }
 
-    public function updateRelatedQuestion($json_data, $node_id, $new_nodes, $mc_nodes)
+    private function updateRelatedQuestion($json_data, $node_id, $new_nodes, $mc_nodes)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -1533,7 +1501,7 @@ class Algorithm extends Component
         return $new_nodes;
     }
 
-    public function questionValidationService($mc_node, $node, $value)
+    private function questionValidationService($mc_node, $node, $value)
     {
         $validation_message = null;
         $validation_type = null;
@@ -1598,7 +1566,7 @@ class Algorithm extends Component
         ];
     }
 
-    public function manageRegistrationStep($json_data)
+    private function manageRegistrationStep($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $registration_order = $algorithm['config']['full_order']['registration_step'];
@@ -1610,14 +1578,14 @@ class Algorithm extends Component
         }), '');
     }
 
-    public function manageFirstLookAssessmentStep($json_data)
+    private function manageFirstLookAssessmentStep($json_data)
     {
         $this->manageVitalSign($json_data);
         $this->manageComplaintCategory($json_data);
         $this->manageBasicMeasurement($json_data);
     }
 
-    public function manageVitalSign($json_data)
+    private function manageVitalSign($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $first_look_assessment_order = $algorithm['config']['full_order']['first_look_assessment_step'];
@@ -1632,7 +1600,7 @@ class Algorithm extends Component
         }
     }
 
-    public function manageComplaintCategory($json_data)
+    private function manageComplaintCategory($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $config = $algorithm['config'];
@@ -1662,7 +1630,7 @@ class Algorithm extends Component
         }
     }
 
-    public function manageBasicMeasurement($json_data)
+    private function manageBasicMeasurement($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $order = $algorithm['config']['full_order']['basic_measurements_step'];
@@ -1690,7 +1658,7 @@ class Algorithm extends Component
         );
     }
 
-    public function manageConsultationStep($json_data)
+    private function manageConsultationStep($json_data)
     {
         if ($this->current_sub_step === 'medical_history') {
             $this->manageMedicalHistory($json_data);
@@ -1711,7 +1679,7 @@ class Algorithm extends Component
         }
     }
 
-    public function managePreventionMedicalHistory($json_data)
+    private function managePreventionMedicalHistory($json_data)
     {
         $algorithm = $json_data['algorithm'];
 
@@ -1815,7 +1783,7 @@ class Algorithm extends Component
         );
     }
 
-    public function manageMedicalHistory($json_data)
+    private function manageMedicalHistory($json_data)
     {
         if ($this->algorithm_type === 'prevention') {
             return $this->managePreventionMedicalHistory($json_data);
@@ -1884,7 +1852,7 @@ class Algorithm extends Component
         );
     }
 
-    public function managePhysicalExam($json_data)
+    private function managePhysicalExam($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $question_per_systems = [];
@@ -1946,7 +1914,7 @@ class Algorithm extends Component
         );
     }
 
-    public function manageTestStep($json_data)
+    private function manageTestStep($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $current_systems =  $this->current_nodes['consultation']['tests'] ?? [];
@@ -1993,7 +1961,7 @@ class Algorithm extends Component
         );
     }
 
-    public function manageDiagnosesStep($json_data)
+    private function manageDiagnosesStep($json_data)
     {
         if ($this->current_sub_step === 'final_diagnoses') {
             $this->manageFinalDiagnose($json_data);
@@ -2012,7 +1980,7 @@ class Algorithm extends Component
         }
     }
 
-    public function manageTreatment($json_data)
+    private function manageTreatment($json_data)
     {
         $algorithm = $json_data['algorithm'];
         // $final_diagnostics = $this->current_nodes['diagnoses']['agreed'] ?? [];
@@ -2066,7 +2034,7 @@ class Algorithm extends Component
         );
     }
 
-    public function manageReferral($json_data)
+    private function manageReferral($json_data)
     {
         $algorithm = $json_data['algorithm'];
         $referral_order = $algorithm['config']['full_order']['referral_step'];
@@ -2078,7 +2046,7 @@ class Algorithm extends Component
         }), '');
     }
 
-    public function manageFinalDiagnose($json_data)
+    private function manageFinalDiagnose($json_data)
     {
         $algorithm = $json_data['algorithm'];
         // $mc_diagnosis = $this->deepCopy($this->medical_case['diagnosis']);
@@ -2131,7 +2099,7 @@ class Algorithm extends Component
         $this->df_to_display = array_flip($mc_diagnosis['proposed']);
     }
 
-    public function calculateConditionInverseFinalDiagnosis($conditions, $mc_nodes, $instances)
+    private function calculateConditionInverseFinalDiagnosis($conditions, $mc_nodes, $instances)
     {
         if (empty($conditions)) {
             return true;
@@ -2156,7 +2124,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function getAvailableHealthcare($json_data, $final_diagnosis, $key, $exclusion = true)
+    private function getAvailableHealthcare($json_data, $final_diagnosis, $key, $exclusion = true)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -2183,7 +2151,7 @@ class Algorithm extends Component
         return array_unique($questions_to_display);
     }
 
-    public function isHealthcareExcluded($json_data, $healthcare_id, $agreed_healthcares)
+    private function isHealthcareExcluded($json_data, $healthcare_id, $agreed_healthcares)
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
@@ -2192,7 +2160,7 @@ class Algorithm extends Component
             !empty(array_intersect($agreed_healthcares, $nodes[$healthcare_id]['excluding_nodes_ids']));
     }
 
-    public function handleManagements($json_data, $management_instances, &$questions_to_display, $instances)
+    private function handleManagements($json_data, $management_instances, &$questions_to_display, $instances)
     {
         $algorithm = $json_data['algorithm'];
         $mc_nodes = $this->medical_case['nodes'];
@@ -2221,7 +2189,7 @@ class Algorithm extends Component
         }
     }
 
-    public function handleDrugs($json_data, $drug_instances, &$questions_to_display, $instances, $exclusion)
+    private function handleDrugs($json_data, $drug_instances, &$questions_to_display, $instances, $exclusion)
     {
         $agreed_final_diagnoses = $this->medical_case['diagnosis']['agreed'];
         $mc_nodes = $this->medical_case['nodes'];
@@ -2247,7 +2215,7 @@ class Algorithm extends Component
         }
     }
 
-    public function drugIsAgreed($drug)
+    private function drugIsAgreed($drug)
     {
         $diagnoses = $this->medical_case['diagnosis'];
         foreach ($drug['diagnoses'] as $diagnosis) {
@@ -2258,7 +2226,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function drugIsRefused($drug)
+    private function drugIsRefused($drug)
     {
         $diagnoses = $this->medical_case['diagnosis'];
         foreach ($drug['diagnoses'] as $diagnosis) {
@@ -2269,7 +2237,7 @@ class Algorithm extends Component
         return false;
     }
 
-    public function reworkAndOrderDrugs()
+    private function reworkAndOrderDrugs()
     {
         $json_data = Cache::get($this->cache_key);
         $algorithm = $json_data['algorithm'];
@@ -2345,7 +2313,7 @@ class Algorithm extends Component
         return -1;
     }
 
-    public function findProposedFinalDiagnoses($json_data, $diagnosis)
+    private function findProposedFinalDiagnoses($json_data, $diagnosis)
     {
         $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
@@ -2389,7 +2357,7 @@ class Algorithm extends Component
         return $final_diagnoses;
     }
 
-    public function getNewDiagnoses($final_diagnoses, $remove_drugs = false)
+    private function getNewDiagnoses($final_diagnoses, $remove_drugs = false)
     {
         $json_data = Cache::get($this->cache_key);
         $algorithm = $json_data['algorithm'];
@@ -2485,7 +2453,7 @@ class Algorithm extends Component
         return $new_final_diagnoses;
     }
 
-    public function findExcludedFinalDiagnoses($json_data, $diagnosis)
+    private function findExcludedFinalDiagnoses($json_data, $diagnosis)
     {
         $top_conditions = $this->getTopConditions($diagnosis['instances']);
 
@@ -2534,14 +2502,14 @@ class Algorithm extends Component
         }
     }
 
-    public function roundValue($value, $step = 1.0)
+    private function roundValue($value, $step = 1.0)
     {
         $inv = 1.0 / $step;
         $result = round($value * $inv) / $inv;
         return (fmod($result, 1) === 0.0) ? (int) $result : $result;
     }
 
-    public function handleNumeric($json_data, $mc_node, $node, $value)
+    private function handleNumeric($json_data, $mc_node, $node, $value)
     {
         $response = ['answer' => null, 'value' => $value];
         $unavailable_answer = collect($node['answers'])->firstWhere('value', 'not_available');
@@ -2574,7 +2542,7 @@ class Algorithm extends Component
         return $response;
     }
 
-    public function handleAnswerId($node, $value)
+    private function handleAnswerId($node, $value)
     {
         $answer = null;
         if (!is_null($value)) {
@@ -2590,7 +2558,7 @@ class Algorithm extends Component
         return ['answer' => $answer, 'value' => $value];
     }
 
-    public function setNodeValue($json_data, $mc_node, $node, $value)
+    private function setNodeValue($json_data, $mc_node, $node, $value)
     {
         $value_formats = config('medal.value_formats');
         switch ($node['value_format']) {
@@ -2610,7 +2578,7 @@ class Algorithm extends Component
         }
     }
 
-    public function generateQuestion($node)
+    private function generateQuestion($node)
     {
         $answer = $node['answer'] ?? null;
         $value = $node['value'] ?? '';
@@ -2649,7 +2617,7 @@ class Algorithm extends Component
         return $hash;
     }
 
-    public function generateQuestionsSequence($node)
+    private function generateQuestionsSequence($node)
     {
         $answer = $node['answer'] ?? null;
 
@@ -2661,14 +2629,14 @@ class Algorithm extends Component
         );
     }
 
-    public function _generateCommon($node)
+    private function _generateCommon($node)
     {
         return [
             'id' => $node['id']
         ];
     }
 
-    public function generateNewNodes($nodes)
+    private function generateNewNodes($nodes)
     {
         $new_nodes = [];
 
