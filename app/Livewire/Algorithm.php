@@ -383,7 +383,7 @@ class Algorithm extends Component
             'drugs' => [],
         ];
 
-        $this->medical_case['nodes'] = $this->generateNewNodes($algorithm['nodes']);
+        $this->medical_case['nodes'] = $this->algorithmService->createMedicalCaseNodes($algorithm['nodes']);
         $this->medical_case['diagnosis'] = [
             'proposed' => [],
             'excluded' => [],
@@ -712,9 +712,9 @@ class Algorithm extends Component
         $nodes = $json_data['algorithm']['nodes'];
 
         if ($value) {
-            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->getYesAnswer($nodes[$modified_cc_id]);
+            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$modified_cc_id]);
         } else {
-            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->getNoAnswer($nodes[$modified_cc_id]);
+            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$modified_cc_id]);
         }
     }
 
@@ -754,9 +754,9 @@ class Algorithm extends Component
                                         unset($this->chosen_complaint_categories[$general_cc_id]);
                                     }
                                 }
-                                $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($nodes[$yi_general_cc_id]);
+                                $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$yi_general_cc_id]);
                                 foreach ($older_ccs as $older_cc_id) {
-                                    $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($nodes[$older_cc_id]);
+                                    $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$older_cc_id]);
                                 }
 
                                 if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
@@ -771,9 +771,9 @@ class Algorithm extends Component
                                         unset($this->chosen_complaint_categories[$yi_general_cc_id]);
                                     }
                                 }
-                                $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($nodes[$general_cc_id]);
+                                $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$general_cc_id]);
                                 foreach ($neonat_ccs as $neonat_cc_id) {
-                                    $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($nodes[$neonat_cc_id]);
+                                    $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$neonat_cc_id]);
                                 }
                                 if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                                     unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
@@ -883,9 +883,9 @@ class Algorithm extends Component
                             }
                         }
                         $this->current_cc = $yi_general_cc_id;
-                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$yi_general_cc_id]);
+                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($full_nodes[$yi_general_cc_id]);
                         foreach ($older_ccs as $older_cc_id) {
-                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$older_cc_id]);
+                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->algorithmService->getNoAnswer($full_nodes[$older_cc_id]);
                         }
 
                         if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
@@ -900,9 +900,9 @@ class Algorithm extends Component
                             }
                         }
                         $this->current_cc = $general_cc_id;
-                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->getYesAnswer($full_nodes[$general_cc_id]);
+                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($full_nodes[$general_cc_id]);
                         foreach ($neonat_ccs as $neonat_cc_id) {
-                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->getNoAnswer($full_nodes[$neonat_cc_id]);
+                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->algorithmService->getNoAnswer($full_nodes[$neonat_cc_id]);
                         }
                         if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                             unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
@@ -945,7 +945,7 @@ class Algorithm extends Component
         return array_filter($diagnoses, function ($diagnosis) use ($nodes, $mc_nodes) {
             return (
                 isset($mc_nodes[$diagnosis['complaint_category']]) &&
-                $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->getYesAnswer($nodes[$diagnosis['complaint_category']]) &&
+                $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->algorithmService->getYesAnswer($nodes[$diagnosis['complaint_category']]) &&
                 $this->respectsCutOff($diagnosis)
             );
         });
@@ -965,16 +965,6 @@ class Algorithm extends Component
         }
 
         return $dd_per_cc ?? [];
-    }
-
-    private function getYesAnswer($node)
-    {
-        return collect($node['answers'])->where('reference', 1)->first()['id'];
-    }
-
-    private function getNoAnswer($node)
-    {
-        return collect($node['answers'])->where('reference', 2)->first()['id'];
     }
 
     private function respectsCutOff($condition)
@@ -1189,7 +1179,7 @@ class Algorithm extends Component
         }
 
         foreach ($nodes[$question_id]['conditioned_by_cc'] as $cc_id) {
-            if ($mc_nodes[$cc_id]['answer'] === $this->getNoAnswer($nodes[$cc_id])) {
+            if ($mc_nodes[$cc_id]['answer'] === $this->algorithmService->getNoAnswer($nodes[$cc_id])) {
                 return true;
             }
         }
@@ -1406,7 +1396,7 @@ class Algorithm extends Component
 
             // If the QS has a value
             if (!is_null($qs_boolean_value)) {
-                $qs_value = $qs_boolean_value ? $this->getYesAnswer($nodes[$qs_id]) : $this->getNoAnswer($nodes[$qs_id]);
+                $qs_value = $qs_boolean_value ? $this->algorithmService->getYesAnswer($nodes[$qs_id]) : $this->algorithmService->getNoAnswer($nodes[$qs_id]);
                 $new_qs_values = $this->handleAnswerId($nodes[$qs_id], $qs_value);
 
                 // Set the QS value in the store
@@ -1643,7 +1633,7 @@ class Algorithm extends Component
             if (!empty($nodes[$question_id]['conditioned_by_cc'])) {
                 // If one of the CCs is true, we need to exclude the question
                 $exclude = array_filter($nodes[$question_id]['conditioned_by_cc'], function ($cc_id) use ($mc_nodes, $nodes) {
-                    return $mc_nodes[$cc_id]['answer'] === $this->getYesAnswer($nodes[$cc_id]);
+                    return $mc_nodes[$cc_id]['answer'] === $this->algorithmService->getYesAnswer($nodes[$cc_id]);
                 });
 
                 return !empty($exclude) && $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
@@ -2576,87 +2566,6 @@ class Algorithm extends Component
             default:
                 return ['answer' => null, 'value' => null];
         }
-    }
-
-    private function generateQuestion($node)
-    {
-        $answer = $node['answer'] ?? null;
-        $value = $node['value'] ?? '';
-        $rounded_value = $node['rounded_value'] ?? '';
-        $estimable = $node['estimable'] ?? false;
-        $estimable_value = $node['estimable_value'] ?? 'measured';
-        $validation_message = $node['validation_message'] ?? null;
-        $validation_type = $node['validation_type'] ?? null;
-        $unavailable_value = $node['unavailable_value'] ?? false;
-        $label = '';
-
-        $hash = array_merge(
-            $this->_generateCommon($node),
-            [
-                'answer' => $answer,
-                'value' => $value,
-                'rounded_value' => $rounded_value,
-                'validation_message' => $validation_message,
-                'validation_type' => $validation_type,
-                'unavailable_value' => $unavailable_value,
-                'label' => $label
-            ]
-        );
-
-        // Set complain category to false by default
-        if ($node['category'] === config('medal.categories.complaint_category')) {
-            $hash['answer'] = $this->getNoAnswer($node);
-        }
-
-        // Add attribute for basic measurement question ex (weight, MUAC, height) to know if it's measured or estimated value answered
-        if ($estimable) {
-            // Type available [measured, estimated]
-            $hash['estimable_value'] = $estimable_value;
-        }
-
-        return $hash;
-    }
-
-    private function generateQuestionsSequence($node)
-    {
-        $answer = $node['answer'] ?? null;
-
-        return array_merge(
-            $this->_generateCommon($node),
-            [
-                'answer' => $answer
-            ]
-        );
-    }
-
-    private function _generateCommon($node)
-    {
-        return [
-            'id' => $node['id']
-        ];
-    }
-
-    private function generateNewNodes($nodes)
-    {
-        $new_nodes = [];
-
-        foreach ($nodes as $node) {
-            if (!isset($node['type'])) continue;
-            switch ($node['type']) {
-                case config('medal.node_types.questions_sequence'):
-                    $new_nodes[$node['id']] = $this->generateQuestionsSequence($node);
-                    break;
-                case config('medal.node_types.question'):
-                    $new_nodes[$node['id']] = $this->generateQuestion($node);
-                    break;
-                case config('medal.node_types.health_care'):
-                case config('medal.node_types.final_diagnosis'):
-                default:
-                    break;
-            }
-        }
-
-        return $new_nodes;
     }
 
     private function comparingBooleanOr($first_boolean, $second_boolean)

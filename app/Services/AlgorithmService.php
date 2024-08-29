@@ -242,4 +242,100 @@ class AlgorithmService
         $d = DateTime::createFromFormat($format, $date);
         return $d && $d->format($format) === $date;
     }
+
+    private function generateQuestion($node)
+    {
+        $answer = $node['answer'] ?? null;
+        $value = $node['value'] ?? '';
+        $rounded_value = $node['rounded_value'] ?? '';
+        $estimable = $node['estimable'] ?? false;
+        $estimable_value = $node['estimable_value'] ?? 'measured';
+        $validation_message = $node['validation_message'] ?? null;
+        $validation_type = $node['validation_type'] ?? null;
+        $unavailable_value = $node['unavailable_value'] ?? false;
+        $label = '';
+
+        $hash = array_merge(
+            $this->_generateCommon($node),
+            [
+                'answer' => $answer,
+                'value' => $value,
+                'rounded_value' => $rounded_value,
+                'validation_message' => $validation_message,
+                'validation_type' => $validation_type,
+                'unavailable_value' => $unavailable_value,
+                'label' => $label
+            ]
+        );
+
+        // Set complain category to false by default
+        if ($node['category'] === config('medal.categories.complaint_category')) {
+            $hash['answer'] = $this->getNoAnswer($node);
+        }
+
+        // Add attribute for basic measurement question ex (weight, MUAC, height) to know if it's measured or estimated value answered
+        if ($estimable) {
+            // Type available [measured, estimated]
+            $hash['estimable_value'] = $estimable_value;
+        }
+
+        return $hash;
+    }
+
+    private function generateQuestionsSequence($node)
+    {
+        $answer = $node['answer'] ?? null;
+
+        return array_merge(
+            $this->_generateCommon($node),
+            [
+                'answer' => $answer
+            ]
+        );
+    }
+
+    private function _generateCommon($node)
+    {
+        return [
+            'id' => $node['id']
+        ];
+    }
+
+    public function createMedicalCaseNodes($nodes)
+    {
+        return $this->generateNewNodes($nodes);
+    }
+
+    private function generateNewNodes($nodes)
+    {
+        $new_nodes = [];
+
+        foreach ($nodes as $node) {
+            if (!isset($node['type'])) continue;
+            switch ($node['type']) {
+                case config('medal.node_types.questions_sequence'):
+                    $new_nodes[$node['id']] = $this->generateQuestionsSequence($node);
+                    break;
+                case config('medal.node_types.question'):
+                    $new_nodes[$node['id']] = $this->generateQuestion($node);
+                    break;
+                case config('medal.node_types.health_care'):
+                case config('medal.node_types.final_diagnosis'):
+                default:
+                    break;
+            }
+        }
+
+        return $new_nodes;
+    }
+
+    public function getYesAnswer($node)
+    {
+        return collect($node['answers'])->where('reference', 1)->first()['id'];
+    }
+
+    public function getNoAnswer($node)
+    {
+        return collect($node['answers'])->where('reference', 2)->first()['id'];
+    }
 }
