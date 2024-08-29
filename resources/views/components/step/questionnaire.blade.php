@@ -8,7 +8,7 @@
 @foreach (array_filter($chosen_complaint_categories) as $cc_id => $chosen)
   <div wire:key="{{ 'chosen-cc-' . $cc_id }}">
 
-    @if ($current_cc == $cc_id)
+    @if ($current_cc === $cc_id)
       @if (array_key_exists($cc_id, $full_nodes))
         <h2 class="fw-normal pb-3">{{ $full_nodes[$cc_id]['label']['en'] }}</h2>
       @else
@@ -38,18 +38,19 @@
               @break
 
               @case('Formula')
+              @case('Reference')
                 @if ($debug_mode)
                   <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :value="$medical_case['nodes'][$node_id]['value']" :$node_id
                     :$full_nodes :$cache_key :is_background_calc="true" />
                 @endif
               @break
 
-              @case('Reference')
+              {{-- @case('Reference')
                 @if ($debug_mode)
                   <x-inputs.text step="consultation.medical_history.{{ $cc_id }}" :$node_id :value="$medical_case['nodes'][$node_id]['value']"
                     :$full_nodes :$cache_key :is_background_calc="true" />
                 @endif
-              @break
+              @break --}}
 
               @default
             @endswitch

@@ -29,15 +29,9 @@
               @break
 
               @case('Formula')
-                @if ($debug_mode)
-                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$medical_case['nodes'][$node_id]" :$full_nodes
-                    :is_background_calc="true" />
-                @endif
-              @break
-
               @case('Reference')
                 @if ($debug_mode)
-                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$medical_case['nodes'][$node_id]" :$full_nodes
+                  <x-inputs.text step='{{ "consultation.$substep.$title" }}' :$node_id :value="$medical_case['nodes'][$node_id]['value']" :$full_nodes
                     :is_background_calc="true" />
                 @endif
               @break

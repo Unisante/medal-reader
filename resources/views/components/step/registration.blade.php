@@ -50,6 +50,7 @@
         @break
 
         @case('Formula')
+        @case('Reference')
           @if ($debug_mode)
             <x-inputs.text step="registration" :node_id="$node_id" :full_nodes="$full_nodes" :is_background_calc="true" />
           @endif

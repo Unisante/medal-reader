@@ -1,7 +1,6 @@
 <?php
 
 return [
-    'uuid' => env('APP_UUID'),
 
     'projects' => [
         'dynamic' => [
@@ -62,7 +61,7 @@ return [
         'input' => 'Input',
         'drop_down_list' => 'DropDownList',
         'formula' => 'Formula',
-        'reference' => 'Reference', // reference table
+        'reference' => 'Reference',
         'string' => 'String',
         'autocomplete' => 'Autocomplete',
         'date' => 'Date',

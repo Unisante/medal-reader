@@ -95,8 +95,8 @@
               wire:click="goToSubStep('diagnoses', 'treatment_questions')">Treatment Questions</button>
           </li>
           <li class="nav-item">
-            <button class="nav-link @if ($current_sub_step === 'drugs') active @endif"
-              wire:click="goToSubStep('diagnoses', 'drugs')">Medicine</button>
+            <button class="nav-link @if ($current_sub_step === 'medicines') active @endif"
+              wire:click="goToSubStep('diagnoses', 'medicines')">Medicine</button>
           </li>
           <li class="nav-item">
             <button class="nav-link @if ($current_sub_step === 'summary') active @endif"
@@ -146,44 +146,40 @@
                 : null;
           @endphp
           @if (isset($treatment_questions))
-            @foreach ($treatment_questions as $node_id => $answer)
-              <div wire:key="{{ 'treatment-question-' . $node_id }}" class="pt-3">
-                @switch($full_nodes[$node_id]['display_format'])
-                  @case('RadioButton')
-                    <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
-                  @break
+            <div class="pt-3">
+              @foreach ($treatment_questions as $node_id => $answer)
+                <div wire:key="{{ 'treatment-question-' . $node_id }}">
+                  @switch($full_nodes[$node_id]['display_format'])
+                    @case('RadioButton')
+                      <x-inputs.radio step='diagnoses.treatment_questions' :$node_id :$full_nodes />
+                    @break
 
-                  @case('String')
-                    <x-inputs.text step='diagnoses.treatment_questions' :$node_id :$full_nodes :is_background_calc="false" />
-                  @break
+                    @case('String')
+                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :$full_nodes :is_background_calc="false" />
+                    @break
 
-                  @case('DropDownList')
-                    <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
-                  @break
+                    @case('DropDownList')
+                      <x-inputs.select step='diagnoses.treatment_questions' :$node_id :$full_nodes />
+                    @break
 
-                  @case('Input')
-                    <x-inputs.numeric step='diagnoses.treatment_questions' :$node_id :$full_nodes :label="$medical_case[$node_id]['label']"
-                      :$debug_mode />
-                  @break
+                    @case('Input')
+                      <x-inputs.numeric step='diagnoses.treatment_questions' :$node_id :$full_nodes :label="$medical_case[$node_id]['label']"
+                        :$debug_mode />
+                    @break
 
-                  @case('Formula')
-                    @if ($debug_mode)
-                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$medical_case[$node_id]" :$full_nodes
-                        :is_background_calc="true" />
-                    @endif
-                  @break
+                    @case('Formula')
+                    @case('Reference')
+                      @if ($debug_mode)
+                        <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$medical_case[$node_id]['value']" :$full_nodes
+                          :is_background_calc="true" />
+                      @endif
+                    @break
 
-                  @case('Reference')
-                    @if ($debug_mode)
-                      <x-inputs.text step='diagnoses.treatment_questions' :$node_id :value="$medical_case[$node_id]" :$full_nodes
-                        :is_background_calc="true" />
-                    @endif
-                  @break
-
-                  @default
-                @endswitch
-              </div>
-            @endforeach
+                    @default
+                  @endswitch
+                </div>
+              @endforeach
+            </div>
           @else
             <h4>There are no questions</h4>
           @endif

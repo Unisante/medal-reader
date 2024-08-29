@@ -107,29 +107,6 @@
 
 </div>
 
-{{-- <div class="col-3">
-      <div class="container">
-        Steps
-        @foreach ($steps[$algorithm_type] as $key => $substeps)
-          <div wire:key="{{ 'go-step-' . $key }}">
-            <button class="btn btn-outline-primary m-1"
-              wire:click="goToStep('{{ $key }}')">{{ $key }}</button>
-          </div>
-        @endforeach
-        <div class="container">
-          CCs chosen :
-          @foreach ($chosen_complaint_categories as $cc => $chosen)
-            <div wire:key="{{ 'edit-cc-' . $cc }}">
-              @if ($chosen)
-                <p class="mb-0">{{ $cc }}</p>
-              @endif
-            </div>
-          @endforeach
-        </div>
-      </div>
-    </div> --}}
-</div>
-
 @script
   <script type="text/javascript">
     let jsComponent = {}

@@ -20,11 +20,8 @@
         @break
 
         @case('Formula')
-          <x-inputs.text step="tests" :node_id="$node_id" :value="$medical_case['nodes'][$node_id]" :full_nodes="$full_nodes" :is_background_calc="true" />
-        @break
-
         @case('Reference')
-          <x-inputs.text step="tests" :node_id="$node_id" :value="$medical_case['nodes'][$node_id]" :full_nodes="$full_nodes" :is_background_calc="true" />
+          <x-inputs.text step="tests" :node_id="$node_id" :value="$medical_case['nodes'][$node_id]['value']" :full_nodes="$full_nodes" :is_background_calc="true" />
         @break
 
         @default
