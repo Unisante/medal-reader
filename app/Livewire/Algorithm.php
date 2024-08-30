@@ -68,8 +68,6 @@ class Algorithm extends Component
     public array $nodes;
     public array $diagnoses_status;
     public array $drugs_status;
-    public array $drugs_formulation;
-    public array $formulations_to_display;
 
     private AlgorithmService $algorithmService;
     private ReferenceCalculator $referenceCalculator;
@@ -77,7 +75,7 @@ class Algorithm extends Component
     private JsonExportService $jsonExportService;
     public array $treatment_questions;
     // private array $diagnoses_formulation;
-    // public array $drugs_formulations;
+
     public array $steps =  [
         'dynamic' => [
             'registration' => [],
@@ -379,12 +377,11 @@ class Algorithm extends Component
 
         $this->medical_case = [
             'nodes' => [],
-            'diagnosis' => [],
             'drugs' => [],
         ];
 
         $this->medical_case['nodes'] = $this->algorithmService->createMedicalCaseNodes($algorithm['nodes']);
-        $this->current_nodes['diagnosis'] = [
+        $this->current_nodes['diagnoses'] = [
             'proposed' => [],
             'excluded' => [],
             'additional' => [],
@@ -629,17 +626,57 @@ class Algorithm extends Component
     public function updatedDiagnosesStatus($value, $key)
     {
         $json_data = Cache::get($this->cache_key);
+        $agreed = $this->current_nodes['diagnoses']['agreed'];
+        $refused = $this->current_nodes['diagnoses']['refused'];
+        $nodes = $json_data['algorithm']['nodes'];
 
-        if ($value) {
-            $this->current_nodes['diagnoses']['agreed'][] = intval($key);
-            $this->current_nodes['diagnoses']['refused'] = array_diff($this->current_nodes['diagnoses']['refused'], [intval($key)]);
-            unset($this->current_nodes['diagnoses']['proposed'][intval($key)]);
-        } else {
-            $this->current_nodes['diagnoses']['proposed'][] = intval($key);
-            $this->current_nodes['diagnoses']['agreed'] = array_diff($this->current_nodes['diagnoses']['agreed'], [intval($key)]);
-            $this->current_nodes['diagnoses']['refused'][] = intval($key);
+        $is_in_agreed = array_key_exists($key, $agreed);
+        $is_in_refused = in_array($key, $refused);
+
+        // From null to Agree
+        if ($value && !$is_in_agreed) {
+            $current_node = $nodes[$key];
+            $available_drugs = $this->getAvailableHealthcare($json_data, $current_node, 'drugs');
+            $available_managements = $this->getAvailableHealthcare($json_data, $current_node, 'managements');
+
+            $this->current_nodes['diagnoses']['agreed'][$key] = [
+                'id' => $key,
+                'managements' => $available_managements,
+                'drugs' => [
+                    'proposed' => $available_drugs,
+                    'agreed' => [],
+                    'refused' => [],
+                    'additional' => [],
+                    'custom' => [],
+                ]
+            ];
+
+            // From Disagree to Agree
+            if ($is_in_refused) {
+                unset($this->current_nodes['diagnoses']['refused'][intval($key)]);
+            }
         }
-        dump($this->current_nodes['diagnoses']);
+
+        // From null to Disagree
+        if (!$value && !$is_in_refused) {
+            $this->current_nodes['diagnoses']['refused'][] = intval($key);
+
+            // From Agree to Disagree
+            if ($is_in_agreed) {
+                unset($this->current_nodes['diagnoses']['agreed'][intval($key)]);
+            }
+        }
+
+        // if ($value) {
+        //     $this->current_nodes['diagnoses']['agreed'][] = intval($key);
+        //     $this->current_nodes['diagnoses']['refused'] = array_diff($this->current_nodes['diagnoses']['refused'], [intval($key)]);
+        //     unset($this->current_nodes['diagnoses']['proposed'][intval($key)]);
+        // } else {
+        //     $this->current_nodes['diagnoses']['proposed'][] = intval($key);
+        //     $this->current_nodes['diagnoses']['agreed'] = array_diff($this->current_nodes['diagnoses']['agreed'], [intval($key)]);
+        //     $this->current_nodes['diagnoses']['refused'][] = intval($key);
+        // }
+
         $this->manageFinalDiagnose($json_data);
     }
 
@@ -667,8 +704,8 @@ class Algorithm extends Component
             $this->dispatch('openEmergencyModal');
         }
 
-
         $node = $nodes[$node_id];
+        dd($value, $key);
         $mc_node = $this->medical_case['nodes'][$node_id];
         $new_nodes = [];
 
@@ -1189,9 +1226,9 @@ class Algorithm extends Component
         $mc_nodes = $this->medical_case['nodes'];
         $nodes = $algorithm['nodes'];
 
-        if (
-            $nodes[$question_id]['type'] === config('medal.node_types.final_diagnosis') ||
-            $nodes[$question_id]['category'] === config('medal.categories.drug') ||
+        if ((isset($nodes[$question_id]['type'])
+                && $nodes[$question_id]['type'] === config('medal.node_types.final_diagnosis')
+            ) || $nodes[$question_id]['category'] === config('medal.categories.drug') ||
             $nodes[$question_id]['category'] === config('medal.categories.management')
         ) {
             return false;
@@ -2016,7 +2053,7 @@ class Algorithm extends Component
             $this->manageDrugs($json_data);
         }
         if ($this->current_sub_step === 'summary') {
-            // $this->manageSummary($json_data);
+            $this->manageSummary($json_data);
         }
         if ($this->current_sub_step === 'referral') {
             $this->manageReferral($json_data);
@@ -2040,6 +2077,7 @@ class Algorithm extends Component
             if (!$agreed) {
                 continue;
             }
+
             $final_diagnostic = $nodes[$agreed_final_diagnostic];
 
             $instances = $diagnoses[$final_diagnostic['diagnosis_id']]['final_diagnoses'][$final_diagnostic['id']]['instances'];
@@ -2082,13 +2120,36 @@ class Algorithm extends Component
 
     private function manageDrugs($json_data)
     {
-        $diagnoses = $this->current_nodes['diagnoses'];
-        dump($diagnoses);
+        $nodes = $json_data['algorithm']['nodes'];
 
-        dump($this->getNewDiagnoses($json_data, $diagnoses['agreed'], true));
-        dump($this->getNewDiagnoses($json_data, $diagnoses['additional']));
+        $this->current_nodes['diagnoses']['agreed'] = $this->getNewDiagnoses(
+            $json_data,
+            $this->current_nodes['diagnoses']['agreed'],
+            true
+        );
 
-        $this->reworkAndOrderDrugs($json_data);
+        $this->current_nodes['drugs'] = $this->reworkAndOrderDrugs($json_data);
+
+        uasort($this->current_nodes['drugs']['calculated'], function ($a, $b) use ($nodes) {
+            return $nodes[$b['id']]['level_of_urgency'] <=> $nodes[$a['id']]['level_of_urgency'];
+        });
+
+        dump($this->current_nodes);
+    }
+
+    private function manageSummary($json_data)
+    {
+        $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$json_data['weight_question_id']];
+        $formulations = new FormulationService(
+            $json_data,
+            $this->current_nodes['drugs']['agreed'] ?? [],
+            $this->current_nodes['diagnoses']['agreed'] ?? [],
+            $weight
+        );
+        $this->formulations_to_display = $formulations->getFormulations();
+        dd($this->formulations_to_display);
+
+        dump($this->current_nodes);
     }
 
     private function manageReferral($json_data)
@@ -2098,7 +2159,7 @@ class Algorithm extends Component
         $instances = $algorithm['diagram']['instances'];
         $mc_nodes = $this->medical_case['nodes'];
 
-        return array_fill_keys(array_filter($referral_order, function ($node_id) use ($json_data, $instances, $mc_nodes) {
+        $this->current_nodes['referral'] = array_fill_keys(array_filter($referral_order, function ($node_id) use ($json_data, $instances, $mc_nodes) {
             return $this->calculateConditionInverse($json_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
         }), '');
     }
@@ -2106,8 +2167,8 @@ class Algorithm extends Component
     private function manageFinalDiagnose($json_data)
     {
         $algorithm = $json_data['algorithm'];
-        // $mc_diagnosis = $this->deepCopy($this->current_nodes['diagnosis']);
-        $mc_diagnosis = $this->current_nodes['diagnosis'];
+        // $mc_diagnosis = $this->deepCopy($this->current_nodes['diagnoses']);
+        $mc_diagnosis = $this->current_nodes['diagnoses'];
 
         $diagnoses = $algorithm['diagnoses'];
         $nodes = $algorithm['nodes'];
@@ -2173,12 +2234,27 @@ class Algorithm extends Component
             array_map(fn($final_diagnosis) => $final_diagnosis['id'], $excluded_diagnoses)
         );
 
-        dump($mc_diagnosis);
-        $this->current_nodes['diagnoses'] = array_replace(
-            $mc_diagnosis,
-            $this->current_nodes['diagnoses'] ?? [],
-        );
-        dump($this->current_nodes['diagnoses']['agreed']);
+        foreach ($this->current_nodes['diagnoses'] as $dd_type => $dds) {
+            $this->current_nodes['diagnoses'][$dd_type] = array_replace(
+                $this->current_nodes['diagnoses'][$dd_type] ?? [],
+                $mc_diagnosis[$dd_type]
+            );
+        }
+
+        uasort($this->current_nodes['diagnoses']['proposed'], function ($a, $b) use ($nodes) {
+            // First, sort by level_of_urgency in descending order
+            $level_urgency_comparison = $nodes[$b]['level_of_urgency'] <=> $nodes[$a]['level_of_urgency'];
+
+            // If level_of_urgency is the same, sort by their original order in the proposed array (ascending)
+            if ($level_urgency_comparison === 0) {
+                $a_index = array_search($a, $this->current_nodes['diagnoses']['proposed']);
+                $b_index = array_search($b, $this->current_nodes['diagnoses']['proposed']);
+
+                return $a_index <=> $b_index;
+            }
+
+            return $level_urgency_comparison;
+        });
 
         $this->df_to_display = array_flip($mc_diagnosis['proposed']);
     }
@@ -2212,7 +2288,8 @@ class Algorithm extends Component
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
-        $instances = array_merge(
+
+        $instances = array_replace(
             $algorithm['diagnoses'][$final_diagnosis['diagnosis_id']]['final_diagnoses'][$final_diagnosis['id']]['instances'],
             $final_diagnosis[$key]
         );
@@ -2249,7 +2326,7 @@ class Algorithm extends Component
         $algorithm = $json_data['algorithm'];
         $mc_nodes = $this->medical_case['nodes'];
         $nodes = $algorithm['nodes'];
-        $agreed_final_diagnoses = $this->current_nodes['diagnosis']['agreed'];
+        $agreed_final_diagnoses = $this->current_nodes['diagnoses']['agreed'];
 
         $managements = array_map(function ($agreed_final_diagnosis) use ($json_data, $nodes) {
             return array_map(function ($management) {
@@ -2275,7 +2352,7 @@ class Algorithm extends Component
 
     private function handleDrugs($json_data, $drug_instances, &$questions_to_display, $instances, $exclusion)
     {
-        $agreed_final_diagnoses = $this->current_nodes['diagnosis']['agreed'];
+        $agreed_final_diagnoses = $this->current_nodes['diagnoses']['agreed'];
         $mc_nodes = $this->medical_case['nodes'];
 
         $agreed_drugs = $exclusion ? array_map(function ($agreed_final_diagnosis) {
@@ -2301,7 +2378,7 @@ class Algorithm extends Component
 
     private function drugIsAgreed($drug)
     {
-        $diagnoses = $this->current_nodes['diagnosis'];
+        $diagnoses = $this->current_nodes['diagnoses'];
         foreach ($drug['diagnoses'] as $diagnosis) {
             if (isset($diagnoses[$diagnosis['key']][$diagnosis['id']]['drugs']['agreed'][$drug['id']])) {
                 return true;
@@ -2312,7 +2389,7 @@ class Algorithm extends Component
 
     private function drugIsRefused($drug)
     {
-        $diagnoses = $this->current_nodes['diagnosis'];
+        $diagnoses = $this->current_nodes['diagnoses'];
         foreach ($drug['diagnoses'] as $diagnosis) {
             if (in_array($drug['id'], $diagnoses[$diagnosis['key']][$diagnosis['id']]['drugs']['refused'])) {
                 return true;
@@ -2325,7 +2402,7 @@ class Algorithm extends Component
     {
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
-        $diagnoses = $this->current_nodes['diagnosis'];
+        $diagnoses = $this->current_nodes['diagnoses'];
 
         $diagnosis_types = ['agreed', 'additional', 'custom'];
         $drug_types = ['agreed', 'proposed', 'additional', 'custom'];
@@ -2350,10 +2427,12 @@ class Algorithm extends Component
                             $drug_index = $this->getDrugIndex($new_drugs, $drug_id);
 
                             if ($drug_index > -1) {
+
                                 $diagnosis_exists = array_search(
                                     $diagnosis['id'],
                                     array_column($new_drugs[$drug_key][$drug_index]['diagnoses'], 'id')
                                 ) !== false;
+
                                 if (!$diagnosis_exists) {
                                     $new_drugs[$drug_key][$drug_index]['duration'] = $new_drugs[$drug_key][$drug_index]['duration'];
                                     $new_drugs[$drug_key][$drug_index]['diagnoses'][] = [
@@ -2364,6 +2443,8 @@ class Algorithm extends Component
                                 }
                             } else {
                                 $drug_label = ($drug_type === 'custom') ? $drug['name'] : $nodes[$drug_id]['label']['en'];
+                                $current_duration = $drug['duration'] ?? null;
+
                                 $new_drugs[$drug_key][] = [
                                     'id' => $drug_id,
                                     'key' => $drug_type,
@@ -2376,7 +2457,7 @@ class Algorithm extends Component
                                             'label' => $diagnosis_label,
                                         ],
                                     ],
-                                    'duration' => $drug['duration'],
+                                    'duration' => $drug_type === 'agreed' ? $this->extractDuration($json_data, $diagnosis['id'], $drug_id, $drug['duration'], $current_duration) : $current_duration,
                                     'added_at' => $drug['added_at'] ?? null,
                                     'selected_formulation_id' => $drug['formulation_id'] ?? null,
                                 ];
@@ -2386,8 +2467,34 @@ class Algorithm extends Component
                 }
             }
         }
-
+        dump($new_drugs);
         return $new_drugs;
+    }
+
+    private function extractDuration($json_data, $diagnosis_id, $drug_id, $current_duration = 0)
+    {
+        $drug_instance = $json_data['nodes'][$diagnosis_id]['drugs'][$drug_id];
+
+        // Check if the drug is marked as pre-referral
+        if ($drug_instance['is_pre_referral']) {
+            return __('reader.formulations.drug.pre_referral_duration');
+        }
+
+        // If current_duration is an integer, try to extract the new duration
+        if (is_int($current_duration)) {
+            // Translate the duration string and match it against the regex
+            $result = [];
+            preg_match('/^\d{1,2}$/', $drug_instance['duration']['en'], $result);
+
+            // If a valid duration is found, return the greater of the new and current duration
+            if (!empty($result)) {
+                $new_duration = intval($result[0]);
+                return ($new_duration > $current_duration) ? $new_duration : $current_duration;
+            }
+        }
+
+        // Return an invalid duration message if no valid duration is found
+        return __('reader.containers.medical_case.drugs.duration_invalid');
     }
 
     private function getDrugIndex($drugs, $drug_id)
@@ -2466,7 +2573,7 @@ class Algorithm extends Component
             }
         }
 
-        // Find for all final diagnosis the proposed drug
+        // Find for all final diagnosis the proposed drugs
         foreach ($final_diagnoses as $final_diagnosis) {
             $available_drugs = $this->getAvailableHealthcare(
                 $json_data,
@@ -2480,11 +2587,12 @@ class Algorithm extends Component
                 $drug_to_remove = array_filter(
                     array_keys($final_diagnosis['drugs']['agreed']),
                     function ($agreed_drug_id) use ($json_data, $available_drugs, $new_agreed) {
-                        return !in_array((int)$agreed_drug_id, $available_drugs) || $this->isHealthcareExcluded(
-                            $json_data,
-                            $agreed_drug_id,
-                            array_column($new_agreed, 'id')
-                        );
+                        return
+                            !in_array((int)$agreed_drug_id, $available_drugs) || $this->isHealthcareExcluded(
+                                $json_data,
+                                $agreed_drug_id,
+                                array_column($new_agreed, 'id')
+                            );
                     }
                 );
 
@@ -2966,7 +3074,7 @@ class Algorithm extends Component
             'df' => $this->df_to_display,
             'df_status' => $this->diagnoses_status,
             'drugs_status' => $this->drugs_status,
-            'drugs_formulation' => $this->drugs_formulation,
+            // 'drugs_formulation' => $this->drugs_formulation,
             'complaint_categories' => $this->chosen_complaint_categories,
             'patient_id' => $this->patient_id,
             'version_id' => $this->id,
@@ -3003,7 +3111,7 @@ class Algorithm extends Component
             'df' => $this->df_to_display,
             'df_status' => $this->diagnoses_status,
             'drugs_status' => $this->drugs_status,
-            'drugs_formulation' => $this->drugs_formulation,
+            // 'drugs_formulation' => $this->drugs_formulation,
             'complaint_categories' => $this->chosen_complaint_categories,
             'patient_id' => $this->patient_id,
             'version_id' => $this->id,

@@ -16,7 +16,7 @@ class FormulationService
 
     public array $drugs_formulation;
     public array $agreed_diagnoses;
-    public array $cached_data;
+    public array $json_data;
     public array $drugs_duration;
     public array $current_drug;
     public array $current_formulation;
@@ -24,11 +24,11 @@ class FormulationService
     public array $drug_indications;
 
 
-    public function __construct(array $drugs_formulation, array $agreed_diagnoses, string $cache_key, float $weight)
+    public function __construct(array $json_data, array $drugs_formulation, array $agreed_diagnoses, float $weight)
     {
+        $this->json_data = $json_data;
         $this->drugs_formulation = $drugs_formulation;
         $this->agreed_diagnoses = $agreed_diagnoses;
-        $this->cached_data = Cache::get($cache_key);
         $this->patient_weight = $weight;
         $this->calculateDrugDuration();
         $this->getDiagnosisLabel($agreed_diagnoses);
@@ -37,9 +37,9 @@ class FormulationService
 
     public function calculateDrugDuration()
     {
-        foreach ($this->agreed_diagnoses as $diagnosis_id => $drugs) {
-            foreach ($drugs as $drug_id => $drug_id) {
-                $drug_instance = $this->cached_data['final_diagnoses'][$diagnosis_id]['drugs'][$drug_id];
+        foreach ($this->agreed_diagnoses as $diagnosis_id => $diagnosis) {
+            foreach ($diagnosis['drugs']['proposed'] as $k => $drug_id) {
+                $drug_instance = $this->json_data['final_diagnoses'][$diagnosis_id]['drugs'][$drug_id];
                 if (boolval($drug_instance['is_pre_referral'])) {
                     $this->drugs_duration[$drug_id] = 'While arranging referral';
                     continue;
@@ -63,7 +63,7 @@ class FormulationService
         foreach ($agreed_diagnoses as $diag_id => $drugs) {
             if (!empty($drugs)) {
                 foreach ($drugs as $drug_id => $drug_id) {
-                    $indication = $this->cached_data['final_diagnoses'][$diag_id]['label']['en'];
+                    $indication = $this->json_data['final_diagnoses'][$diag_id]['label']['en'];
                     if (!isset($this->drug_indications[$drug_id])) {
                         $this->drug_indications[$drug_id] = $indication;
                         continue;
@@ -453,7 +453,7 @@ class FormulationService
     public function formatFormulation(int $drug_id, int $formulation_id)
     {
 
-        $health_cares = $this->cached_data['health_cares'];
+        $health_cares = $this->json_data['health_cares'];
         $this->current_drug = $health_cares[$drug_id];
         foreach ($this->current_drug['formulations'] as $formulation) {
             if ($formulation['id'] === $formulation_id) {

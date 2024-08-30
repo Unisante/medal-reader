@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     "general" => "General",
     "respiratory_circulation" => "Respiratory and Circulatory system",
     "ear_nose_mouth_throat" => "Ear, Nose, Mouth and Throat system",
