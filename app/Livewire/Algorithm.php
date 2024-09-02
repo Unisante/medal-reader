@@ -621,7 +621,75 @@ class Algorithm extends Component
         }
     }
 
+    public function updatingCurrentNodes($value, $key)
+    {
+        if ($this->algorithmService->isDate($value)) return;
 
+        if (
+            Str::of($key)->contains('first_name')
+            || Str::of($key)->contains('last_name')
+            || Str::of($key)->contains('drugs')
+        ) return;
+
+        if (Str::of($key)->contains('first_look_nodes_id')) {
+            if ($value) {
+                $this->dispatch('openEmergencyModal');
+            }
+        }
+
+        $json_data = Cache::get($this->cache_key);
+        $algorithm = $json_data['algorithm'];
+        $need_emergency = $json_data['need_emergency'];
+        $nodes = $algorithm['nodes'];
+        $node_id = intval(Str::of($key)->explode('.')->last());
+        Arr::set($this->current_nodes, $key, $value);
+
+        // If the answer trigger the emergency modal
+        if (array_key_exists($value, $need_emergency)) {
+            $this->dispatch('openEmergencyModal');
+        }
+
+        $node = $nodes[$node_id];
+        $mc_node = $this->medical_case['nodes'][$node_id];
+        $new_nodes = [];
+
+        // Set the new value to the current node
+        $new_values = $this->setNodeValue($json_data, $mc_node, $node, $value);
+        $new_nodes[$node_id] = array_replace($mc_node, $new_values);
+
+        // Update question sequence
+        $new_nodes = $this->updateQuestionSequence(
+            $json_data,
+            $node['id'],
+            $new_nodes,
+            $this->medical_case['nodes']
+        );
+
+        // Update related questions
+        $new_nodes = $this->updateRelatedQuestion(
+            $json_data,
+            $node['id'],
+            $new_nodes,
+            $this->medical_case['nodes']
+        );
+
+        $this->last_system_updated = [
+            'stage' => $this->current_sub_step,
+            'step' => $this->current_step,
+            'system' => $node['system'] ?? '',
+        ];
+
+        $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
+
+        match ($this->current_step) {
+            'consultation' => $this->current_sub_step === 'medical_history'
+                ? $this->manageMedicalHistory($json_data)
+                : $this->managePhysicalExam($json_data),
+            'tests' => $this->manageTestStep($json_data),
+            'diagnoses' => $this->manageDiagnosesStep($json_data),
+            default => null,
+        };
+    }
 
     public function updatedDiagnosesStatus($value, $key)
     {
@@ -680,71 +748,55 @@ class Algorithm extends Component
         $this->manageFinalDiagnose($json_data);
     }
 
-    public function updatingCurrentNodes($value, $key)
+    public function updatedDrugsStatus($value, $key)
     {
-        if ($this->algorithmService->isDate($value)) return;
+        $json_data = Cache::get($this->cache_key);
+        $drug_id = $key;
 
-        if (Str::of($key)->contains('first_name') || Str::of($key)->contains('last_name')) return;
+        foreach ($this->current_nodes['drugs']['calculated'] as $drug_key => $drug) {
+            foreach ($drug['diagnoses'] as $drug_diagnosis) {
 
-        if (Str::of($key)->contains('first_look_nodes_id')) {
-            if ($value) {
-                $this->dispatch('openEmergencyModal');
+                $diagnosis_id = $drug_diagnosis['id'];
+                $diagnosis_key = $drug_diagnosis['key'];
+                $diagnosis = $this->current_nodes['diagnoses']['agreed'][$diagnosis_id];
+
+                $is_in_agreed = array_key_exists($drug_id, $diagnosis['drugs']['agreed']);
+                $is_in_refused = in_array($drug_id, $diagnosis['drugs']['refused'] ?? []);
+
+                // From null to Agree
+                if ($value && !$is_in_agreed) {
+                    $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id] = ['id' => $drug_id];
+                    // $this->addAgreedDrug($diagnosis_key, $diagnosis_id, $drug_id);
+
+                    // From Disagree to Agree
+                    if ($is_in_refused) {
+                        $refused_drugs = &$this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['refused'];
+
+                        $index = array_search($drug_id, $refused_drugs);
+
+                        if ($index !== false) {
+                            unset($refused_drugs[$index]);
+                            $refused_drugs = array_values($refused_drugs);
+                        }
+                        // $this->removeRefusedDrug($diagnosis_key, $diagnosis_id, $drug_id);
+                    }
+                }
+
+                // From null to Disagree
+                if (!$value && !$is_in_refused) {
+                    $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['refused'][] = $drug_id;
+                    // $this->addRefusedDrug($diagnosis_key, $diagnosis_id, $drug_id);
+
+                    // From Agree to Disagree
+                    if ($is_in_agreed) {
+                        unset($this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id]);
+                        // $this->removeAgreedDrug($diagnosis_key, $diagnosis_id, $drug_id);
+                    }
+                }
             }
         }
 
-        $json_data = Cache::get($this->cache_key);
-        $algorithm = $json_data['algorithm'];
-        $need_emergency = $json_data['need_emergency'];
-        $nodes = $algorithm['nodes'];
-        $node_id = intval(Str::of($key)->explode('.')->last());
-        Arr::set($this->current_nodes, $key, $value);
-
-        // If the answer trigger the emergency modal
-        if (array_key_exists($value, $need_emergency)) {
-            $this->dispatch('openEmergencyModal');
-        }
-
-        $node = $nodes[$node_id];
-        dd($value, $key);
-        $mc_node = $this->medical_case['nodes'][$node_id];
-        $new_nodes = [];
-
-        // Set the new value to the current node
-        $new_values = $this->setNodeValue($json_data, $mc_node, $node, $value);
-        $new_nodes[$node_id] = array_replace($mc_node, $new_values);
-
-        // Update question sequence
-        $new_nodes = $this->updateQuestionSequence(
-            $json_data,
-            $node['id'],
-            $new_nodes,
-            $this->medical_case['nodes']
-        );
-
-        // Update related questions
-        $new_nodes = $this->updateRelatedQuestion(
-            $json_data,
-            $node['id'],
-            $new_nodes,
-            $this->medical_case['nodes']
-        );
-
-        $this->last_system_updated = [
-            'stage' => $this->current_sub_step,
-            'step' => $this->current_step,
-            'system' => $node['system'] ?? '',
-        ];
-
-        $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
-
-        match ($this->current_step) {
-            'consultation' => $this->current_sub_step === 'medical_history'
-                ? $this->manageMedicalHistory($json_data)
-                : $this->managePhysicalExam($json_data),
-            'tests' => $this->manageTestStep($json_data),
-            'diagnoses' => $this->manageDiagnosesStep($json_data),
-            default => null,
-        };
+        $this->manageDrugs($json_data);
     }
 
     public function updatingChosenComplaintCategories($value, int $modified_cc_id)
@@ -2128,11 +2180,14 @@ class Algorithm extends Component
             true
         );
 
-        $this->current_nodes['drugs'] = $this->reworkAndOrderDrugs($json_data);
-
+        dump($this->current_nodes['drugs'] ?? []);
+        $new_drugs = $this->reworkAndOrderDrugs($json_data);
+        dump($new_drugs);
+        $this->current_nodes['drugs'] = $new_drugs;
         uasort($this->current_nodes['drugs']['calculated'], function ($a, $b) use ($nodes) {
             return $nodes[$b['id']]['level_of_urgency'] <=> $nodes[$a['id']]['level_of_urgency'];
         });
+        dump($this->current_nodes['drugs']);
 
         dump($this->current_nodes);
     }
@@ -2457,7 +2512,13 @@ class Algorithm extends Component
                                             'label' => $diagnosis_label,
                                         ],
                                     ],
-                                    'duration' => $drug_type === 'agreed' ? $this->extractDuration($json_data, $diagnosis['id'], $drug_id, $drug['duration'], $current_duration) : $current_duration,
+                                    'duration' => $drug_type === 'agreed' ?
+                                        $this->extractDuration(
+                                            $json_data,
+                                            $diagnosis['id'],
+                                            $drug_id,
+                                            $current_duration
+                                        ) : $current_duration,
                                     'added_at' => $drug['added_at'] ?? null,
                                     'selected_formulation_id' => $drug['formulation_id'] ?? null,
                                 ];
@@ -2467,13 +2528,13 @@ class Algorithm extends Component
                 }
             }
         }
-        dump($new_drugs);
+
         return $new_drugs;
     }
 
     private function extractDuration($json_data, $diagnosis_id, $drug_id, $current_duration = 0)
     {
-        $drug_instance = $json_data['nodes'][$diagnosis_id]['drugs'][$drug_id];
+        $drug_instance = $json_data['algorithm']['nodes'][$diagnosis_id]['drugs'][$drug_id];
 
         // Check if the drug is marked as pre-referral
         if ($drug_instance['is_pre_referral']) {

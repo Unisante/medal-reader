@@ -39,7 +39,7 @@ class FormulationService
     {
         foreach ($this->agreed_diagnoses as $diagnosis_id => $diagnosis) {
             foreach ($diagnosis['drugs']['proposed'] as $k => $drug_id) {
-                $drug_instance = $this->json_data['final_diagnoses'][$diagnosis_id]['drugs'][$drug_id];
+                $drug_instance = $this->json_data['algorithm']['nodes'][$diagnosis_id]['drugs'][$drug_id];
                 if (boolval($drug_instance['is_pre_referral'])) {
                     $this->drugs_duration[$drug_id] = 'While arranging referral';
                     continue;
@@ -63,7 +63,7 @@ class FormulationService
         foreach ($agreed_diagnoses as $diag_id => $drugs) {
             if (!empty($drugs)) {
                 foreach ($drugs as $drug_id => $drug_id) {
-                    $indication = $this->json_data['final_diagnoses'][$diag_id]['label']['en'];
+                    $indication = $this->json_data['algorithm']['nodes'][$diag_id]['label']['en'];
                     if (!isset($this->drug_indications[$drug_id])) {
                         $this->drug_indications[$drug_id] = $indication;
                         continue;
@@ -453,7 +453,7 @@ class FormulationService
     public function formatFormulation(int $drug_id, int $formulation_id)
     {
 
-        $health_cares = $this->json_data['health_cares'];
+        $health_cares = $this->json_data['algorithm']['nodes'];
         $this->current_drug = $health_cares[$drug_id];
         foreach ($this->current_drug['formulations'] as $formulation) {
             if ($formulation['id'] === $formulation_id) {

@@ -195,15 +195,17 @@
                 </tr>
               </thead>
               <tbody>
-                @foreach ($current_nodes['drugs']['calculated'] as $drug)
+                @foreach ($current_nodes['drugs']['calculated'] as $drug_key => $drug)
                   <tr wire:key="{{ 'drug-' . $drug['id'] }}">
                     @php $cache_drug=$health_cares[$drug['id']] @endphp
-                    <td><label class="form-check-label" for="{{ $drug['id'] }}">{{ $cache_drug['label']['en'] }}
+                    <td>
+                      <label class="form-check-label" for="{{ $drug['id'] }}">
+                        {{ $cache_drug['label']['en'] }}
                       </label>
                     </td>
                     <td>
                       <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                        wire:model.live="current_nodes.drugs.calculated.{{ $drug['id'] }}"
+                        wire:model.live="current_nodes.drugs.calculated.{{ $drug_key }}.selected_formulation_id"
                         id="formulation-{{ $drug['id'] }}">
                         <option selected>Please Select a formulation</option>
                         @foreach ($cache_drug['formulations'] as $formulation)
