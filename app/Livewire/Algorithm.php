@@ -382,6 +382,8 @@ class Algorithm extends Component
         ];
 
         $this->medical_case['nodes'] = $this->algorithmService->createMedicalCaseNodes($algorithm['nodes']);
+        $this->manageRegistrationStep($json_data);
+
         $this->current_nodes['diagnoses'] = [
             'proposed' => [],
             'excluded' => [],
@@ -390,13 +392,12 @@ class Algorithm extends Component
             'refused' => [],
             'custom' => [],
         ];
-        $nodes = $this->manageRegistrationStep($json_data);
-        $this->current_nodes['registration'] = $nodes;
         $this->last_system_updated = [
             'stage' => null,
             'step' => null,
             'system' => null,
         ];
+
 
         if ($this->algorithm_type === 'prevention') {
             unset($this->current_nodes['registration']['first_name']);
@@ -420,9 +421,6 @@ class Algorithm extends Component
 
         if ($this->algorithm_type === 'prevention' && config('app.debug')) {
             $this->current_nodes['registration'][42321] = 43855;
-            $this->current_nodes['registration'][42318] = 74;
-            $this->current_nodes['registration'][42323] = 160;
-
             $this->current_nodes['registration']['birth_date'] = '1974-01-01';
             $this->chosen_complaint_categories = [];
             $this->df_to_display = [];
@@ -790,7 +788,6 @@ class Algorithm extends Component
                     $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id] = [
                         'id' => $drug_id
                     ];
-                    // $this->addAgreedDrug($diagnosis_key, $diagnosis_id, $drug_id);
 
                     // From Disagree to Agree
                     if ($is_in_refused) {
@@ -802,19 +799,16 @@ class Algorithm extends Component
                             unset($refused_drugs[$index]);
                             $refused_drugs = array_values($refused_drugs);
                         }
-                        // $this->removeRefusedDrug($diagnosis_key, $diagnosis_id, $drug_id);
                     }
                 }
 
                 // From null to Disagree
                 if (!$value && !$is_in_refused) {
                     $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['refused'][] = $drug_id;
-                    // $this->addRefusedDrug($diagnosis_key, $diagnosis_id, $drug_id);
 
                     // From Agree to Disagree
                     if ($is_in_agreed) {
                         unset($this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id]);
-                        // $this->removeAgreedDrug($diagnosis_key, $diagnosis_id, $drug_id);
                     }
                 }
             }
@@ -1723,7 +1717,7 @@ class Algorithm extends Component
         $instances = $algorithm['diagram']['instances'];
         $mc_nodes = $this->medical_case['nodes'];
 
-        return array_fill_keys(
+        $this->current_nodes['registration'] = array_fill_keys(
             array_filter(
                 $registration_order,
                 function ($node_id) use ($json_data, $instances, $mc_nodes) {
@@ -1940,7 +1934,6 @@ class Algorithm extends Component
 
                 if (!empty($new_questions)) {
                     $updated_systems[$cc_id] = $new_questions;
-                    if ($updated_systems[$cc_id] !== array_intersect_key($new_questions, $updated_systems[$cc_id])) dump('oui oui');
                     $updated_systems[$cc_id] = array_intersect_key($new_questions, $updated_systems[$cc_id]);
                 }
             }
@@ -2158,6 +2151,102 @@ class Algorithm extends Component
         }
     }
 
+    private function manageFinalDiagnose($json_data)
+    {
+        $algorithm = $json_data['algorithm'];
+        $mc_diagnosis = $this->current_nodes['diagnoses'];
+
+        $diagnoses = $algorithm['diagnoses'];
+        $nodes = $algorithm['nodes'];
+        $valid_diagnoses = $this->getValidDiagnoses($json_data);
+        $valid_diagnoses_ids = array_map(fn($diagnosis) => $diagnosis['id'], $valid_diagnoses);
+
+        // Exclude diagnoses based on cut off and complaint category exclusion
+        $mc_diagnosis['excluded'] = array_merge(
+            ...array_map(function ($diagnosis) use ($valid_diagnoses_ids) {
+                if (!in_array($diagnosis['id'], $valid_diagnoses_ids)) {
+                    return array_map(fn($final_diagnosis) => $final_diagnosis['id'], $diagnosis['final_diagnoses']);
+                }
+                return [];
+            }, $diagnoses)
+        );
+
+        // Find all the included diagnoses
+        $mc_diagnosis['proposed'] = array_merge(
+            ...array_map(function ($diagnosis) use ($json_data) {
+                return $this->findProposedFinalDiagnoses($json_data, $diagnosis);
+            }, $valid_diagnoses)
+        );
+
+        $mc_diagnosis['proposed'] = array_filter(
+            $mc_diagnosis['proposed'],
+            function ($final_diagnosis_id) use (&$mc_diagnosis, $nodes) {
+                return !$nodes[$final_diagnosis_id]['excluding_final_diagnoses']
+                    || !array_reduce(
+                        $nodes[$final_diagnosis_id]['excluding_final_diagnoses'],
+                        function ($carry, $excluding_final_diagnosis_id) use (&$mc_diagnosis, $final_diagnosis_id) {
+                            if (in_array(
+                                $excluding_final_diagnosis_id,
+                                array_map(fn($a) => $a['id'], $mc_diagnosis['agreed'])
+                            )) {
+                                $mc_diagnosis['excluded'][] = $final_diagnosis_id;
+                            }
+                            return $carry || (
+                                in_array($excluding_final_diagnosis_id, $mc_diagnosis['proposed'])
+                                && !in_array($excluding_final_diagnosis_id, $mc_diagnosis['refused'])
+                            );
+                        },
+                        false
+                    );
+            }
+        );
+
+        // Remove agreed diagnosis if it is no longer proposed
+        foreach ($mc_diagnosis['agreed'] ?? [] as $key => $diagnosis) {
+            if (!in_array($diagnosis['id'], $mc_diagnosis['proposed'])) {
+                unset($mc_diagnosis['agreed'][$key]);
+            }
+        }
+
+
+        $excluded_diagnoses = array_replace(...array_map(function ($diagnosis) use ($json_data) {
+            return array_filter(
+                $this->findExcludedFinalDiagnoses($json_data, $diagnosis),
+                fn($final_diagnosis) => $final_diagnosis['value'] === false
+            );
+        }, $valid_diagnoses));
+
+        $mc_diagnosis['excluded'] = array_replace(
+            $mc_diagnosis['excluded'],
+            array_map(fn($final_diagnosis) => $final_diagnosis['id'], $excluded_diagnoses)
+        );
+
+        foreach ($this->current_nodes['diagnoses'] as $dd_type => $dds) {
+            // $this->current_nodes['diagnoses'][$dd_type] = array_replace(
+            //     $this->current_nodes['diagnoses'][$dd_type] ?? [],
+            //     $mc_diagnosis[$dd_type]
+            // );
+            $this->current_nodes['diagnoses'][$dd_type] = $mc_diagnosis[$dd_type];
+        }
+
+        uasort($this->current_nodes['diagnoses']['proposed'], function ($a, $b) use ($nodes) {
+            // First, sort by level_of_urgency in descending order
+            $level_urgency_comparison = $nodes[$b]['level_of_urgency'] <=> $nodes[$a]['level_of_urgency'];
+
+            // If level_of_urgency is the same, sort by their original order in the proposed array (ascending)
+            if ($level_urgency_comparison === 0) {
+                $a_index = array_search($a, $this->current_nodes['diagnoses']['proposed']);
+                $b_index = array_search($b, $this->current_nodes['diagnoses']['proposed']);
+
+                return $a_index <=> $b_index;
+            }
+
+            return $level_urgency_comparison;
+        });
+
+        $this->df_to_display = array_flip($mc_diagnosis['proposed']);
+    }
+
     private function manageTreatment($json_data)
     {
         $algorithm = $json_data['algorithm'];
@@ -2229,6 +2318,7 @@ class Algorithm extends Component
         $new_drugs = $this->reworkAndOrderDrugs($json_data);
 
         $this->current_nodes['drugs'] = $new_drugs;
+
         uasort($this->current_nodes['drugs']['calculated'], function ($a, $b) use ($nodes) {
             return $nodes[$b['id']]['level_of_urgency'] <=> $nodes[$a['id']]['level_of_urgency'];
         });
@@ -2258,103 +2348,8 @@ class Algorithm extends Component
 
         $this->current_nodes['referral'] = array_replace(
             $referral_nodes,
-            $this->current_nodes['referral']
+            $this->current_nodes['referral'] ?? []
         );
-    }
-
-    private function manageFinalDiagnose($json_data)
-    {
-        $algorithm = $json_data['algorithm'];
-        // $mc_diagnosis = $this->deepCopy($this->current_nodes['diagnoses']);
-        $mc_diagnosis = $this->current_nodes['diagnoses'];
-
-        $diagnoses = $algorithm['diagnoses'];
-        $nodes = $algorithm['nodes'];
-        $valid_diagnoses = $this->getValidDiagnoses($json_data);
-        $valid_diagnoses_ids = array_map(fn($diagnosis) => $diagnosis['id'], $valid_diagnoses);
-
-        // Exclude diagnoses based on cut off and complaint category exclusion
-        $mc_diagnosis['excluded'] = array_merge(
-            ...array_map(function ($diagnosis) use ($valid_diagnoses_ids) {
-                if (!in_array($diagnosis['id'], $valid_diagnoses_ids)) {
-                    return array_map(fn($final_diagnosis) => $final_diagnosis['id'], $diagnosis['final_diagnoses']);
-                }
-                return [];
-            }, $diagnoses)
-        );
-
-        // Find all the included diagnoses
-        $mc_diagnosis['proposed'] = array_merge(
-            ...array_map(function ($diagnosis) use ($json_data) {
-                return $this->findProposedFinalDiagnoses($json_data, $diagnosis);
-            }, $valid_diagnoses)
-        );
-
-        $mc_diagnosis['proposed'] = array_filter(
-            $mc_diagnosis['proposed'],
-            function ($final_diagnosis_id) use (&$mc_diagnosis, $nodes) {
-                return !$nodes[$final_diagnosis_id]['excluding_final_diagnoses']
-                    || !array_reduce(
-                        $nodes[$final_diagnosis_id]['excluding_final_diagnoses'],
-                        function ($carry, $excluding_final_diagnosis_id) use (&$mc_diagnosis, $final_diagnosis_id) {
-                            if (in_array(
-                                $excluding_final_diagnosis_id,
-                                array_map(fn($a) => $a['id'], $mc_diagnosis['agreed'])
-                            )) {
-                                $mc_diagnosis['excluded'][] = $final_diagnosis_id;
-                            }
-                            return $carry || (
-                                in_array($excluding_final_diagnosis_id, $mc_diagnosis['proposed'])
-                                && !in_array($excluding_final_diagnosis_id, $mc_diagnosis['refused'])
-                            );
-                        },
-                        false
-                    );
-            }
-        );
-
-        // Remove agreed diagnosis if it is no longer proposed
-        foreach ($mc_diagnosis['agreed'] ?? [] as $key => $diagnosis) {
-            if (!in_array($diagnosis['id'], $mc_diagnosis['proposed'])) {
-                unset($mc_diagnosis['agreed'][$key]);
-            }
-        }
-
-        $excluded_diagnoses = array_replace(...array_map(function ($diagnosis) use ($json_data) {
-            return array_filter(
-                $this->findExcludedFinalDiagnoses($json_data, $diagnosis),
-                fn($final_diagnosis) => $final_diagnosis['value'] === false
-            );
-        }, $valid_diagnoses));
-
-        $mc_diagnosis['excluded'] = array_replace(
-            $mc_diagnosis['excluded'],
-            array_map(fn($final_diagnosis) => $final_diagnosis['id'], $excluded_diagnoses)
-        );
-
-        foreach ($this->current_nodes['diagnoses'] as $dd_type => $dds) {
-            $this->current_nodes['diagnoses'][$dd_type] = array_replace(
-                $this->current_nodes['diagnoses'][$dd_type] ?? [],
-                $mc_diagnosis[$dd_type]
-            );
-        }
-
-        uasort($this->current_nodes['diagnoses']['proposed'], function ($a, $b) use ($nodes) {
-            // First, sort by level_of_urgency in descending order
-            $level_urgency_comparison = $nodes[$b]['level_of_urgency'] <=> $nodes[$a]['level_of_urgency'];
-
-            // If level_of_urgency is the same, sort by their original order in the proposed array (ascending)
-            if ($level_urgency_comparison === 0) {
-                $a_index = array_search($a, $this->current_nodes['diagnoses']['proposed']);
-                $b_index = array_search($b, $this->current_nodes['diagnoses']['proposed']);
-
-                return $a_index <=> $b_index;
-            }
-
-            return $level_urgency_comparison;
-        });
-
-        $this->df_to_display = array_flip($mc_diagnosis['proposed']);
     }
 
     private function calculateConditionInverseFinalDiagnosis($conditions, $mc_nodes, $instances)
@@ -2477,6 +2472,7 @@ class Algorithm extends Component
     public function drugIsAgreed($drug)
     {
         $diagnoses = $this->current_nodes['diagnoses'];
+
         foreach ($drug['diagnoses'] as $diagnosis) {
             if (isset($diagnoses[$diagnosis['key']][$diagnosis['id']]['drugs']['agreed'][$drug['id']])) {
                 return true;
@@ -2691,8 +2687,8 @@ class Algorithm extends Component
                 $drug_to_remove = array_filter(
                     array_keys($final_diagnosis['drugs']['agreed']),
                     function ($agreed_drug_id) use ($json_data, $available_drugs, $new_agreed) {
-                        return
-                            !in_array((int)$agreed_drug_id, $available_drugs) || $this->isHealthcareExcluded(
+                        return !in_array((int)$agreed_drug_id, $available_drugs)
+                            || $this->isHealthcareExcluded(
                                 $json_data,
                                 $agreed_drug_id,
                                 array_column($new_agreed, 'id')

@@ -22,16 +22,15 @@
   <x-navigation.prevention-navsteps :$current_step :$saved_step :$completion_per_step :$chosen_complaint_categories />
 
   {{-- Registration --}}
-  @if (array_key_exists('first_look_assessment', $current_nodes))
-    @if ($current_step === 'registration')
-      <div class="row g-3 mt-3">
-        <div class="col-8">
-          <x-step.registration :nodes="$current_nodes['registration']" :$full_nodes :$medical_case :$cache_key :$algorithm_type
-            :$debug_mode />
-        </div>
+  {{-- @if (array_key_exists('first_look_assessment', $current_nodes)) --}}
+  @if ($current_step === 'registration')
+    <div class="row g-3 mt-3">
+      <div class="col-8">
+        <x-step.registration :nodes="$current_nodes['registration']" :$full_nodes :$medical_case :$cache_key :$algorithm_type :$debug_mode />
       </div>
-    @endif
+    </div>
   @endif
+  {{-- @endif --}}
 
   {{-- first_look_assessment --}}
   @if ($current_step === 'first_look_assessment')

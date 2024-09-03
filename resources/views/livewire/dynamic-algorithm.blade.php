@@ -204,17 +204,17 @@
                       </label>
                     </td>
                     <td>
-                      @if ($this->drugIsAgreed($drug))
-                        <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                          wire:model.live="formulations.{{ $drug['id'] }}" id="formulation-{{ $drug['id'] }}">
-                          <option selected>Please Select a formulation</option>
+                      <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                        wire:model.live="formulations.{{ $drug['id'] }}" id="formulation-{{ $drug['id'] }}">
+                        <option selected>Please Select a formulation</option>
+                        @if ($this->drugIsAgreed($drug))
                           @foreach ($cache_drug['formulations'] as $formulation)
                             <option value="{{ $formulation['id'] }}">
                               {{ $formulation['description']['en'] }}
                             </option>
                           @endforeach
-                        </select>
-                      @endif
+                        @endif
+                      </select>
                     </td>
                     <td>
                       <label class="custom-control teleport-switch">
