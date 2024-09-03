@@ -420,12 +420,12 @@ class Algorithm extends Component
         // $this->all_managements_to_display = [];
 
         if ($this->algorithm_type === 'prevention' && config('app.debug')) {
-            $this->current_nodes['registration'][42321] = 43855;
-            $this->current_nodes['registration']['birth_date'] = '1974-01-01';
+            // $this->current_nodes['registration'][42321] = 43855;
+            // $this->current_nodes['registration']['birth_date'] = '1974-01-01';
             $this->chosen_complaint_categories = [];
             $this->df_to_display = [];
             $this->diagnoses_per_cc = [];
-            $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
+            // $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
             $this->manageBasicMeasurement($json_data);
             $this->current_nodes['registration'] = array_replace(
                 $this->current_nodes['registration'],
