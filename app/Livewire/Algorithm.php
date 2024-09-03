@@ -426,6 +426,11 @@ class Algorithm extends Component
             $this->df_to_display = [];
             $this->diagnoses_per_cc = [];
             $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
+            $this->manageBasicMeasurement($json_data);
+            $this->current_nodes['registration'] = array_replace(
+                $this->current_nodes['registration'],
+                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'],
+            );
         }
 
         if ($this->algorithm_type === 'dynamic' && config('app.debug')) {
@@ -1934,6 +1939,7 @@ class Algorithm extends Component
 
                 if (!empty($new_questions)) {
                     $updated_systems[$cc_id] = $new_questions;
+                    // if ($updated_systems[$cc_id] !== array_intersect_key($new_questions, $updated_systems[$cc_id])) dump('oui oui');
                     $updated_systems[$cc_id] = array_intersect_key($new_questions, $updated_systems[$cc_id]);
                 }
             }
