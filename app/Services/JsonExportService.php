@@ -20,7 +20,7 @@ class JsonExportService
         $nodes_to_save = $data['nodes_to_save'] ?? [];
 
         //We remove first_name, last_name and birthdate from the nodes
-        $current_nodes = array_filter($data['nodes'], fn ($k) => is_numeric($k), ARRAY_FILTER_USE_KEY);
+        $current_nodes = array_filter($data['nodes'], fn($k) => is_numeric($k), ARRAY_FILTER_USE_KEY);
 
         // Merge nodes with nodes_to_save values
         foreach ($current_nodes as $key => $value) {

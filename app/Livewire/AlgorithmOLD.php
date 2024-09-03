@@ -2379,10 +2379,10 @@ class Algorithm extends Component
         // summary
         if (($substep === 'summary') && isset($this->drugs_status) && count(array_filter($this->drugs_status))) {
             // drug ids in drug_status and formulations in drugs_formulation
-            $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
+            // $common_agreed_df = array_intersect_key($this->df_to_display, array_filter($this->diagnoses_status));
             $common_agreed_drugs = array_intersect_key($this->drugs_formulation, array_filter($this->drugs_status));
             $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$cached_data['weight_question_id']];
-            $formulations = new FormulationService($cached_data, $common_agreed_drugs, $common_agreed_df, $weight);
+            $formulations = new FormulationService($cached_data, $common_agreed_drugs, $weight);
             $this->formulations_to_display = $formulations->getFormulations();
         }
     }
