@@ -419,7 +419,6 @@ class Algorithm extends Component
         // $this->all_managements_to_display = [];
 
         if ($this->algorithm_type === 'prevention' && config('app.debug')) {
-
             $this->current_nodes['registration'][42321] = 43855;
             $this->current_nodes['registration'][42318] = 74;
             $this->current_nodes['registration'][42323] = 160;
@@ -2253,9 +2252,14 @@ class Algorithm extends Component
         $instances = $algorithm['diagram']['instances'];
         $mc_nodes = $this->medical_case['nodes'];
 
-        $this->current_nodes['referral'] = array_fill_keys(array_filter($referral_order, function ($node_id) use ($json_data, $instances, $mc_nodes) {
+        $referral_nodes = array_fill_keys(array_filter($referral_order, function ($node_id) use ($json_data, $instances, $mc_nodes) {
             return $this->calculateConditionInverse($json_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
         }), '');
+
+        $this->current_nodes['referral'] = array_replace(
+            $referral_nodes,
+            $this->current_nodes['referral']
+        );
     }
 
     private function manageFinalDiagnose($json_data)
