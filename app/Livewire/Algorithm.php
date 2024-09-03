@@ -433,7 +433,7 @@ class Algorithm extends Component
             );
         }
 
-        if ($this->algorithm_type === 'dynamic' && config('app.debug')) {
+        if ($this->id === 96 && config('app.debug')) {
             $this->current_nodes['registration']['birth_date'] = '2018-01-01';
             $this->updatingCurrentNodesRegistrationBirthDate('2018-01-01');
             $this->current_nodes['registration'][7852] = 6258; //male
@@ -1722,7 +1722,7 @@ class Algorithm extends Component
         $instances = $algorithm['diagram']['instances'];
         $mc_nodes = $this->medical_case['nodes'];
 
-        $this->current_nodes['registration'] = array_fill_keys(
+        $registration_nodes = array_fill_keys(
             array_filter(
                 $registration_order,
                 function ($node_id) use ($json_data, $instances, $mc_nodes) {
@@ -1730,6 +1730,16 @@ class Algorithm extends Component
                 }
             ),
             ''
+        );
+
+        if ($this->algorithm_type === 'prevention') {
+            unset($registration_nodes['first_name']);
+            unset($registration_nodes['last_name']);
+        }
+
+        $this->current_nodes['registration'] = array_replace(
+            $registration_nodes,
+            $this->current_nodes['registration'] ?? []
         );
     }
 
