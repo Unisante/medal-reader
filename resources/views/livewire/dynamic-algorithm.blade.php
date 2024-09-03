@@ -204,16 +204,17 @@
                       </label>
                     </td>
                     <td>
-                      <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                        wire:model.live="current_nodes.drugs.calculated.{{ $drug_key }}.selected_formulation_id"
-                        id="formulation-{{ $drug['id'] }}">
-                        <option selected>Please Select a formulation</option>
-                        @foreach ($cache_drug['formulations'] as $formulation)
-                          <option value="{{ $formulation['id'] }}">
-                            {{ $formulation['description']['en'] }}
-                          </option>
-                        @endforeach
-                      </select>
+                      @if ($this->drugIsAgreed($drug))
+                        <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                          wire:model.live="formulations.{{ $drug['id'] }}" id="formulation-{{ $drug['id'] }}">
+                          <option selected>Please Select a formulation</option>
+                          @foreach ($cache_drug['formulations'] as $formulation)
+                            <option value="{{ $formulation['id'] }}">
+                              {{ $formulation['description']['en'] }}
+                            </option>
+                          @endforeach
+                        </select>
+                      @endif
                     </td>
                     <td>
                       <label class="custom-control teleport-switch">
@@ -247,9 +248,11 @@
                     <td><b>{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</b>
                       @if ($final_diagnoses[$diagnosis_id]['description']['en'])
                         <div x-data="{ open: false }">
-                          <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                            <i class="bi bi-info-circle"> Description</i>
-                          </button>
+                          <div class="d-flex justify-content-end pe-3">
+                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                              <i class="bi bi-info-circle"> Description</i>
+                            </button>
+                          </div>
                           <div x-show="open">
                             <p>{{ $final_diagnoses[$diagnosis_id]['description']['en'] }}</p>
                           </div>
@@ -267,59 +270,61 @@
                 </tr>
               </thead>
               <tbody>
-                @foreach ($current_nodes['drugs'] as $drug_id => $formulation)
-                  <tr>
-                    <td class="d-flex justify-content-between">
-                      <div>
-                        <b>{{ $formulation['drug_label'] }}</b> <br>
-                        <p>
-                          <span>{{ $formulation['amountGiven'] }}</span> |
-                          <span>{{ $formulation['doses_per_day'] }}
-                            {{ intval($formulation['doses_per_day']) > 1 ? 'times' : 'time' }} per day</span> |
-                          @if (intval($formulation['duration']))
-                            <span> {{ $formulation['duration'] }}
-                              {{ intval($formulation['duration']) > 1 ? 'days' : 'day' }}
-                            </span>
-                          @else
-                            <span>{{ $formulation['duration'] }}</span>
-                          @endif
-                        </p>
-                        <div x-data="{ open: false }" @toggle.window="open = ! open">
-                          <div x-show="open">
-                            <span><b>Indication:</b> {{ $formulation['indication'] }}</span><br>
-                            <span><b>Dose calculation:</b> {{ $formulation['dose_calculation'] }}</span> <br>
-                            <span><b>Route:</b> {{ $formulation['route'] }}</span> <br>
-                            <span><b>Amount to be given :</b> {{ $formulation['amountGiven'] }}</span> <br>
-                            @if ($formulation['injection_instructions'])
+                @foreach ($current_nodes['diagnoses']['agreed'] as $dd_id => $diagnosis)
+                  @foreach ($diagnosis['drugs']['agreed'] ?? [] as $drug_id => $drug)
+                    <tr>
+                      <td>
+                        <div>
+                          <b>{{ $drug['drug_label'] }}</b> <br>
+                          <p>
+                            <span>{{ $drug['amountGiven'] }}</span> |
+                            <span>{{ $drug['doses_per_day'] }}
+                              {{ intval($drug['doses_per_day']) > 1 ? 'times' : 'time' }} per day</span> |
+                            @if (intval($drug['duration']))
+                              <span> {{ $drug['duration'] }}
+                                {{ intval($drug['duration']) > 1 ? 'days' : 'day' }}
+                              </span>
+                            @else
+                              <span>{{ $drug['duration'] }}</span>
+                            @endif
+                          </p>
+                          <div x-data="{ open: false }" wire:key="{{ 'summary-drug-' . $drug['id'] }}">
+                            <div class="d-flex justify-content-end pe-3">
+                              <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                                <i class="bi bi-info-circle"> More</i>
+                              </button>
+                            </div>
+                            <div x-show="open">
+                              <span><b>Indication:</b> {{ $drug['indication'] }}</span><br>
+                              <span><b>Dose calculation:</b> {{ $drug['dose_calculation'] }}</span> <br>
+                              <span><b>Route:</b> {{ $drug['route'] }}</span> <br>
+                              <span><b>Amount to be given :</b> {{ $drug['amountGiven'] }}</span> <br>
+                              @if ($drug['injection_instructions'])
+                                <span>
+                                  <b>Preparation instructions :</b>{{ $drug['injection_instructions'] }}
+                                </span> <br>
+                              @endif
                               <span>
-                                <b>Preparation instructions :</b>{{ $formulation['injection_instructions'] }}
+                                <b>Frequency :</b> {{ $drug['doses_per_day'] }}
+                                {{ intval($drug['doses_per_day']) > 1 ? 'times' : 'time' }} per day (or
+                                every {{ $drug['recurrence'] }} hours)
                               </span> <br>
-                            @endif
-                            <span>
-                              <b>Frequency :</b> {{ $formulation['doses_per_day'] }}
-                              {{ intval($formulation['doses_per_day']) > 1 ? 'times' : 'time' }} per day (or
-                              every {{ $formulation['recurrence'] }} hours)
-                            </span> <br>
-                            <span>
-                              <b>Duration :</b>
-                              {{ $formulation['duration'] }}{{ intval($formulation['duration']) > 1 ? ' days' : ' day' }}
-                            </span> <br>
-                            @if ($formulation['dispensing_description'])
                               <span>
-                                <b>Administration instructions :</b>
-                                {{ $formulation['dispensing_description'] }}
-                              </span><br>
-                            @endif
+                                <b>Duration :</b>
+                                {{ $drug['duration'] }}{{ intval($drug['duration']) > 1 ? ' days' : ' day' }}
+                              </span> <br>
+                              @if ($drug['dispensing_description'])
+                                <span>
+                                  <b>Administration instructions :</b>
+                                  {{ $drug['dispensing_description'] }}
+                                </span><br>
+                              @endif
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div x-data>
-                        <button class="btn btn-sm btn-outline-secondary m-1" @click="$dispatch('toggle')">
-                          <i class="bi bi-info-circle"> More</i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  @endforeach
                 @endforeach
               </tbody>
             </table>
@@ -330,26 +335,28 @@
                 </tr>
               </thead>
               <tbody>
-                @foreach ($managements_to_display as $management_key => $diagnosis_id)
-                  @if (isset($diagnoses_status[$diagnosis_id]))
-                    <tr wire:key="{{ 'management-' . $management_key }}">
+                @foreach ($current_nodes['diagnoses']['agreed'] as $dd_id => $diagnosis)
+                  @foreach ($diagnosis['managements'] ?? [] as $management_id)
+                    <tr wire:key="{{ 'management-' . $management_id }}">
                       <td>
-                        <b>{{ $health_cares[$management_key]['label']['en'] }}</b><br>
+                        <b>{{ $health_cares[$management_id]['label']['en'] }}</b><br>
                         <b>Indication:</b>
                         {{ $final_diagnoses[$diagnosis_id]['label']['en'] }}
-                        @if ($health_cares[$management_key]['description']['en'])
+                        @if ($health_cares[$management_id]['description']['en'])
                           <div x-data="{ open: false }">
-                            <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
-                              <i class="bi bi-info-circle"> Description</i>
-                            </button>
+                            <div class="d-flex justify-content-end pe-3">
+                              <button class="btn btn-sm btn-outline-secondary m-1" @click="open = ! open">
+                                <i class="bi bi-info-circle"> Description</i>
+                              </button>
+                            </div>
                             <div x-show="open">
-                              <p>{{ $health_cares[$management_key]['description']['en'] }}</p>
+                              <p>{{ $health_cares[$management_id]['description']['en'] }}</p>
                             </div>
                           </div>
                         @endif
                       </td>
                     </tr>
-                  @endif
+                  @endforeach
                 @endforeach
               </tbody>
             </table>

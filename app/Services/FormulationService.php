@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Cache;
 class FormulationService
 {
 
-    public array $drugs_formulation;
     public array $agreed_diagnoses;
     public array $json_data;
     public array $drugs_duration;
@@ -24,16 +23,14 @@ class FormulationService
     public array $drug_indications;
 
 
-    public function __construct(array $json_data, array $drugs_formulation, array $agreed_diagnoses, float $weight)
+    public function __construct(array $json_data, array $agreed_diagnoses, float $weight)
     {
         $this->json_data = $json_data;
-        $this->drugs_formulation = $drugs_formulation;
         $this->agreed_diagnoses = $agreed_diagnoses;
         $this->patient_weight = $weight;
         $this->calculateDrugDuration();
         $this->getDiagnosisLabel($agreed_diagnoses);
     }
-
 
     public function calculateDrugDuration()
     {
@@ -60,16 +57,14 @@ class FormulationService
 
     public function getDiagnosisLabel($agreed_diagnoses)
     {
-        foreach ($agreed_diagnoses as $diag_id => $drugs) {
-            if (!empty($drugs)) {
-                foreach ($drugs as $drug_id => $drug_id) {
-                    $indication = $this->json_data['algorithm']['nodes'][$diag_id]['label']['en'];
-                    if (!isset($this->drug_indications[$drug_id])) {
-                        $this->drug_indications[$drug_id] = $indication;
-                        continue;
-                    }
-                    $this->drug_indications[$drug_id] = $this->drug_indications[$drug_id] . ' | ' . $indication;
+        foreach ($agreed_diagnoses as $diag_id => $diagnosis) {
+            foreach ($diagnosis['drugs']['agreed'] ?? [] as $drug_id => $drug) {
+                $indication = $this->json_data['algorithm']['nodes'][$diag_id]['label']['en'];
+                if (!isset($this->drug_indications[$drug_id])) {
+                    $this->drug_indications[$drug_id] = $indication;
+                    continue;
                 }
+                $this->drug_indications[$drug_id] = $this->drug_indications[$drug_id] . ' | ' . $indication;
             }
         }
     }
@@ -478,10 +473,15 @@ class FormulationService
 
     public function getFormulations()
     {
-        $formulations = [];
-        foreach ($this->drugs_formulation as $drug_id => $formulation_id) {
-            $formulations[$drug_id] = $this->formatFormulation($drug_id, $formulation_id);
+        foreach ($this->agreed_diagnoses as $dd_id => $agreed_diagnosis) {
+            foreach ($agreed_diagnosis['drugs']['agreed'] ?? [] as $drug_id => $drug) {
+                $this->agreed_diagnoses[$dd_id]['drugs']['agreed'][$drug_id] = array_replace(
+                    $this->agreed_diagnoses[$dd_id]['drugs']['agreed'][$drug_id],
+                    $this->formatFormulation($drug_id, $drug['formulation_id'])
+                );
+            }
         }
-        return $formulations;
+
+        return $this->agreed_diagnoses;
     }
 }

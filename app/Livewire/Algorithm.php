@@ -68,6 +68,7 @@ class Algorithm extends Component
     public array $nodes;
     public array $diagnoses_status;
     public array $drugs_status;
+    public array $formulations;
 
     private AlgorithmService $algorithmService;
     private ReferenceCalculator $referenceCalculator;
@@ -411,13 +412,11 @@ class Algorithm extends Component
                 : $json_data['yi_general_cc_id'];
         }
 
-        $this->current_nodes['registration']['birth_date'] = '2018-01-01';
         // $this->chosen_complaint_categories = [];
         // $this->df_to_display = [];
         // $this->diagnoses_per_cc = [];
         // $this->drugs_to_display = [];
         // $this->all_managements_to_display = [];
-        $this->updatingCurrentNodesRegistrationBirthDate('2018-01-01');
 
         if ($this->algorithm_type === 'prevention') {
 
@@ -430,6 +429,30 @@ class Algorithm extends Component
             $this->df_to_display = [];
             $this->diagnoses_per_cc = [];
             $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
+        }
+
+        if ($this->algorithm_type === 'dynamic') {
+            $this->current_nodes['registration']['birth_date'] = '2018-01-01';
+            $this->updatingCurrentNodesRegistrationBirthDate('2018-01-01');
+            $this->current_nodes['registration'][7852] = 6258; //male
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][7805] = 40;
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][7435] = 140;
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][7471] = 20;
+            $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][7827] = 50;
+            $this->updatingCurrentNodes(6258, 'registration.7852');
+            $this->updatingCurrentNodes(50, 'first_look_assessment.basic_measurements_nodes_id.7827');
+            $this->updatingCurrentNodes(20, 'first_look_assessment.basic_measurements_nodes_id.7471');
+            $this->updatingCurrentNodes(140, 'first_look_assessment.basic_measurements_nodes_id.7435');
+            $this->updatingCurrentNodes(40, 'first_look_assessment.basic_measurements_nodes_id.7805');
+            $this->goToStep('consultation');
+            $this->updatingCurrentNodes(6147, 'consultation.medical_history.general.7807');
+            $this->updatingCurrentNodes(5641, 'consultation.medical_history.general.7539');
+            $this->updatingCurrentNodes(6167, 'consultation.medical_history.respiratory_circulation.7817');
+            $this->goToSubStep('consultation', 'physical_exam');
+            $this->updatingCurrentNodes(6155, 'consultation.physical_exam.respiratory_circulation.7811');
+            $this->updatingCurrentNodes(5, 'consultation.physical_exam.respiratory_circulation.8385');
+            $this->goToStep('tests');
+            // $this->goToSubStep('diagnoses', 'final_diagnoses');
         }
         //END TO REMOVE
 
@@ -765,7 +788,9 @@ class Algorithm extends Component
 
                 // From null to Agree
                 if ($value && !$is_in_agreed) {
-                    $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id] = ['id' => $drug_id];
+                    $this->current_nodes['diagnoses'][$diagnosis_key][$diagnosis_id]['drugs']['agreed'][$drug_id] = [
+                        'id' => $drug_id
+                    ];
                     // $this->addAgreedDrug($diagnosis_key, $diagnosis_id, $drug_id);
 
                     // From Disagree to Agree
@@ -797,6 +822,28 @@ class Algorithm extends Component
         }
 
         $this->manageDrugs($json_data);
+    }
+
+    public function updatedFormulations($value, $key)
+    {
+        $json_data = Cache::get($this->cache_key);
+        $calculated_drugs = $this->current_nodes['drugs']['calculated'];
+        $drug_id = intval($key);
+
+        $drugs = array_filter($calculated_drugs, function ($v) use ($drug_id) {
+            return intval($v['id']) === $drug_id;
+        });
+
+        if (empty($drugs)) {
+            return;
+        }
+
+        foreach ($drugs as $drug) {
+            foreach ($drug['diagnoses'] as $diagnosis) {
+                $drug_key = $drug['key'] === 'proposed' ? 'agreed' : $drug['key'];
+                $this->current_nodes['diagnoses'][$diagnosis['key']][$diagnosis['id']]['drugs'][$drug_key][$drug['id']]['formulation_id'] = $value;
+            }
+        }
     }
 
     public function updatingChosenComplaintCategories($value, int $modified_cc_id)
@@ -2180,16 +2227,12 @@ class Algorithm extends Component
             true
         );
 
-        dump($this->current_nodes['drugs'] ?? []);
         $new_drugs = $this->reworkAndOrderDrugs($json_data);
-        dump($new_drugs);
+
         $this->current_nodes['drugs'] = $new_drugs;
         uasort($this->current_nodes['drugs']['calculated'], function ($a, $b) use ($nodes) {
             return $nodes[$b['id']]['level_of_urgency'] <=> $nodes[$a['id']]['level_of_urgency'];
         });
-        dump($this->current_nodes['drugs']);
-
-        dump($this->current_nodes);
     }
 
     private function manageSummary($json_data)
@@ -2197,14 +2240,10 @@ class Algorithm extends Component
         $weight = $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'][$json_data['weight_question_id']];
         $formulations = new FormulationService(
             $json_data,
-            $this->current_nodes['drugs']['agreed'] ?? [],
             $this->current_nodes['diagnoses']['agreed'] ?? [],
             $weight
         );
-        $this->formulations_to_display = $formulations->getFormulations();
-        dd($this->formulations_to_display);
-
-        dump($this->current_nodes);
+        $this->current_nodes['diagnoses']['agreed'] = $formulations->getFormulations();
     }
 
     private function manageReferral($json_data)
@@ -2431,7 +2470,7 @@ class Algorithm extends Component
         }
     }
 
-    private function drugIsAgreed($drug)
+    public function drugIsAgreed($drug)
     {
         $diagnoses = $this->current_nodes['diagnoses'];
         foreach ($drug['diagnoses'] as $diagnosis) {
@@ -2442,7 +2481,7 @@ class Algorithm extends Component
         return false;
     }
 
-    private function drugIsRefused($drug)
+    public function drugIsRefused($drug)
     {
         $diagnoses = $this->current_nodes['diagnoses'];
         foreach ($drug['diagnoses'] as $diagnosis) {
@@ -2517,7 +2556,7 @@ class Algorithm extends Component
                                             $json_data,
                                             $diagnosis['id'],
                                             $drug_id,
-                                            $current_duration
+                                            $current_duration ?? 0
                                         ) : $current_duration,
                                     'added_at' => $drug['added_at'] ?? null,
                                     'selected_formulation_id' => $drug['formulation_id'] ?? null,
