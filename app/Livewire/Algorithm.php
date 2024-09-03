@@ -400,10 +400,14 @@ class Algorithm extends Component
 
 
         if ($this->algorithm_type === 'prevention') {
+            $this->manageBasicMeasurement($json_data);
+            $this->current_nodes['registration'] = array_replace(
+                $this->current_nodes['registration'],
+                $this->current_nodes['first_look_assessment']['basic_measurements_nodes_id'],
+            );
             unset($this->current_nodes['registration']['first_name']);
             unset($this->current_nodes['registration']['last_name']);
         }
-
 
         //todo remove these when in prod
         //START TO REMOVE
