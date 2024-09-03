@@ -418,7 +418,7 @@ class Algorithm extends Component
         // $this->drugs_to_display = [];
         // $this->all_managements_to_display = [];
 
-        if ($this->algorithm_type === 'prevention') {
+        if ($this->algorithm_type === 'prevention' && config('app.debug')) {
 
             $this->current_nodes['registration'][42321] = 43855;
             $this->current_nodes['registration'][42318] = 74;
@@ -431,7 +431,7 @@ class Algorithm extends Component
             $this->updatingCurrentNodesRegistrationBirthDate('1974-01-01');
         }
 
-        if ($this->algorithm_type === 'dynamic') {
+        if ($this->algorithm_type === 'dynamic' && config('app.debug')) {
             $this->current_nodes['registration']['birth_date'] = '2018-01-01';
             $this->updatingCurrentNodesRegistrationBirthDate('2018-01-01');
             $this->current_nodes['registration'][7852] = 6258; //male
