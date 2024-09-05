@@ -840,15 +840,21 @@ class Algorithm extends Component
         }
     }
 
-    public function updatingChosenComplaintCategories($value, int $modified_cc_id)
+    public function updatedChosenComplaintCategories($value, int $modified_cc_id)
     {
         $json_data = Cache::get($this->cache_key);
         $nodes = $json_data['algorithm']['nodes'];
 
         if ($value) {
             $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$modified_cc_id]);
+            $this->completion_per_substep[$modified_cc_id] = [
+                'start' => 0,
+                'end' => 0,
+            ];
+            // $this->calculateCompletionPercentage($json_data, $modified_cc_id);
         } else {
             $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$modified_cc_id]);
+            unset($this->completion_per_substep[$modified_cc_id]);
         }
     }
 
@@ -3017,7 +3023,6 @@ class Algorithm extends Component
                 return;
             }
         }
-
         $json_data = Cache::get($this->cache_key);
 
         if ($this->current_sub_step === '' && $this->algorithm_type !== 'training') {
@@ -3048,6 +3053,9 @@ class Algorithm extends Component
 
         if ($step === 'consultation') {
             $this->manageConsultationStep($json_data);
+            foreach (array_keys(array_filter($this->chosen_complaint_categories)) as $cc) {
+                $this->calculateCompletionPercentage($json_data, $cc);
+            }
         }
 
         if ($step === 'tests') {
