@@ -459,6 +459,10 @@ class Algorithm extends Component
         // If we are in training mode then we go directly to consultation step
         if ($this->algorithm_type === 'training') {
             $this->chosen_complaint_categories[$json_data['general_cc_id']] = true;
+            $this->completion_per_substep[$json_data['general_cc_id']] = [
+                'start' => 0,
+                'end' => 0,
+            ];
             $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
             $this->diagnoses_per_cc = $valid_diagnoses;
             $this->saved_step = 2;
