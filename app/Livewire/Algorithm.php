@@ -459,7 +459,6 @@ class Algorithm extends Component
         // If we are in training mode then we go directly to consultation step
         if ($this->algorithm_type === 'training') {
             $this->chosen_complaint_categories[$json_data['general_cc_id']] = true;
-
             $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
             $this->diagnoses_per_cc = $valid_diagnoses;
             $this->saved_step = 2;
@@ -1081,6 +1080,7 @@ class Algorithm extends Component
         $nodes = $algorithm['nodes'];
         $diagnoses = $algorithm['diagnoses'];
         $mc_nodes = $this->medical_case['nodes'];
+
         // Filter diagnoses based on the complaint category and cut-off dates
         return array_filter($diagnoses, function ($diagnosis) use ($nodes, $mc_nodes) {
             return (
@@ -1131,6 +1131,7 @@ class Algorithm extends Component
         if (is_null($cut_off_end)) {
             return $cut_off_start <= $this->age_in_days;
         }
+
         return $cut_off_start <= $this->age_in_days && $cut_off_end > $this->age_in_days;
     }
 
@@ -2068,7 +2069,6 @@ class Algorithm extends Component
         ];
         $instances = $algorithm['diagram']['instances'];
         $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
-        $assessment_step = $algorithm['config']['full_order']['test_step'];
 
         $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
         $mc_nodes = $this->medical_case['nodes'];
