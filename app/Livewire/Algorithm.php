@@ -459,6 +459,7 @@ class Algorithm extends Component
         // If we are in training mode then we go directly to consultation step
         if ($this->algorithm_type === 'training') {
             $this->chosen_complaint_categories[$json_data['general_cc_id']] = true;
+
             $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
             $this->diagnoses_per_cc = $valid_diagnoses;
             $this->saved_step = 2;
@@ -2067,6 +2068,8 @@ class Algorithm extends Component
         ];
         $instances = $algorithm['diagram']['instances'];
         $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
+        $assessment_step = $algorithm['config']['full_order']['test_step'];
+
         $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
         $mc_nodes = $this->medical_case['nodes'];
 
@@ -2102,23 +2105,21 @@ class Algorithm extends Component
         $updated_systems = [];
         foreach ($medical_history_step as $system) {
             foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
-                $new_questions = array_fill_keys(
-                    array_filter(
-                        $system['data'],
-                        function ($question_id) use ($json_data, $cc_id, $system, $instances, $mc_nodes) {
-                            return $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
-                        }
-                    ),
-                    ''
-                );
-
+                $new_questions = array_fill_keys(array_filter(
+                    $system['data'],
+                    function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
+                        return in_array($question_id, $question_per_systems[$cc_id] ?? []) &&
+                            $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                    }
+                ), '');
+                $new_questions[6639] = '';
                 foreach ($new_questions as $key => $v) {
                     if (array_key_exists($key, $current_systems[$cc_id] ?? [])) {
                         $new_questions[$key] = $current_systems[$cc_id][$key];
                     }
                 }
                 if (!empty($new_questions)) {
-                    $updated_systems[$cc_id] = $new_questions;
+                    $updated_systems[$cc_id] = array_replace($updated_systems[$cc_id] ?? [], $new_questions);
                 }
             }
         }
@@ -2267,8 +2268,11 @@ class Algorithm extends Component
         $diagnoses = $algorithm['diagnoses'];
         $nodes = $algorithm['nodes'];
         $valid_diagnoses = $this->getValidDiagnoses($json_data);
-        $valid_diagnoses_ids = array_map(fn($diagnosis) => $diagnosis['id'], $valid_diagnoses);
+        if ($this->algorithm_type === 'training') {
+            $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data)[$json_data['general_cc_id']];
+        }
 
+        $valid_diagnoses_ids = array_map(fn($diagnosis) => $diagnosis['id'], $valid_diagnoses);
         // Exclude diagnoses based on cut off and complaint category exclusion
         $mc_diagnosis['excluded'] = array_merge(
             ...array_map(function ($diagnosis) use ($valid_diagnoses_ids) {
