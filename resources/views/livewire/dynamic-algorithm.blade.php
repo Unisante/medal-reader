@@ -139,8 +139,9 @@
               @endforeach
             </tbody>
           </table>
-          <button class="btn button-unisante m-1" wire:click="goToSubStep('diagnoses', 'treatment_questions')">Treatment
-            questions</button>
+          <button class="btn button-unisante m-1" wire:click="goToSubStep('diagnoses', 'treatment_questions')">
+            Treatment questions
+          </button>
         @endif
         @if ($current_sub_step === 'treatment_questions')
           @php

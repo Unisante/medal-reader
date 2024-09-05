@@ -1789,7 +1789,11 @@ class Algorithm extends Component
                         $neonat_cc,
                         function ($node_id) use ($json_data, $neonat_general_id, $instances, $mc_nodes) {
                             return $node_id !== $neonat_general_id &&
-                                $this->calculateConditionInverse($json_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
+                                $this->calculateConditionInverse(
+                                    $json_data,
+                                    $instances[$node_id]['conditions'] ?? [],
+                                    $mc_nodes
+                                );
                         }
                     ),
                     ''
@@ -1800,7 +1804,11 @@ class Algorithm extends Component
                         $older_cc,
                         function ($node_id) use ($json_data, $older_general_id, $instances, $mc_nodes) {
                             return $node_id !== $older_general_id &&
-                                $this->calculateConditionInverse($json_data, $instances[$node_id]['conditions'] ?? [], $mc_nodes);
+                                $this->calculateConditionInverse(
+                                    $json_data,
+                                    $instances[$node_id]['conditions'] ?? [],
+                                    $mc_nodes
+                                );
                         }
                     ),
                     ''
@@ -2727,6 +2735,7 @@ class Algorithm extends Component
                     ]);
                     if (count($drug_formulations) === 1) {
                         $this->formulations[$drug['id']] = strval($drug_formulations[0]['id']);
+                        $this->updatedFormulations(strval($drug_formulations[0]['id']), $drug['id']);
                     }
                 }
             }
