@@ -123,14 +123,17 @@
                       for="{{ $diagnosis_id }}">{{ $final_diagnoses[$diagnosis_id]['label']['en'] }}</label>
                   </td>
                   <td>
-                    <label class="custom-control teleport-switch">
-                      <span class="teleport-switch-control-description">Disagree</span>
-                      <input type="checkbox" class="teleport-switch-control-input" name="{{ $diagnosis_id }}"
-                        id="{{ $diagnosis_id }}" value="{{ $diagnosis_id }}"
+                    <div class="btn-group" role="group" aria-label="Diagnosis status">
+                      <input type="radio" class="btn-check" value="0" name="disagree-{{ $diagnosis_id }}"
+                        id="disagree-{{ $diagnosis_id }}" autocomplete="off"
                         wire:model.live="diagnoses_status.{{ $diagnosis_id }}">
-                      <span class="teleport-switch-control-indicator"></span>
-                      <span class="teleport-switch-control-description">Agree</span>
-                    </label>
+                      <label class="btn btn-outline-primary" for="disagree-{{ $diagnosis_id }}">Disagree</label>
+
+                      <input type="radio" class="btn-check" value="1" name="agree-{{ $diagnosis_id }}"
+                        id="agree-{{ $diagnosis_id }}" autocomplete="off"
+                        wire:model.live="diagnoses_status.{{ $diagnosis_id }}">
+                      <label class="btn btn-outline-primary" for="agree-{{ $diagnosis_id }}">Agree</label>
+                    </div>
                   </td>
                 </tr>
               @endforeach
@@ -190,8 +193,8 @@
               <thead>
                 <tr>
                   <th scope="col">Proposed Medicines</th>
-                  <th scope="col">Formulations</th>
                   <th scope="col">Action</th>
+                  <th scope="col">Formulations</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,19 +207,6 @@
                       </label>
                     </td>
                     <td>
-                      <select class="form-select form-select-sm" aria-label=".form-select-sm example"
-                        wire:model.live="formulations.{{ $drug['id'] }}" id="formulation-{{ $drug['id'] }}">
-                        <option selected>Please Select a formulation</option>
-                        @if ($this->drugIsAgreed($drug))
-                          @foreach ($cache_drug['formulations'] as $formulation)
-                            <option value="{{ $formulation['id'] }}">
-                              {{ $formulation['description']['en'] }}
-                            </option>
-                          @endforeach
-                        @endif
-                      </select>
-                    </td>
-                    <td>
                       <label class="custom-control teleport-switch">
                         <span class="teleport-switch-control-description">Disagree</span>
                         <input type="checkbox" class="teleport-switch-control-input" name="{{ $drug['id'] }}"
@@ -225,6 +215,20 @@
                         <span class="teleport-switch-control-indicator"></span>
                         <span class="teleport-switch-control-description">Agree</span>
                       </label>
+                    </td>
+                    <td style="width:40%;">
+                      <select class="form-select form-select-sm" aria-label=".form-select-sm example"
+                        wire:model.live="formulations.{{ $drug['id'] }}" id="formulation-{{ $drug['id'] }}">
+                        <option selected>Please Select a formulation</option>
+                        @if ($this->drugIsAgreed($drug))
+                          @foreach ($cache_drug['formulations'] as $formulation)
+                            <option value="{{ $formulation['id'] }}"
+                              @if (isset($formulations[$drug['id']]) && $formulations[$drug['id']] == $formulation['id']) selected @endif>
+                              {{ $formulation['description']['en'] }}
+                            </option>
+                          @endforeach
+                        @endif
+                      </select>
                     </td>
                   </tr>
                 @endforeach
@@ -272,7 +276,13 @@
               <tbody>
                 @foreach ($current_nodes['diagnoses']['agreed'] as $dd_id => $diagnosis)
                   @foreach ($diagnosis['drugs']['agreed'] ?? [] as $drug_id => $drug)
-                    <tr>
+                    @php
+                      if (isset($displayed_drugs[$drug_id])) {
+                          continue;
+                      }
+                      $displayed_drugs[$drug_id] = true;
+                    @endphp
+                    <tr wire:key="{{ 'drug-summary-' . $drug_id }}">
                       <td>
                         <div>
                           <b>{{ $drug['drug_label'] }}</b> <br>

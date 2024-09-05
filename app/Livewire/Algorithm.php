@@ -774,10 +774,14 @@ class Algorithm extends Component
     public function updatedDrugsStatus($value, $key)
     {
         $json_data = Cache::get($this->cache_key);
-        $drug_id = $key;
+        $drug_id = intval($key);
 
-        foreach ($this->current_nodes['drugs']['calculated'] as $drug_key => $drug) {
-            foreach ($drug['diagnoses'] as $drug_diagnosis) {
+        $diagnoses = array_filter($this->current_nodes['drugs']['calculated'], function ($v) use ($drug_id) {
+            return intval($v['id']) === $drug_id;
+        });
+
+        foreach ($diagnoses as $diagnosis) {
+            foreach ($diagnosis['diagnoses'] as $drug_diagnosis) {
 
                 $diagnosis_id = $drug_diagnosis['id'];
                 $diagnosis_key = $drug_diagnosis['key'];
@@ -822,7 +826,6 @@ class Algorithm extends Component
 
     public function updatedFormulations($value, $key)
     {
-        $json_data = Cache::get($this->cache_key);
         $calculated_drugs = $this->current_nodes['drugs']['calculated'];
         $drug_id = intval($key);
 
@@ -2679,7 +2682,7 @@ class Algorithm extends Component
                 if (array_key_exists($drug['id'], $new_agreed)) {
                     $new_agreed[$drug['id']]['final_diagnoses_id'][] = $final_diagnosis['id'];
                 } else {
-                    $new_agreed[$drug['id']] = array_merge($drug, [
+                    $new_agreed[$drug['id']] = array_replace($drug, [
                         'formulation_id' => $drug['formulation_id'] ?? null,
                         'final_diagnoses_id' => [$final_diagnosis['id']]
                     ]);
@@ -2695,6 +2698,7 @@ class Algorithm extends Component
                 'drugs',
                 false
             );
+
             $new_additional = json_decode(json_encode($final_diagnosis['drugs']['additional']), true);
 
             if ($remove_drugs) {
@@ -2709,7 +2713,6 @@ class Algorithm extends Component
                             );
                     }
                 );
-
                 foreach ($drug_to_remove as $drug_id) {
                     unset($new_agreed[$drug_id]);
                 }
@@ -2727,18 +2730,21 @@ class Algorithm extends Component
             foreach ($new_agreed as $drug) {
                 if (in_array($final_diagnosis['id'], $drug['final_diagnoses_id'])) {
                     $drug_formulations = $nodes[$drug['id']]['formulations'];
-                    $agreed_with_formulations[$drug['id']] = array_merge($drug, [
+                    $agreed_with_formulations[$drug['id']] = array_replace($drug, [
                         'formulation_id' => count($drug_formulations) === 1
                             ? $drug_formulations[0]['id']
                             : $final_diagnosis['drugs']['agreed'][$drug['id']]['formulation_id'] ?? null
                     ]);
+                    if (count($drug_formulations) === 1) {
+                        $this->formulations[$drug['id']] = strval($drug_formulations[0]['id']);
+                    }
                 }
             }
 
             $additional_with_formulations = [];
             foreach ($new_additional as $drug) {
                 $drug_formulations = $nodes[$drug['id']]['formulations'];
-                $additional_with_formulations[$drug['id']] = array_merge($drug, [
+                $additional_with_formulations[$drug['id']] = array_replace($drug, [
                     'formulation_id' => count($drug_formulations) === 1
                         ? $drug_formulations[0]['id']
                         : $final_diagnosis['drugs']['additional'][$drug['id']]['formulation_id'] ?? null
@@ -2752,7 +2758,7 @@ class Algorithm extends Component
                 'managements'
             );
 
-            $new_final_diagnoses[$final_diagnosis['id']] = array_merge($final_diagnosis, [
+            $new_final_diagnoses[$final_diagnosis['id']] = array_replace($final_diagnosis, [
                 'drugs' => [
                     'proposed' => $new_proposed,
                     'agreed' => $agreed_with_formulations,
@@ -3194,8 +3200,8 @@ class Algorithm extends Component
             'version_id' => $this->id,
         ];
 
+        dd($data);
         $json = $this->jsonExportService->prepareJsonData($data);
-        dd($json);
 
         // $response = $this->fhirService->setConditionsToPatient($this->patient_id, $conditions);
 

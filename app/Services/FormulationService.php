@@ -10,6 +10,7 @@ namespace App\Services;
  */
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class FormulationService
 {
@@ -88,7 +89,9 @@ class FormulationService
         $callStrings = [
             "fixed_dose_indication_administration" => $string_0,
             "fixed_dose_indication_application" => $string_1,
-            "dose_indication" => !empty($args) ? "Dose range " . $args['dosage'] . " mg/kg X " . $args['patient_weight'] . " kg = " . $args['total'] . " mg" : null,
+            "dose_indication" => isset($args['dosage']) && isset($args['patient_weight']) && isset($args['total'])
+                ? "Dose range " . $args['dosage'] . " mg/kg X " . $args['patient_weight'] . " kg = " . $args['total'] . " mg"
+                : null,
         ];
         return $callStrings[$keyString];
     }
@@ -140,7 +143,7 @@ class FormulationService
         $minDoseMg = $this->roundSup(($this->patient_weight * $minimal_dose_per_kg) / $doses_per_day);
         $maximal_dose_per_kg = $this->current_formulation['maximal_dose_per_kg'];
         $maxDoseMg = $this->roundSup(($this->patient_weight * $maximal_dose_per_kg) / $doses_per_day);
-        // dd($this->current_formulation['medication_form']);
+
         if (!$this->current_formulation['by_age']) {
             return match ($this->current_formulation['medication_form']) {
                 'suspension', 'syrup', 'powder_for_injection', 'ointment', 'solution' => call_user_func(function () use ($recurrence, $minDoseMg, $maxDoseMg, $dose_form, $liquid_concentration, $doses_per_day, $uniqDose) {
@@ -481,7 +484,85 @@ class FormulationService
                 );
             }
         }
-
         return $this->agreed_diagnoses;
+    }
+
+    /**
+     * Formulation display in medication selection
+     * @param array $drug_dose
+     * @return string
+     */
+    public function formulationLabel($drug_dose)
+    {
+        // Early return if there are no options available
+        if ($drug_dose['doseResult'] === null && !$drug_dose['uniqDose']) {
+            return "{$drug_dose['to_display']}: " . __('reader.formulations.drug.no_options');
+        }
+
+        // Normal behavior
+        switch ($drug_dose['medication_form']) {
+            case config('medal.medication_forms.gel'):
+            case config('medal.medication_forms.ointment'):
+            case config('medal.medication_forms.cream'):
+            case config('medal.medication_forms.lotion'):
+            case config('medal.medication_forms.spray'):
+            case config('medal.medication_forms.patch'):
+                return "{$drug_dose['to_display']}: " . __('reader.formulations.drug.per_application', ['count' => floatval($drug_dose['unique_dose'])]);
+
+            case config('medal.medication_forms.suppository'):
+            case config('medal.medication_forms.drops'):
+            case config('medal.medication_forms.pessary'):
+                return "{$drug_dose['to_display']}: " . __('reader.formulations.medication_form.' . $drug_dose['medication_form'], ['count' => floatval($drug_dose['unique_dose'])]);
+
+            case config('medal.medication_forms.inhaler'):
+                return "{$drug_dose['to_display']}: " . __('reader.formulations.drug.per_administration', [
+                    'suffix' => __('reader.formulations.medication_form.' . $drug_dose['medication_form'], ['count' => floatval($drug_dose['unique_dose'])])
+                ]);
+
+            case config('medal.medication_forms.solution'):
+            case config('medal.medication_forms.suspension'):
+                if ($drug_dose['uniqDose']) {
+                    return "{$drug_dose['to_display']}: " . floatval($drug_dose['unique_dose']) . "ml";
+                }
+
+                if (in_array(strtolower($drug_dose['administration_route_name']), ['im', 'iv', 'sc'])) {
+                    return $drug_dose['to_display'];
+                }
+
+                return "{$drug_dose['to_display']}: " . $this->roundSup($drug_dose['doseResult']) . "ml";
+
+            case config('medal.medication_forms.capsule'):
+            case config('medal.medication_forms.dispersible_tablet'):
+            case config('medal.medication_forms.tablet'):
+                if ($drug_dose['uniqDose']) {
+                    return "{$drug_dose['to_display']}: " . __('reader.formulations.medication_form.' . $drug_dose['medication_form'], [
+                        'count' => floatval($drug_dose['unique_dose']),
+                        'fraction' => floatval($drug_dose['unique_dose'])
+                    ]);
+                }
+
+                $breakable_result = $this->breakableFraction($drug_dose);
+                $fraction_string = $breakable_result['fractionString'];
+                $number_of_full_solid = $breakable_result['numberOfFullSolid'];
+
+                // Handle translation for fraction
+                $fraction_translated = __('reader.formulations.medication_form.' . $drug_dose['medication_form'], [
+                    'count' => $number_of_full_solid,
+                    'fraction' => $fraction_string,
+                    'context' => (string)$number_of_full_solid,
+                ]);
+
+                return "{$drug_dose['to_display']}: " . $fraction_translated;
+
+            case config('medal.medication_forms.powder_for_injection'):
+                return $drug_dose['to_display'];
+
+            case config('medal.medication_forms.syrup'):
+                $dose = $drug_dose['uniqDose'] ? $drug_dose['unique_dose'] : $drug_dose['doseResult'];
+                return "{$drug_dose['to_display']}: " . $this->roundSup($dose) . "ml";
+
+            default:
+                return "({$drug_dose['medication_form']}) " . __('reader.formulations.drug.medication_form_not_handled');
+        }
     }
 }
