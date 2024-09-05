@@ -1,8 +1,8 @@
 @php
   $cache = Cache::get($cache_key);
   $full_nodes = $cache['full_nodes'];
-  $final_diagnoses = $cache['final_diagnoses'];
-  $health_cares = $cache['health_cares'];
+  $final_diagnoses = $cache['algorithm']['final_diagnoses'];
+  $health_cares = $cache['algorithm']['health_cares'];
 @endphp
 
 <div class="mb-5">
@@ -25,7 +25,7 @@
 
       {{-- Consultation --}}
       @if ($current_step === 'consultation')
-        <x-step.questionnaire :nodes="$current_nodes['consultation']" :$chosen_complaint_categories :$nodes_to_save :$current_cc :$cache_key
+        <x-step.questionnaire :nodes="$current_nodes['consultation']['medical_history']" :$chosen_complaint_categories :$medical_case :$current_cc :$cache_key
           :$debug_mode />
       @endif
 

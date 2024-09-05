@@ -462,7 +462,7 @@ class Algorithm extends Component
             $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
             $this->diagnoses_per_cc = $valid_diagnoses;
             $this->saved_step = 2;
-            $this->goToStep('consultation');
+            $this->goToSubStep('consultation', 'medical_history');
         }
 
         //For FHIR serveur wip
@@ -1111,6 +1111,10 @@ class Algorithm extends Component
         $cut_off_start = isset($condition['cut_off_start']) ? $condition['cut_off_start'] : null;
         $cut_off_end = isset($condition['cut_off_end']) ? $condition['cut_off_end'] : null;
 
+        if ($this->algorithm_type === 'training') {
+            return true;
+        }
+
         if (!isset($this->age_in_days)) {
             return false;
         }
@@ -1308,7 +1312,11 @@ class Algorithm extends Component
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
 
-        if (in_array($nodes[$question_id]['category'], $categories)) {
+        if ($this->algorithm_type !== 'training') {
+            if (in_array($nodes[$question_id]['category'], $categories)) {
+                $questions_to_display[] = $question_id;
+            }
+        } else {
             $questions_to_display[] = $question_id;
         }
     }
@@ -1870,114 +1878,14 @@ class Algorithm extends Component
         }
     }
 
-    private function managePreventionMedicalHistory($json_data)
-    {
-        $algorithm = $json_data['algorithm'];
-
-        $question_per_systems = [];
-
-        $medical_history_categories = [
-            config('medal.categories.symptom'),
-            config('medal.categories.exposure'),
-            config('medal.categories.chronic_condition'),
-            config('medal.categories.vaccine'),
-            config('medal.categories.observed_physical_sign'),
-        ];
-        $instances = $algorithm['diagram']['instances'];
-        $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
-        $cc_order = $algorithm['config']['full_order']['complaint_categories_step'][$this->age_key];
-        $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
-        $mc_nodes = $this->medical_case['nodes'];
-
-        $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
-
-        $this->diagnoses_per_cc = $valid_diagnoses;
-
-        if (empty($valid_diagnoses)) {
-            flash()->addError('There is no recommendation for this age range');
-            return;
-        }
-
-        foreach ($valid_diagnoses as $cc_id => $diagnosis_per_cc) {
-            foreach ($diagnosis_per_cc as $diagnosis) {
-                $top_conditions = $this->getTopConditions($diagnosis['instances']);
-                $this->handleChildren(
-                    $json_data,
-                    $top_conditions,
-                    null,
-                    $question_per_systems[$cc_id],
-                    $diagnosis['instances'],
-                    $medical_history_categories,
-                    $diagnosis['id'],
-                    config('medal.node_types.diagnosis'),
-                    true,
-                    $current_systems,
-                    $medical_history_step
-                );
-            }
-        }
-
-        $ccs = [
-            ...$algorithm['config']['full_order']['complaint_categories_step']['older'],
-            ...$algorithm['config']['full_order']['complaint_categories_step']['neonat'],
-        ];
-
-        $cc_order = array_flip($ccs);
-
-        // Respect the order in the complaint_categories_step key
-        if (!$this->algorithm_type !== 'dynamic') {
-            uksort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
-                return $cc_order[$a] <=> $cc_order[$b];
-            });
-        }
-
-        $updated_systems = [];
-        foreach ($medical_history_step as $system) {
-            if ($system['title'] !== 'general') {
-                continue;
-            }
-            foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
-                $new_questions = array_fill_keys(array_filter(
-                    $system['data'],
-                    function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
-                        return in_array($question_id, $question_per_systems[$cc_id] ?? []) &&
-                            $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
-                    }
-                ), '');
-
-                foreach ($new_questions as $key => $v) {
-                    if (array_key_exists($key, $current_systems[$cc_id] ?? [])) {
-                        $new_questions[$key] = $current_systems[$cc_id][$key];
-                    }
-                }
-
-                if (!empty($new_questions)) {
-                    $updated_systems[$cc_id] = $new_questions;
-                    // if ($updated_systems[$cc_id] !== array_intersect_key($new_questions, $updated_systems[$cc_id])) dump('oui oui');
-                    $updated_systems[$cc_id] = array_intersect_key($new_questions, $updated_systems[$cc_id]);
-                }
-            }
-        }
-
-        foreach ($updated_systems as $cc_id_to_check => $nodes_per_cc) {
-            foreach ($nodes_per_cc as $node_id => $value) {
-                if (isset($already_displayed[$node_id])) {
-                    unset($updated_systems[$cc_id_to_check][$node_id]);
-                }
-                $already_displayed[$node_id] = true;
-            }
-        }
-
-        $this->current_nodes['consultation']['medical_history'] = array_replace(
-            $this->current_nodes['consultation']['medical_history'] ?? [],
-            $updated_systems,
-        );
-    }
-
     private function manageMedicalHistory($json_data)
     {
         if ($this->algorithm_type === 'prevention') {
             return $this->managePreventionMedicalHistory($json_data);
+        }
+
+        if ($this->algorithm_type === 'training') {
+            return $this->manageTrainingMedicalHistory($json_data);
         }
 
         $algorithm = $json_data['algorithm'];
@@ -2034,13 +1942,193 @@ class Algorithm extends Component
             $updated_systems[$system['title']] = $new_questions;
             $updated_systems[$system['title']] = array_intersect_key($new_questions, $updated_systems[$system['title']]);
         }
-
         $updated_systems['follow_up_questions'] = array_unique($question_per_systems['follow_up_questions'] ?? []);
 
         $this->current_nodes['consultation']['medical_history'] = array_replace(
             $this->current_nodes['consultation']['medical_history'] ?? [],
             $updated_systems,
         );
+    }
+
+    private function managePreventionMedicalHistory($json_data)
+    {
+        $algorithm = $json_data['algorithm'];
+
+        $question_per_systems = [];
+
+        $medical_history_categories = [
+            config('medal.categories.symptom'),
+            config('medal.categories.exposure'),
+            config('medal.categories.chronic_condition'),
+            config('medal.categories.vaccine'),
+            config('medal.categories.observed_physical_sign'),
+        ];
+        $instances = $algorithm['diagram']['instances'];
+        $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
+        $cc_order = $algorithm['config']['full_order']['complaint_categories_step'][$this->age_key];
+        $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
+        $mc_nodes = $this->medical_case['nodes'];
+
+        $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
+        $this->diagnoses_per_cc = $valid_diagnoses;
+
+        if (empty($valid_diagnoses)) {
+            flash()->addError('There is no recommendation for this age range');
+            return;
+        }
+
+        foreach ($valid_diagnoses as $cc_id => $diagnosis_per_cc) {
+            foreach ($diagnosis_per_cc as $diagnosis) {
+                $top_conditions = $this->getTopConditions($diagnosis['instances']);
+
+                $this->handleChildren(
+                    $json_data,
+                    $top_conditions,
+                    null,
+                    $question_per_systems[$cc_id],
+                    $diagnosis['instances'],
+                    $medical_history_categories,
+                    $diagnosis['id'],
+                    config('medal.node_types.diagnosis'),
+                    true,
+                    $current_systems,
+                    $medical_history_step
+                );
+            }
+        }
+
+        $ccs = [
+            ...$algorithm['config']['full_order']['complaint_categories_step']['older'],
+            ...$algorithm['config']['full_order']['complaint_categories_step']['neonat'],
+        ];
+
+        $cc_order = array_flip($ccs);
+
+        // Respect the order in the complaint_categories_step key
+        if (!$this->algorithm_type !== 'dynamic') {
+            uksort($this->chosen_complaint_categories, function ($a, $b) use ($cc_order) {
+                return $cc_order[$a] <=> $cc_order[$b];
+            });
+        }
+
+        $updated_systems = [];
+        foreach ($medical_history_step as $system) {
+            if ($system['title'] !== 'general') {
+                continue;
+            }
+            foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
+                $new_questions = array_fill_keys(array_filter(
+                    $system['data'],
+                    function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
+                        return in_array($question_id, $question_per_systems[$cc_id] ?? []) &&
+                            $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                    }
+                ), '');
+
+                foreach ($new_questions as $key => $v) {
+                    if (array_key_exists($key, $current_systems[$cc_id] ?? [])) {
+                        $new_questions[$key] = $current_systems[$cc_id][$key];
+                    }
+                }
+
+                if (!empty($new_questions)) {
+                    $updated_systems[$cc_id] = $new_questions;
+                }
+            }
+        }
+
+        foreach ($updated_systems as $cc_id_to_check => $nodes_per_cc) {
+            foreach ($nodes_per_cc as $node_id => $value) {
+                if (isset($already_displayed[$node_id])) {
+                    unset($updated_systems[$cc_id_to_check][$node_id]);
+                }
+                $already_displayed[$node_id] = true;
+            }
+        }
+
+        $this->current_nodes['consultation']['medical_history'] = array_replace(
+            $this->current_nodes['consultation']['medical_history'] ?? [],
+            $updated_systems,
+        );
+    }
+
+    private function manageTrainingMedicalHistory($json_data)
+    {
+        $algorithm = $json_data['algorithm'];
+
+        $question_per_systems = [];
+
+        $medical_history_categories = [
+            config('medal.categories.symptom'),
+            config('medal.categories.exposure'),
+            config('medal.categories.chronic_condition'),
+            config('medal.categories.vaccine'),
+            config('medal.categories.observed_physical_sign'),
+        ];
+        $instances = $algorithm['diagram']['instances'];
+        $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
+        $current_systems = $this->current_nodes['consultation']['medical_history'] ?? [];
+        $mc_nodes = $this->medical_case['nodes'];
+
+        $valid_diagnoses = $this->getValidPreventionDiagnoses($json_data);
+
+        $this->diagnoses_per_cc = $valid_diagnoses;
+
+        if (empty($valid_diagnoses)) {
+            flash()->addError('There is no recommendation for this age range');
+            return;
+        }
+
+        foreach ($valid_diagnoses as $cc_id => $diagnosis_per_cc) {
+            foreach ($diagnosis_per_cc as $diagnosis) {
+                $top_conditions = $this->getTopConditions($diagnosis['instances']);
+
+                $this->handleChildren(
+                    $json_data,
+                    $top_conditions,
+                    null,
+                    $question_per_systems[$cc_id],
+                    $diagnosis['instances'],
+                    $medical_history_categories,
+                    $diagnosis['id'],
+                    config('medal.node_types.diagnosis'),
+                    false,
+                    $current_systems,
+                    $medical_history_step
+                );
+            }
+        }
+
+        $updated_systems = [];
+        foreach ($medical_history_step as $system) {
+            foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
+                $new_questions = array_fill_keys(
+                    array_filter(
+                        $system['data'],
+                        function ($question_id) use ($json_data, $cc_id, $system, $instances, $mc_nodes) {
+                            return $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                        }
+                    ),
+                    ''
+                );
+
+                foreach ($new_questions as $key => $v) {
+                    if (array_key_exists($key, $current_systems[$cc_id] ?? [])) {
+                        $new_questions[$key] = $current_systems[$cc_id][$key];
+                    }
+                }
+                if (!empty($new_questions)) {
+                    $updated_systems[$cc_id] = $new_questions;
+                }
+            }
+        }
+
+        foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
+            $this->current_nodes['consultation']['medical_history'][$cc_id] = array_replace(
+                $this->current_nodes['consultation']['medical_history'][$cc_id] ?? [],
+                $updated_systems[$cc_id],
+            );
+        }
     }
 
     private function managePhysicalExam($json_data)

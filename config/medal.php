@@ -106,6 +106,7 @@ return [
         'final_diagnosis' => 'FinalDiagnosis',
         'health_care' => 'HealthCare',
         'question' => 'Question',
+        'variable' => 'Variable',
         'questions_sequence' => 'QuestionsSequence',
     ],
 

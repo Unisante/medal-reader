@@ -317,6 +317,7 @@ class AlgorithmService
                     $new_nodes[$node['id']] = $this->generateQuestionsSequence($node);
                     break;
                 case config('medal.node_types.question'):
+                case config('medal.node_types.variable'):
                     $new_nodes[$node['id']] = $this->generateQuestion($node);
                     break;
                 case config('medal.node_types.health_care'):
