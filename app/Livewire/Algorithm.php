@@ -744,7 +744,12 @@ class Algorithm extends Component
 
             // From Disagree to Agree
             if ($is_in_refused) {
-                unset($this->current_nodes['diagnoses']['refused'][intval($key)]);
+                $refused_diagnoses = &$this->current_nodes['diagnoses']['refused'];
+                $index = array_search(intval($key), $refused_diagnoses);
+                if ($index !== false) {
+                    unset($refused_diagnoses[$index]);
+                    $refused_diagnoses = array_values($refused_diagnoses);
+                }
             }
         }
 
@@ -757,16 +762,6 @@ class Algorithm extends Component
                 unset($this->current_nodes['diagnoses']['agreed'][intval($key)]);
             }
         }
-
-        // if ($value) {
-        //     $this->current_nodes['diagnoses']['agreed'][] = intval($key);
-        //     $this->current_nodes['diagnoses']['refused'] = array_diff($this->current_nodes['diagnoses']['refused'], [intval($key)]);
-        //     unset($this->current_nodes['diagnoses']['proposed'][intval($key)]);
-        // } else {
-        //     $this->current_nodes['diagnoses']['proposed'][] = intval($key);
-        //     $this->current_nodes['diagnoses']['agreed'] = array_diff($this->current_nodes['diagnoses']['agreed'], [intval($key)]);
-        //     $this->current_nodes['diagnoses']['refused'][] = intval($key);
-        // }
 
         $this->manageFinalDiagnose($json_data);
     }
@@ -2239,10 +2234,6 @@ class Algorithm extends Component
         );
 
         foreach ($this->current_nodes['diagnoses'] as $dd_type => $dds) {
-            // $this->current_nodes['diagnoses'][$dd_type] = array_replace(
-            //     $this->current_nodes['diagnoses'][$dd_type] ?? [],
-            //     $mc_diagnosis[$dd_type]
-            // );
             $this->current_nodes['diagnoses'][$dd_type] = $mc_diagnosis[$dd_type];
         }
 
@@ -2267,13 +2258,12 @@ class Algorithm extends Component
     private function manageTreatment($json_data)
     {
         $algorithm = $json_data['algorithm'];
-        // $final_diagnostics = $this->current_nodes['diagnoses']['agreed'] ?? [];
         $final_diagnostics = $this->diagnoses_status ?? [];
         $final_diagnostics_additional = $this->current_nodes['diagnoses']['additional'] ?? [];
         $nodes = $algorithm['nodes'];
         $diagnoses = $algorithm['diagnoses'];
-        $questions_to_display = [];
         $current_systems =  $this->current_nodes['diagnoses'] ?? [];
+        $questions_to_display = [];
 
         $all_final_diagnostics = array_replace($final_diagnostics, $final_diagnostics_additional);
 
