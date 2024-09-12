@@ -2038,18 +2038,24 @@ class Algorithm extends Component
                     }
                 ), '');
 
-                $new_questions = array_fill_keys(array_filter(
-                    $system['data'],
-                    function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
-                        return in_array($question_id, $question_per_systems[$cc_id] ?? []) &&
-                            $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
-                    }
-                ), '');
-
                 foreach ($new_questions as $key => $v) {
-                    if (array_key_exists($key, $current_systems[$cc_id] ?? [])) {
+                    if (isset($current_systems[$cc_id][$key]) && $current_systems[$cc_id][$key] !== "") {
                         $new_questions[$key] = $current_systems[$cc_id][$key];
                     }
+                }
+
+                if (isset($current_systems[$cc_id])) {
+                    $ordered_new_questions = [];
+                    foreach ($current_systems[$cc_id] as $key => $value) {
+                        if (isset($new_questions[$key])) {
+                            $ordered_new_questions[$key] = $new_questions[$key];
+                            unset($new_questions[$key]); // Remove it from $new_questions as it's already processed
+                        }
+                    }
+                    foreach ($new_questions as $key => $value) {
+                        $ordered_new_questions[$key] = $value;
+                    }
+                    $new_questions = $ordered_new_questions;
                 }
 
                 foreach ($new_questions as $key => $v) {
@@ -2059,20 +2065,36 @@ class Algorithm extends Component
                 }
 
                 if (!empty($new_questions)) {
-                    $diff_questions = array_diff_key($new_questions, $current_systems[$cc_id] ?? []);
 
-                    if ($node_id && !empty($diff_questions)) {
+                    $diff_questions_to_add = array_diff_key(
+                        $new_questions,
+                        $current_systems[$cc_id] ?? []
+                    );
+
+                    $diff_questions_to_hide = array_diff_key(
+                        $current_systems[$cc_id] ?? [],
+                        $new_questions
+                    );
+
+                    if ($node_id && !empty($diff_questions_to_add)) {
                         $new_questions = $this->appendOrInsertAtPos(
                             $new_questions,
-                            $diff_questions,
+                            $diff_questions_to_add,
                             $node_id
                         );
                     }
 
-                    if (!empty($new_questions)) {
-                        if (!empty(array_diff_key($new_questions, $current_systems[$cc_id] ?? []))) {
+                    if (!empty($diff_questions_to_hide)) {
+                        foreach ($diff_questions_to_hide as $node_to_hide => $v) {
+                            unset($current_systems[$cc_id][$node_to_hide]);
+                        }
+                    }
+
+                    if (!empty($new_questions) || !empty($diff_questions_to_hide)) {
+                        if (!empty($diff_questions_to_add) || !empty($diff_questions_to_hide)) {
                             $updated_systems[$cc_id] = $new_questions;
                         }
+
                         foreach ($new_questions as $key => $v) {
                             $already_displayed[$key] = true;
                         }
@@ -2083,7 +2105,7 @@ class Algorithm extends Component
 
         $this->current_nodes['consultation']['medical_history'] = array_replace(
             $this->current_nodes['consultation']['medical_history'] ?? [],
-            $updated_systems,
+            $updated_systems
         );
     }
 
@@ -3116,16 +3138,16 @@ class Algorithm extends Component
 
     public function goToCc($cc_id): void
     {
-        // if ($this->algorithm_type === 'prevention') {
-        //     $this->validate(
-        //         [
-        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-        //         ],
-        //         [
-        //             'required' => 'This field is required',
-        //         ]
-        //     );
-        // }
+        if ($this->algorithm_type === 'prevention') {
+            $this->validate(
+                [
+                    "current_nodes.consultation.medical_history.{$this->current_cc}.*" => 'required',
+                ],
+                [
+                    'required' => 'This field is required',
+                ]
+            );
+        }
         $this->dispatch('scrollTop');
 
         $this->current_cc = $cc_id;
@@ -3133,16 +3155,16 @@ class Algorithm extends Component
 
     public function goToNextCc(): void
     {
-        // if ($this->algorithm_type === 'prevention') {
-        //     $this->validate(
-        //         [
-        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-        //         ],
-        //         [
-        //             'required' => 'This field is required',
-        //         ]
-        //     );
-        // }
+        if ($this->algorithm_type === 'prevention') {
+            $this->validate(
+                [
+                    "current_nodes.consultation.medical_history.{$this->current_cc}.*" => 'required',
+                ],
+                [
+                    'required' => 'This field is required',
+                ]
+            );
+        }
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
@@ -3160,16 +3182,16 @@ class Algorithm extends Component
 
     public function goToPreviousCc(): void
     {
-        // if ($this->algorithm_type === 'prevention') {
-        //     $this->validate(
-        //         [
-        //             "current_nodes.consultation.{$this->current_cc}.*" => 'required',
-        //         ],
-        //         [
-        //             'required' => 'This field is required',
-        //         ]
-        //     );
-        // }
+        if ($this->algorithm_type === 'prevention') {
+            $this->validate(
+                [
+                    "current_nodes.consultation.medical_history.{$this->current_cc}.*" => 'required',
+                ],
+                [
+                    'required' => 'This field is required',
+                ]
+            );
+        }
         $this->dispatch('scrollTop');
 
         $keys = array_keys($this->chosen_complaint_categories);
