@@ -710,7 +710,7 @@ class Algorithm extends Component
 
         match ($this->current_step) {
             'consultation' => $this->current_sub_step === 'medical_history'
-                ? $this->manageMedicalHistory($json_data)
+                ? $this->manageMedicalHistory($json_data, $node_id)
                 : $this->managePhysicalExam($json_data),
             'tests' => $this->manageTestStep($json_data),
             'diagnoses' => $this->manageDiagnosesStep($json_data),
@@ -1890,10 +1890,10 @@ class Algorithm extends Component
         }
     }
 
-    private function manageMedicalHistory($json_data)
+    private function manageMedicalHistory($json_data, $node_id = null)
     {
         if ($this->algorithm_type === 'prevention') {
-            return $this->managePreventionMedicalHistory($json_data);
+            return $this->managePreventionMedicalHistory($json_data, $node_id);
         }
 
         if ($this->algorithm_type === 'training') {
@@ -1962,7 +1962,7 @@ class Algorithm extends Component
         );
     }
 
-    private function managePreventionMedicalHistory($json_data)
+    private function managePreventionMedicalHistory($json_data, $node_id = null)
     {
         $algorithm = $json_data['algorithm'];
 
@@ -2028,7 +2028,16 @@ class Algorithm extends Component
             if ($system['title'] !== 'general') {
                 continue;
             }
-            foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $accepted) {
+            foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $a) {
+
+                $new_questions = array_fill_keys(array_filter(
+                    $system['data'],
+                    function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
+                        return in_array($question_id, $question_per_systems[$cc_id] ?? []) &&
+                            $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
+                    }
+                ), '');
+
                 $new_questions = array_fill_keys(array_filter(
                     $system['data'],
                     function ($question_id) use ($json_data, $question_per_systems, $cc_id, $instances, $mc_nodes) {
@@ -2043,18 +2052,32 @@ class Algorithm extends Component
                     }
                 }
 
-                if (!empty($new_questions)) {
-                    $updated_systems[$cc_id] = $new_questions;
+                foreach ($new_questions as $key => $v) {
+                    if (isset($already_displayed[$key])) {
+                        unset($new_questions[$key]);
+                    }
                 }
-            }
-        }
 
-        foreach ($updated_systems as $cc_id_to_check => $nodes_per_cc) {
-            foreach ($nodes_per_cc as $node_id => $value) {
-                if (isset($already_displayed[$node_id])) {
-                    unset($updated_systems[$cc_id_to_check][$node_id]);
+                if (!empty($new_questions)) {
+                    $diff_questions = array_diff_key($new_questions, $current_systems[$cc_id] ?? []);
+
+                    if ($node_id && !empty($diff_questions)) {
+                        $new_questions = $this->appendOrInsertAtPos(
+                            $new_questions,
+                            $diff_questions,
+                            $node_id
+                        );
+                    }
+
+                    if (!empty($new_questions)) {
+                        if (!empty(array_diff_key($new_questions, $current_systems[$cc_id] ?? []))) {
+                            $updated_systems[$cc_id] = $new_questions;
+                        }
+                        foreach ($new_questions as $key => $v) {
+                            $already_displayed[$key] = true;
+                        }
+                    }
                 }
-                $already_displayed[$node_id] = true;
             }
         }
 
@@ -2513,7 +2536,6 @@ class Algorithm extends Component
             $this->handleDrugs($json_data, $all_drugs, $questions_to_display, $instances, $exclusion);
         } else {
             $all_managements = array_filter($instances, function ($instance) use ($nodes) {
-
                 return $nodes[$instance['id']]['category'] === config('medal.categories.management');
             });
             $this->handleManagements($json_data, $all_managements, $questions_to_display, $instances);
@@ -2527,8 +2549,8 @@ class Algorithm extends Component
         $algorithm = $json_data['algorithm'];
         $nodes = $algorithm['nodes'];
 
-        return in_array($healthcare_id, $nodes[$healthcare_id]['excluding_nodes_ids']) &&
-            !empty(array_intersect($agreed_healthcares, $nodes[$healthcare_id]['excluding_nodes_ids']));
+        return in_array($healthcare_id, $nodes[$healthcare_id]['excluding_nodes_ids'])
+            && !empty(array_intersect($agreed_healthcares, $nodes[$healthcare_id]['excluding_nodes_ids']));
     }
 
     private function handleManagements($json_data, $management_instances, &$questions_to_display, $instances)
