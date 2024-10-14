@@ -8,13 +8,16 @@ use App\Services\FormulationService;
 use App\Services\JsonExportService;
 use App\Services\ReferenceCalculator;
 use Carbon\Carbon;
+use Cerbero\JsonParser\Exceptions\IntersectingPointersException;
 use Cerbero\JsonParser\JsonParser;
 use DateTime;
 use DCarbone\PHPFHIRGenerated\R4\FHIRResource\FHIRDomainResource\FHIRPatient;
 use DCarbone\PHPFHIRGenerated\R4\PHPFHIRResponseParser;
 use DivisionByZeroError;
+use DomainException;
 use Exception;
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -23,13 +26,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use LogicException;
 use RecursiveArrayIterator;
 use RecursiveIteratorIterator;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use UnexpectedValueException;
 
+/**
+ * This is the main Livewire component
+ *
+ * @package App\Livewire
+ */
 class Algorithm extends Component
 {
     public int $id;
@@ -55,14 +70,17 @@ class Algorithm extends Component
     public array $all_managements_to_display;
     public array $last_system_updated;
     public int $age_in_days;
-    #[Validate([
-        // 'current_nodes.registration.birth_date' => 'required:date',
-        'current_nodes.registration.*' => 'required',
-        // 'current_nodes.consultation.*.*' => 'required',
-    ], message: [
-        'required' => 'This field is required',
-        'date' => 'The date of birth is required to continue',
-    ])]
+    #[Validate(
+        [
+            // 'current_nodes.registration.birth_date' => 'required:date',
+            'current_nodes.registration.*' => 'required',
+            // 'current_nodes.consultation.*.*' => 'required',
+        ],
+        message: [
+            'required' => 'This field is required',
+            'date' => 'The date of birth is required to continue',
+        ]
+    )]
     public array $current_nodes;
     public array $medical_case;
     public array $nodes;
@@ -70,10 +88,10 @@ class Algorithm extends Component
     public array $drugs_status;
     public array $formulations;
 
-    private AlgorithmService $algorithmService;
-    private ReferenceCalculator $referenceCalculator;
-    private FHIRService $fhirService;
-    private JsonExportService $jsonExportService;
+    private AlgorithmService $_algorithmService;
+    private ReferenceCalculator $_referenceCalculator;
+    private FHIRService $_fhirService;
+    private JsonExportService $_jsonExportService;
     public array $treatment_questions;
     // private array $diagnoses_formulation;
 
@@ -142,17 +160,34 @@ class Algorithm extends Component
     public string $current_sub_step = '';
 
     public function boot(
-        AlgorithmService $algorithmService,
-        ReferenceCalculator $referenceCalculator,
-        FHIRService $fhirService,
-        JsonExportService $jsonExportService,
+        AlgorithmService $_algorithmService,
+        ReferenceCalculator $_referenceCalculator,
+        FHIRService $_fhirService,
+        JsonExportService $_jsonExportService,
     ) {
-        $this->algorithmService = $algorithmService;
-        $this->referenceCalculator = $referenceCalculator;
-        $this->fhirService = $fhirService;
-        $this->jsonExportService = $jsonExportService;
+        $this->_algorithmService = $_algorithmService;
+        $this->_referenceCalculator = $_referenceCalculator;
+        $this->_fhirService = $_fhirService;
+        $this->_jsonExportService = $_jsonExportService;
     }
 
+    /**
+     *
+     * @param mixed $id
+     * @param mixed $patient_id
+     * @param array $data
+     * @return RedirectResponse|void
+     * @throws HttpException
+     * @throws NotFoundHttpException
+     * @throws IntersectingPointersException
+     * @throws LogicException
+     * @throws RouteNotFoundException
+     * @throws ValidationException
+     * @throws Exception
+     * @throws UnexpectedValueException
+     * @throws DomainException
+     * @throws InvalidArgumentException
+     */
     public function mount($id = null, $patient_id = null, $data = [])
     {
         $this->id = $id;
@@ -192,7 +227,6 @@ class Algorithm extends Component
         $cache_found = Cache::has($this->cache_key);
         if (!$cache_found) {
             Cache::put($this->cache_key, [
-                'algorithm' => $algorithm,
                 'full_nodes' => collect($json['medal_r_json']['nodes'])->keyBy('id')->all(),
                 'birth_date_formulas' => $json['medal_r_json']['config']['birth_date_formulas'],
                 'general_cc_id' => $json['medal_r_json']['config']['basic_questions']['general_cc_id'],
@@ -211,13 +245,14 @@ class Algorithm extends Component
             ]);
         }
 
-        $json_data = Cache::get($this->cache_key);
+        $json_data = Cache::get($this->cache_key) ?? [];
 
         $formula_hash_map = [];
         $need_emergency = [];
+        $bc_nodes_to_add = [];
         JsonParser::parse(Storage::get("$extract_dir/$id.json"))
             ->pointer('/medal_r_json/nodes')
-            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$need_emergency) {
+            ->traverse(function (mixed $value, string|int $key, JsonParser $parser) use (&$formula_hash_map, &$need_emergency, &$bc_nodes_to_add) {
                 foreach ($value as $node) {
 
                     if ($node['type'] === 'QuestionsSequence') {
@@ -230,6 +265,7 @@ class Algorithm extends Component
 
                     if ($node['category'] === "background_calculation" || $node['display_format'] === "Formula") {
                         $formula_hash_map[$node['id']] = $node['formula'] ?? '';
+                        $bc_nodes_to_add[] = $node['id'];
                     }
                 }
             });
@@ -247,7 +283,7 @@ class Algorithm extends Component
         ];
 
         foreach ($ccs as $step) {
-            $diagnosesForStep = collect($json_data['algorithm']['diagnoses'])->filter(function ($diag) use ($step, $female_gender_answer_id, $male_gender_answer_id, &$qs_hash_map) {
+            $diagnosesForStep = collect($algorithm['diagnoses'])->filter(function ($diag) use ($step, $female_gender_answer_id, $male_gender_answer_id, &$qs_hash_map) {
                 return $diag['complaint_category'] === $step;
             });
 
@@ -273,7 +309,6 @@ class Algorithm extends Component
                     }
 
                     $instance_node = $json_data['full_nodes'][$instance_id];
-
                     if (empty($instance['conditions'])) {
 
                         if (!isset($dependency_map[$diag['id']])) {
@@ -281,7 +316,7 @@ class Algorithm extends Component
                         }
 
                         if ($instance_node['type'] === 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                            $this->algorithmService->manageQS($json_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, true);
+                            $this->_algorithmService->manageQS($json_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, true);
                         }
 
                         // We don't care about background calculations
@@ -321,15 +356,15 @@ class Algorithm extends Component
                             }
 
                             if ($instance_node['type'] === 'QuestionsSequence' && $instance['final_diagnosis_id'] === null) {
-                                $this->algorithmService->manageQS($json_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
+                                $this->_algorithmService->manageQS($json_data, $diag, $instance_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
                             }
 
                             $node = $json_data['full_nodes'][$node_id];
                             if ($node['type'] !== 'QuestionsSequence') {
-                                $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
+                                $this->_algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $node_id, $answer_id, $dependency_map, true);
                             } else {
                                 if ($instance['final_diagnosis_id'] === null) {
-                                    $this->algorithmService->manageQS($json_data, $diag, $node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
+                                    $this->_algorithmService->manageQS($json_data, $diag, $node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, false, $answer_id);
                                 }
                             }
 
@@ -337,10 +372,10 @@ class Algorithm extends Component
                                 $child_node = $json_data['full_nodes'][$child_node_id] ?? null;
                                 if ($child_node) {
                                     if ($child_node['type'] !== 'QuestionsSequence') {
-                                        $this->algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node_id, $answer_id, $dependency_map);
+                                        $this->_algorithmService->breadthFirstSearch($diag['instances'], $diag['id'], $child_node_id, $answer_id, $dependency_map);
                                     } else {
                                         if ($instance['final_diagnosis_id'] === null) {
-                                            $this->algorithmService->manageQS($json_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, empty($instance['conditions']));
+                                            $this->_algorithmService->manageQS($json_data, $diag, $child_node, $step, $consultation_nodes, $answers_hash_map, $qs_hash_map, $dependency_map, empty($instance['conditions']));
                                         }
                                     }
                                 }
@@ -362,11 +397,20 @@ class Algorithm extends Component
             }
         }
 
+        //We add the background calculations for debug mode of Eviprev
+        if ($this->algorithm_type === 'prevention') {
+            $algorithm['config']['full_order']['medical_history_step'][0]['data'] = array_merge(
+                $bc_nodes_to_add,
+                $algorithm['config']['full_order']['medical_history_step'][0]['data']
+            );
+        }
+
         //todo actually stop calulating again if cache found. Create function in service and
         //cache get or cache create and get
         if (!$cache_found) {
             Cache::put($this->cache_key, [
                 ...$json_data,
+                'algorithm' => $algorithm,
                 'formula_hash_map' => $formula_hash_map,
                 'max_path_length' => $max_path_length,
                 'need_emergency' => $need_emergency,
@@ -381,7 +425,7 @@ class Algorithm extends Component
             'drugs' => [],
         ];
 
-        $this->medical_case['nodes'] = $this->algorithmService->createMedicalCaseNodes($algorithm['nodes']);
+        $this->medical_case['nodes'] = $this->_algorithmService->createMedicalCaseNodes($algorithm['nodes']);
         $this->manageRegistrationStep($json_data);
 
         $this->current_nodes['diagnoses'] = [
@@ -471,7 +515,7 @@ class Algorithm extends Component
 
         //For FHIR serveur wip
         if ($this->patient_id) {
-            $response = $this->fhirService->getPatientFromRemoteFHIRServer($patient_id);
+            $response = $this->_fhirService->getPatientFromRemoteFHIRServer($patient_id);
             $parser = new PHPFHIRResponseParser();
             if ($response->successful()) {
                 /** @var FHIRBundle $patients_bundle */
@@ -650,15 +694,19 @@ class Algorithm extends Component
 
     public function updatingCurrentNodes($value, $key)
     {
-        if ($this->algorithmService->isDate($value)) return;
+        if ($this->_algorithmService->isDate($value)) {
+            return;
+        }
 
         if (
             Str::of($key)->contains('first_name')
             || Str::of($key)->contains('last_name')
             || Str::of($key)->contains('drugs')
-        ) return;
+        ) {
+            return;
+        }
 
-        if (Str::of($key)->contains('first_look_nodes_id')) {
+        if (Str::of($key)->contains('firsvim.opt.clipboard = "unnamedplus"t_look_nodes_id')) {
             if ($value) {
                 $this->dispatch('openEmergencyModal');
             }
@@ -823,14 +871,23 @@ class Algorithm extends Component
         $this->manageDrugs($json_data);
     }
 
+    /**
+     * @param mixed $value
+     * @param mixed $key
+     *
+     * @return void
+     */
     public function updatedFormulations($value, $key)
     {
         $calculated_drugs = $this->current_nodes['drugs']['calculated'];
         $drug_id = intval($key);
 
-        $drugs = array_filter($calculated_drugs, function ($v) use ($drug_id) {
-            return intval($v['id']) === $drug_id;
-        });
+        $drugs = array_filter(
+            $calculated_drugs,
+            function ($v) use ($drug_id) {
+                return intval($v['id']) === $drug_id;
+            }
+        );
 
         if (empty($drugs)) {
             return;
@@ -850,14 +907,14 @@ class Algorithm extends Component
         $nodes = $json_data['algorithm']['nodes'];
 
         if ($value) {
-            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$modified_cc_id]);
+            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->_algorithmService->getYesAnswer($nodes[$modified_cc_id]);
             $this->completion_per_substep[$modified_cc_id] = [
                 'start' => 0,
                 'end' => 0,
             ];
             // $this->calculateCompletionPercentage($json_data, $modified_cc_id);
         } else {
-            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$modified_cc_id]);
+            $this->medical_case['nodes'][$modified_cc_id]['answer'] = $this->_algorithmService->getNoAnswer($nodes[$modified_cc_id]);
             unset($this->completion_per_substep[$modified_cc_id]);
         }
     }
@@ -898,9 +955,9 @@ class Algorithm extends Component
                                         unset($this->chosen_complaint_categories[$general_cc_id]);
                                     }
                                 }
-                                $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$yi_general_cc_id]);
+                                $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->_algorithmService->getYesAnswer($nodes[$yi_general_cc_id]);
                                 foreach ($older_ccs as $older_cc_id) {
-                                    $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$older_cc_id]);
+                                    $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->_algorithmService->getNoAnswer($nodes[$older_cc_id]);
                                 }
 
                                 if ($this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
@@ -915,9 +972,9 @@ class Algorithm extends Component
                                         unset($this->chosen_complaint_categories[$yi_general_cc_id]);
                                     }
                                 }
-                                $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($nodes[$general_cc_id]);
+                                $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->_algorithmService->getYesAnswer($nodes[$general_cc_id]);
                                 foreach ($neonat_ccs as $neonat_cc_id) {
-                                    $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->algorithmService->getNoAnswer($nodes[$neonat_cc_id]);
+                                    $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->_algorithmService->getNoAnswer($nodes[$neonat_cc_id]);
                                 }
                                 if ($this->age_key === 'neonat' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])) {
                                     unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
@@ -1027,14 +1084,13 @@ class Algorithm extends Component
                             }
                         }
                         $this->current_cc = $yi_general_cc_id;
-                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($full_nodes[$yi_general_cc_id]);
+                        $this->medical_case['nodes'][$yi_general_cc_id]['answer'] = $this->_algorithmService->getYesAnswer($full_nodes[$yi_general_cc_id]);
                         foreach ($older_ccs as $older_cc_id) {
-                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->algorithmService->getNoAnswer($full_nodes[$older_cc_id]);
+                            $this->medical_case['nodes'][$older_cc_id]['answer'] = $this->_algorithmService->getNoAnswer($full_nodes[$older_cc_id]);
                         }
 
                         if (
-                            $this->age_key === 'older'
-                            && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])
+                            $this->age_key === 'older' && isset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id'])
                         ) {
                             unset($this->current_nodes['first_look_assessment']['complaint_categories_nodes_id']);
                         }
@@ -1047,9 +1103,9 @@ class Algorithm extends Component
                             }
                         }
                         $this->current_cc = $general_cc_id;
-                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->algorithmService->getYesAnswer($full_nodes[$general_cc_id]);
+                        $this->medical_case['nodes'][$general_cc_id]['answer'] = $this->_algorithmService->getYesAnswer($full_nodes[$general_cc_id]);
                         foreach ($neonat_ccs as $neonat_cc_id) {
-                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->algorithmService->getNoAnswer($full_nodes[$neonat_cc_id]);
+                            $this->medical_case['nodes'][$neonat_cc_id]['answer'] = $this->_algorithmService->getNoAnswer($full_nodes[$neonat_cc_id]);
                         }
                         if (
                             $this->age_key === 'neonat'
@@ -1095,7 +1151,7 @@ class Algorithm extends Component
         return array_filter($diagnoses, function ($diagnosis) use ($nodes, $mc_nodes) {
             return (
                 isset($mc_nodes[$diagnosis['complaint_category']])
-                && $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->algorithmService->getYesAnswer($nodes[$diagnosis['complaint_category']])
+                && $mc_nodes[$diagnosis['complaint_category']]['answer'] === $this->_algorithmService->getYesAnswer($nodes[$diagnosis['complaint_category']])
                 && $this->respectsCutOff($diagnosis)
             );
         });
@@ -1213,7 +1269,8 @@ class Algorithm extends Component
                     $is_valid_condition = (
                         (isset($nodes[$child_id]['type']) && $nodes[$child_id]['type'] !== config('medal.node_types.final_diagnosis')
                             && $diagram_type === config('medal.node_types.diagnosis')
-                            || ($diagram_type === config('medal.node_types.questions_sequence') &&
+                            || (
+                                $diagram_type === config('medal.node_types.questions_sequence') &&
                                 $child_id !== $diagram_id
                             ))
                     );
@@ -1258,14 +1315,13 @@ class Algorithm extends Component
         $mc_nodes = $this->medical_case['nodes'];
 
         if (in_array($nodes[$question_id]['category'], $categories)) {
-
             $old_system_index = array_search(
                 $this->last_system_updated['system'] ?? null,
                 array_column($system_order, 'title')
             );
 
             $current_question_system_index = array_search(
-                $nodes[$question_id]['system'],
+                $nodes[$question_id]['system'] ?? 'general',
                 array_column($system_order, 'title')
             );
 
@@ -1339,7 +1395,8 @@ class Algorithm extends Component
         $mc_nodes = $this->medical_case['nodes'];
         $nodes = $algorithm['nodes'];
 
-        if ((isset($nodes[$question_id]['type'])
+        if ((
+                isset($nodes[$question_id]['type'])
                 && $nodes[$question_id]['type'] === config('medal.node_types.final_diagnosis')
             ) || $nodes[$question_id]['category'] === config('medal.categories.drug') ||
             $nodes[$question_id]['category'] === config('medal.categories.management')
@@ -1352,7 +1409,7 @@ class Algorithm extends Component
         }
 
         foreach ($nodes[$question_id]['conditioned_by_cc'] as $cc_id) {
-            if ($mc_nodes[$cc_id]['answer'] === $this->algorithmService->getNoAnswer($nodes[$cc_id])) {
+            if ($mc_nodes[$cc_id]['answer'] === $this->_algorithmService->getNoAnswer($nodes[$cc_id])) {
                 return true;
             }
         }
@@ -1570,7 +1627,7 @@ class Algorithm extends Component
             // If the QS has a value
             if (!is_null($qs_boolean_value)) {
                 $qs_value = $qs_boolean_value ?
-                    $this->algorithmService->getYesAnswer($nodes[$qs_id]) : $this->algorithmService->getNoAnswer($nodes[$qs_id]);
+                    $this->_algorithmService->getYesAnswer($nodes[$qs_id]) : $this->_algorithmService->getNoAnswer($nodes[$qs_id]);
 
                 $new_qs_values = $this->handleAnswerId($nodes[$qs_id], $qs_value);
 
@@ -1620,7 +1677,7 @@ class Algorithm extends Component
 
             $gender = $this->current_nodes['registration'][$gender_question_id] === $female_gender_answer_id ? 'female' : 'male';
 
-            return $this->referenceCalculator->calculateReference($node_id, $nodes, $gender, $this->cache_key);
+            return $this->_referenceCalculator->calculateReference($node_id, $nodes, $gender, $this->cache_key);
         }
 
         return null;
@@ -1850,7 +1907,7 @@ class Algorithm extends Component
             if (!empty($nodes[$question_id]['conditioned_by_cc'])) {
                 // If one of the CCs is true, we need to exclude the question
                 $exclude = array_filter($nodes[$question_id]['conditioned_by_cc'], function ($cc_id) use ($mc_nodes, $nodes) {
-                    return $mc_nodes[$cc_id]['answer'] === $this->algorithmService->getYesAnswer($nodes[$cc_id]);
+                    return $mc_nodes[$cc_id]['answer'] === $this->_algorithmService->getYesAnswer($nodes[$cc_id]);
                 });
 
                 return !empty($exclude) && $this->calculateConditionInverse(
@@ -1974,6 +2031,7 @@ class Algorithm extends Component
             config('medal.categories.chronic_condition'),
             config('medal.categories.vaccine'),
             config('medal.categories.observed_physical_sign'),
+            config('medal.categories.background_calculation'),
         ];
         $instances = $algorithm['diagram']['instances'];
         $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
@@ -1988,7 +2046,6 @@ class Algorithm extends Component
             flash()->addError('There is no recommendation for this age range');
             return;
         }
-
         foreach ($valid_diagnoses as $cc_id => $diagnosis_per_cc) {
             foreach ($diagnosis_per_cc as $diagnosis) {
                 $top_conditions = $this->getTopConditions($diagnosis['instances']);
@@ -2028,6 +2085,7 @@ class Algorithm extends Component
             if ($system['title'] !== 'general') {
                 continue;
             }
+
             foreach (array_filter($this->chosen_complaint_categories) as $cc_id => $a) {
 
                 $new_questions = array_fill_keys(array_filter(
@@ -2042,6 +2100,15 @@ class Algorithm extends Component
                     if (isset($current_systems[$cc_id][$key]) && $current_systems[$cc_id][$key] !== "") {
                         $new_questions[$key] = $current_systems[$cc_id][$key];
                     }
+                    if ($json_data['algorithm']['nodes'][$key]['category'] === config('medal.categories.background_calculation')) {
+                        if (!isset($this->current_nodes['consultation']['medical_history'][$cc_id][$key])) {
+                            $new_questions[$key] = $mc_nodes[$key]['label'];
+                        } else {
+                            if ($this->current_nodes['consultation']['medical_history'][$cc_id][$key] !== $mc_nodes[$key]['label']) {
+                                $this->current_nodes['consultation']['medical_history'][$cc_id][$key] = $mc_nodes[$key]['label'];
+                            }
+                        }
+                    }
                 }
 
                 if (isset($current_systems[$cc_id])) {
@@ -2049,7 +2116,7 @@ class Algorithm extends Component
                     foreach ($current_systems[$cc_id] as $key => $value) {
                         if (isset($new_questions[$key])) {
                             $ordered_new_questions[$key] = $new_questions[$key];
-                            unset($new_questions[$key]); // Remove it from $new_questions as it's already processed
+                            unset($new_questions[$key]);
                         }
                     }
                     foreach ($new_questions as $key => $value) {
@@ -2229,7 +2296,6 @@ class Algorithm extends Component
                         $this->calculateConditionInverse($json_data, $instances[$question_id]['conditions'] ?? [], $mc_nodes);
                 }
             ), '');
-
             foreach ($new_questions as $key => $v) {
                 if (array_key_exists($key, $current_systems[$system['title']] ?? [])) {
                     $new_questions[$key] = $current_systems[$system['title']][$key];
@@ -3348,9 +3414,9 @@ class Algorithm extends Component
         ];
 
         dd($data);
-        $json = $this->jsonExportService->prepareJsonData($data);
+        $json = $this->_jsonExportService->prepareJsonData($data);
 
-        // $response = $this->fhirService->setConditionsToPatient($this->patient_id, $conditions);
+        // $response = $this->_fhirService->setConditionsToPatient($this->patient_id, $conditions);
 
         // if (!$response) {
         //     flash()->addError('An error occured while saving. Please try again');
@@ -3384,7 +3450,7 @@ class Algorithm extends Component
             'version_id' => $this->id,
         ];
 
-        $json = $this->jsonExportService->prepareJsonData($data);
+        $json = $this->_jsonExportService->prepareJsonData($data);
         dd($json);
 
         if (!$this->patient_id) {
@@ -3406,7 +3472,7 @@ class Algorithm extends Component
             return;
         }
 
-        $response = $this->fhirService->setConditionsToPatient($this->patient_id, $conditions);
+        $response = $this->_fhirService->setConditionsToPatient($this->patient_id, $conditions);
 
         if (!$response) {
             flash()->addError('An error occured while saving. Please try again');
