@@ -1027,6 +1027,7 @@ class Algorithm extends Component
         $this->manageComplaintCategory($json_data);
 
         $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
+        $this->calculateCompletionPercentage($json_data);
         return;
     }
 
