@@ -109,13 +109,13 @@
   @if ($saved_step >= 4)
     <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
       wire:click="goToSubStep('diagnoses', 'final_diagnoses')"
-      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step > 4 ? ' success' : '' }}">
+      class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step === 4 ? ' success' : '' }}">
     @else
       <div name="navstep" style="{{ $saved_step >= 4 ? 'cursor:pointer;' : 'cursor:default;' }}"
-        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step > 4 ? ' success' : '' }}">
+        class="step prevention-step{{ $current_step === 'diagnoses' ? ' active' : '' }}{{ $saved_step < 4 ? ' empty' : '' }}{{ $completion_per_step['diagnoses']['end'] >= 100 && $saved_step === 4 ? ' success' : '' }}">
   @endif
 
-  @if ($saved_step > 4)
+  @if ($saved_step === 4)
     <div class="success-icon">
       <div>
         <img src=" {{ mix('images/icons-done.svg') }}" />
@@ -127,10 +127,11 @@
       <path class="circle-bg" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-      <path class="circle circle-animate circle-diagnoses" stroke-dasharray="100, 100" d="M18 2.0845
+      <path class="circle circle-animate circle-consultation"
+        stroke-dasharray="{{ $completion_per_step['diagnoses']['end'] }}, 100" d="M18 2.0845
           a 15.9155 15.9155 0 0 1 0 31.831
           a 15.9155 15.9155 0 0 1 0 -31.831" />
-      <text x="18" y="20.35" class="percentage">100%</text>
+      <text x="18" y="20.35" class="percentage">{{ $completion_per_step['diagnoses']['end'] }}%</text>
     </svg>
   </div>
   <div class="content">

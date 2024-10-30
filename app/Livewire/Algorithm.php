@@ -690,6 +690,12 @@ class Algorithm extends Component
             $end_percentage = intval(min(100, round($completion_percentage)));
             $this->completion_per_step[$this->current_step]['end'] = $end_percentage;
         }
+
+        if ($this->algorithm_type === 'prevention') {
+            if ($this->current_step === 'consultation' && $this->completion_per_step['consultation']['end'] !== 100) {
+                $this->completion_per_step['diagnoses']['end'] = 0;
+            }
+        }
     }
 
     public function updatingCurrentNodes($value, $key)
@@ -3189,6 +3195,11 @@ class Algorithm extends Component
         if ($this->algorithm_type === 'training' && $step === 'diagnoses') {
             $this->saved_step = 2;
             $this->completion_per_step[1] = 100;
+        }
+        if ($this->algorithm_type === 'prevention' && $step === 'diagnoses') {
+            if ($this->completion_per_step['consultation']['end'] === 100) {
+                $this->completion_per_step['diagnoses']['end'] = 100;
+            }
         }
 
         //Need to be on the future validateStep function, not here and remove the max
