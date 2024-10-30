@@ -73,7 +73,7 @@
 @endphp
 
 <div>
-  <h2 class="mb-5">RECOMMANDATIONS EVIPREV 2024</h2>
+  <h2 class="mb-5">EVIPREV RECOMMENDATIONS 2024</h2>
   @if (empty($df_to_display))
     <p>No results</p>
   @else

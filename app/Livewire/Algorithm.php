@@ -610,7 +610,7 @@ class Algorithm extends Component
 
         if ($this->current_step === 'consultation') {
             if ($this->algorithm_type !== 'dynamic') {
-                $current_nodes = $this->current_nodes['consultation'][$other_cc ?? $this->current_cc];
+                $current_nodes = $this->current_nodes['consultation']['medical_history'][$other_cc ?? $this->current_cc];
             } else {
                 $current_nodes = $this->current_nodes['consultation'];
                 foreach ($current_nodes as $steps) {
@@ -2174,6 +2174,7 @@ class Algorithm extends Component
             $this->current_nodes['consultation']['medical_history'] ?? [],
             $updated_systems
         );
+        $this->calculateCompletionPercentage($json_data);
     }
 
     private function manageTrainingMedicalHistory($json_data)
