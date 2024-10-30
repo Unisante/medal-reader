@@ -141,6 +141,8 @@
       if (el.classList.contains('circle-' + currentStep)) {
         startPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].start
         endPercentage = jsComponent.snapshot.data.completion_per_step[0][currentStep][0].end
+        console.log(startPercentage)
+        console.log(endPercentage)
         if (lastStartPercentage[currentStep] !== endPercentage) {
           el.setAttribute('stroke-dasharray', endPercentage + ',100');
           el.style.setProperty('--startPercentage', startPercentage);

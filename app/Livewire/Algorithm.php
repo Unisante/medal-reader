@@ -665,7 +665,7 @@ class Algorithm extends Component
         $completion_percentage = count($current_answers) / $total * 100;
 
         if (
-            isset($this->completion_per_substep[$other_cc ?? $this->current_cc])
+            isset($this->current_cc) && isset($this->completion_per_substep[$other_cc ?? $this->current_cc])
             && $this->algorithm_type === 'prevention' && $this->current_step !== 'registration'
             && $this->current_step !== 'first_look_assessment'
         ) {
@@ -712,7 +712,7 @@ class Algorithm extends Component
             return;
         }
 
-        if (Str::of($key)->contains('firsvim.opt.clipboard = "unnamedplus"t_look_nodes_id')) {
+        if (Str::of($key)->contains('first_look_nodes_id')) {
             if ($value) {
                 $this->dispatch('openEmergencyModal');
             }
@@ -763,6 +763,7 @@ class Algorithm extends Component
         $this->medical_case['nodes'] = array_replace($this->medical_case['nodes'], $new_nodes);
 
         match ($this->current_step) {
+            'registration' => $this->calculateCompletionPercentage($json_data),
             'consultation' => $this->current_sub_step === 'medical_history'
                 ? $this->manageMedicalHistory($json_data, $node_id)
                 : $this->managePhysicalExam($json_data),
