@@ -1355,7 +1355,7 @@ class Algorithm extends Component
             } else {
                 if ($this->algorithm_type === 'dynamic') {
                     $system = isset($nodes[$question_id]['system']) ? $nodes[$question_id]['system'] : 'others';
-                    if (isset($questions_to_display[$nodes[$question_id]['system']])) {
+                    if (isset($questions_to_display[$system])) {
                         $questions_to_display[$system][] = $question_id;
                     } else {
                         $questions_to_display[$system] = [$question_id];
