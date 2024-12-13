@@ -1975,6 +1975,7 @@ class Algorithm extends Component
             config('medal.categories.chronic_condition'),
             config('medal.categories.vaccine'),
             config('medal.categories.observed_physical_sign'),
+            config('medal.categories.background_calculation'),
         ];
         $instances = $algorithm['diagram']['instances'];
         $medical_history_step = $algorithm['config']['full_order']['medical_history_step'];
@@ -2269,7 +2270,8 @@ class Algorithm extends Component
         $question_per_systems = [];
         $physical_exam_categories = [
             config('medal.categories.physical_exam'),
-            config('medal.categories.vital_sign_anthropometric')
+            config('medal.categories.vital_sign_anthropometric'),
+            config('medal.categories.background_calculation'),
         ];
         $instances = $algorithm['diagram']['instances'];
         $physical_exam_step = $algorithm['config']['full_order']['physical_exam_step'];
